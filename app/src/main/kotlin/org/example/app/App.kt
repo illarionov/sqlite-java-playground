@@ -14,7 +14,7 @@ fun main() {
 
 
 private fun testSqlite() {
-    val (sqlite3Initialize, evalDuration) = measureTimedValue {
+    val (sqlite3Bindings, evalDuration) = measureTimedValue {
         val wasmContext: Context = Context.newBuilder("wasm")
             .allowAllAccess(true)
             //.option("wasm.Builtins", "wasi_snapshot_preview1")
@@ -53,11 +53,9 @@ private fun testSqlite() {
 
         println("keys: ${wasmMainBindings.memberKeys}")
 
-        val main = wasmContext.getBindings("wasm").getMember("main")
-
-        main.getMember("sqlite3_initialize")
+        SqliteBindings(wasmContext.getBindings("wasm").getMember("main"))
     }
-    println("wasm: binding = $sqlite3Initialize. duration: $evalDuration")
+    println("wasm: binding = ${sqlite3Bindings.sqlite3_initialize}. duration: $evalDuration")
 
 }
 
