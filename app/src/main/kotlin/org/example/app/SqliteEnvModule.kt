@@ -62,7 +62,7 @@ fun createSqliteEnvModule(
     context: WasmContext,
     name: String = "env",
 ): WasmInstance {
-    val envModule = WasmModule.create("env", null)
+    val envModule = WasmModule.create(name, null)
     val exportedFunctions: Map<String, Int> = envFunctions.associate {
         val f = envModule.defineFunction(it)
         it.name to f.index()

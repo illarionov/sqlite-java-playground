@@ -3,20 +3,8 @@ package org.example.app
 import kotlin.time.measureTimedValue
 import org.graalvm.polyglot.Context
 import org.graalvm.polyglot.HostAccess
-import org.graalvm.polyglot.Language
 import org.graalvm.polyglot.Source
-import org.graalvm.polyglot.Value
 import org.graalvm.wasm.WasmContext
-import org.graalvm.wasm.WasmInstance
-import org.graalvm.wasm.WasmModule
-import org.graalvm.wasm.WasmOptions
-import org.graalvm.wasm.WasmType
-import org.graalvm.wasm.WasmType.I32_TYPE
-import org.graalvm.wasm.api.Dictionary
-import org.graalvm.wasm.api.WebAssembly
-import org.graalvm.wasm.constants.Sizes
-import org.graalvm.wasm.constants.Sizes.MAX_MEMORY_64_DECLARATION_SIZE
-import org.graalvm.wasm.constants.Sizes.MAX_MEMORY_DECLARATION_SIZE
 
 private object App
 
@@ -29,7 +17,7 @@ private fun testSqlite() {
     val (sqlite3Initialize, evalDuration) = measureTimedValue {
         val wasmContext: Context = Context.newBuilder("wasm")
             .allowAllAccess(true)
-            .option("wasm.Builtins", "wasi_snapshot_preview1")
+            //.option("wasm.Builtins", "wasi_snapshot_preview1")
             .build()
         wasmContext.initialize("wasm")
 
@@ -43,6 +31,13 @@ private fun testSqlite() {
         try {
             val instanceContext = WasmContext.get(null)
             createSqliteEnvModule(instanceContext)
+
+            val wasiInstance = WasiSnapshotPreview1BuiltinsModule().createInstance(
+                instanceContext.language(),
+                instanceContext,
+                "wasi_snapshot_preview1"
+            )
+            instanceContext.register(wasiInstance)
 
         } finally {
             wasmContext.leave()
