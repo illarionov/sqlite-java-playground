@@ -2,8 +2,21 @@ package org.example.app
 
 import kotlin.time.measureTimedValue
 import org.graalvm.polyglot.Context
+import org.graalvm.polyglot.HostAccess
+import org.graalvm.polyglot.Language
 import org.graalvm.polyglot.Source
 import org.graalvm.polyglot.Value
+import org.graalvm.wasm.WasmContext
+import org.graalvm.wasm.WasmInstance
+import org.graalvm.wasm.WasmModule
+import org.graalvm.wasm.WasmOptions
+import org.graalvm.wasm.WasmType
+import org.graalvm.wasm.WasmType.I32_TYPE
+import org.graalvm.wasm.api.Dictionary
+import org.graalvm.wasm.api.WebAssembly
+import org.graalvm.wasm.constants.Sizes
+import org.graalvm.wasm.constants.Sizes.MAX_MEMORY_64_DECLARATION_SIZE
+import org.graalvm.wasm.constants.Sizes.MAX_MEMORY_DECLARATION_SIZE
 
 private object App
 
@@ -11,17 +24,33 @@ fun main() {
     testSqlite()
 }
 
+
 private fun testSqlite() {
     val (sqlite3Initialize, evalDuration) = measureTimedValue {
-        val wasmContext = Context.newBuilder("wasm")
+        val wasmContext: Context = Context.newBuilder("wasm")
             .allowAllAccess(true)
             .option("wasm.Builtins", "wasi_snapshot_preview1")
-            //.option("wasm.Builtins", "emscripten")
             .build()
-        val sqliteSource = run {
-            //val factorialWasmUrl = requireNotNull(App::class.java.getResource("sqlite3_3450000.wasm"))
-            val factorialWasmUrl = requireNotNull(App::class.java.getResource("sqlite3-wasi-sdk.wasm"))
-            Source.newBuilder("wasm", factorialWasmUrl).build()
+        wasmContext.initialize("wasm")
+
+//        val webAssembly = wasmContext
+//            .polyglotBindings
+//            .getMember("WebAssembly")
+//            .`as`(WebAssembly::class.java)
+//            ?: error("Can not get WebAssembly instance")
+
+        wasmContext.enter()
+        try {
+            val instanceContext = WasmContext.get(null)
+            createSqliteEnvModule(instanceContext)
+
+        } finally {
+            wasmContext.leave()
+        }
+
+        val sqliteSource: Source = run {
+            val sqliteUrl = requireNotNull(App::class.java.getResource("sqlite3_3450000.wasm"))
+            Source.newBuilder("wasm", sqliteUrl).build()
         }
         wasmContext.eval(sqliteSource)
 
@@ -29,12 +58,20 @@ private fun testSqlite() {
 
         println("keys: ${wasmMainBindings.memberKeys}")
 
-        wasmContext.getBindings("wasm")
-            .getMember("main")
-            .getMember("sqlite3_initialize")
+        val main = wasmContext.getBindings("wasm").getMember("main")
+
+        main.getMember("sqlite3_initialize")
     }
     println("wasm: binding = $sqlite3Initialize. duration: $evalDuration")
 
+}
+
+public class SqliteEnv(
+) {
+    @HostAccess.Export
+    fun __syscall_rmdir(path: String): Int {
+        return 0
+    }
 }
 
 private fun testFactorial() {
@@ -57,32 +94,4 @@ private fun testFactorial() {
         factorial.execute(20L)
     }
     println("wasm: factorial(20) = $result. duration: $evalDuration / $resultDuration")
-}
-
-private fun test2() {
-    Context.newBuilder().allowAllAccess(true).build().use { context ->
-        val languages = context.engine.languages.keys
-        for (id in languages) {
-            println("Initializing language $id")
-            context.initialize(id)
-            when (id) {
-                "python" -> context.eval("python", "print('Hello Python!')")
-                "js" -> context.eval("js", "print('Hello JavaScript!');")
-                "ruby" -> context.eval("ruby", "puts 'Hello Ruby!'")
-                "wasm" -> {
-                    context.eval(Source.newBuilder("wasm", App::class.java.getResource("factorial.wasm")).build())
-                    val factorial: Value = context.getBindings("wasm").getMember("main").getMember("fac")
-                    println("wasm: factorial(20) = " + factorial.execute(20L))
-                }
-
-                "java" -> {
-                    val out: Value = context
-                        .getBindings("java")
-                        .getMember("java.lang.System")
-                        .getMember("out")
-                    out.invokeMember("println", "Hello Espresso Java!")
-                }
-            }
-        }
-    }
 }

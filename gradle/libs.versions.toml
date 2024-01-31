@@ -7,4 +7,5 @@ kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", v
 graalvm-polyglot-polyglot = { group = "org.graalvm.polyglot", name = "polyglot", version.ref = "graalvm" }
 graalvm-polyglot-js = { group = "org.graalvm.polyglot", name = "js-community", version.ref = "graalvm" }
 graalvm-polyglot-wasm = { group = "org.graalvm.polyglot", name = "wasm-community", version.ref = "graalvm" }
+graalvm-wasm-language = { group = "org.graalvm.wasm", name = "wasm-language", version.ref = "graalvm" }
 graalvm-compiler = { group = "org.graalvm.compiler", name = "compiler", version.ref = "graalvm" }

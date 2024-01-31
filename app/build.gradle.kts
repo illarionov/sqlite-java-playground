@@ -1,6 +1,5 @@
 @file:Suppress("UnstableApiUsage")
 
-import java.io.Serializable
 import java.nio.file.Paths
 import kotlin.io.path.exists
 
@@ -64,6 +63,7 @@ tasks.withType<JavaExec>().configureEach {
 dependencies {
     implementation(libs.graalvm.polyglot.polyglot)
     implementation(libs.graalvm.polyglot.wasm)
+    compileOnly(libs.graalvm.wasm.language)
     implementation(project(":utilities"))
 }
 dependencies {
