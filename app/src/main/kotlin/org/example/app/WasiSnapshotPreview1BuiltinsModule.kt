@@ -37,7 +37,7 @@ import org.graalvm.wasm.predefined.wasi.WasiRandomGetNode
 import org.graalvm.wasm.predefined.wasi.WasiSchedYieldNode
 
 class WasiSnapshotPreview1BuiltinsModule : BuiltinModule() {
-    val NUMBER_OF_FUNCTIONS = 27
+    val NUMBER_OF_FUNCTIONS = 28
 
     public override fun createInstance(language: WasmLanguage, context: WasmContext, name: String): WasmInstance {
         val instance = WasmInstance(context, WasmModule.createBuiltin(name), NUMBER_OF_FUNCTIONS)
@@ -136,9 +136,18 @@ class WasiSnapshotPreview1BuiltinsModule : BuiltinModule() {
             WasiFdPrestatGetNode(language, instance)
         )
         defineFunction(
-            instance, "fd_prestat_dir_name", types(WasmType.I32_TYPE, WasmType.I32_TYPE, WasmType.I32_TYPE), types(
-                WasmType.I32_TYPE
-            ), WasiFdPrestatDirNameNode(language, instance)
+            instance,
+            "fd_prestat_dir_name",
+            types(WasmType.I32_TYPE, WasmType.I32_TYPE, WasmType.I32_TYPE),
+            types(WasmType.I32_TYPE),
+            WasiFdPrestatDirNameNode(language, instance)
+        )
+        defineFunction(
+            instance,
+            "fd_sync",
+            types(WasmType.I32_TYPE),
+            types(WasmType.I32_TYPE),
+            WasiUnsupportedFunctionNode(language, instance, "__wasi_fd_sync")
         )
         defineFunction(
             instance,

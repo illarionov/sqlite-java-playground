@@ -19,6 +19,7 @@ val envFunctions = buildList {
     fn("emscripten_date_now", listOf(), F64_TYPE)
     fn("_emscripten_get_now_is_monotonic", listOf())
     fn("emscripten_get_now", listOf(), F64_TYPE)
+    fn("emscripten_resize_heap", listOf(I32_TYPE))
     fn("__syscall_fchmod", listOf(I32_TYPE, I32_TYPE))
     fn("__syscall_chmod", listOf(I32_TYPE, I32_TYPE))
     fn("__syscall_fchown32", List(3) { I32_TYPE })
@@ -119,6 +120,7 @@ fun createSqliteEnvModule(
         "_tzset_js",
         "emscripten_date_now",
         "emscripten_get_now",
+        "emscripten_resize_heap",
     ).forEach { funcName ->
         envInstance.setTarget(
             exportedFunctions.getValue(funcName),
