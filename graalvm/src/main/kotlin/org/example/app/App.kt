@@ -5,6 +5,7 @@ import org.graalvm.polyglot.Context
 import org.graalvm.polyglot.HostAccess
 import org.graalvm.polyglot.Source
 import org.graalvm.wasm.WasmContext
+import ru.pixnews.sqlite3.wasm.Sqlite3Wasm
 
 private object App
 
@@ -44,7 +45,7 @@ private fun testSqlite() {
         }
 
         val sqliteSource: Source = run {
-            val sqliteUrl = requireNotNull(App::class.java.getResource("sqlite3_3460000.wasm"))
+            val sqliteUrl = Sqlite3Wasm.Emscripten.sqlite3_346
             Source.newBuilder("wasm", sqliteUrl).build()
         }
         wasmContext.eval(sqliteSource)
@@ -81,7 +82,7 @@ private fun testFactorial() {
             //.option("wasm.Builtins", "wasi_snapshot_preview1")
             .build()
         val factorialSource = run {
-            val factorialWasmUrl = requireNotNull(App::class.java.getResource("factorial.wasm"))
+            val factorialWasmUrl = requireNotNull(App::class.java.getResource("ru/pixnews/sqlite3/wasm/factorial.wasm"))
             Source.newBuilder("wasm", factorialWasmUrl).build()
         }
 

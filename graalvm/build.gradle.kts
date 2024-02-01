@@ -64,7 +64,7 @@ dependencies {
     implementation(libs.graalvm.polyglot.polyglot)
     implementation(libs.graalvm.polyglot.wasm)
     compileOnly(libs.graalvm.wasm.language)
-    implementation(project(":utilities"))
+    implementation(project(":sqlite3-wasm"))
 }
 dependencies {
     testImplementation("junit:junit:4.13.2")

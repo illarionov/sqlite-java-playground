@@ -7,4 +7,4 @@ plugins {
 }
 
 rootProject.name = "sqlite-java-playground"
-include("app", "list", "utilities")
+include("graalvm", "sqlite3-wasm")
