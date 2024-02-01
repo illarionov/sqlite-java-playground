@@ -44,7 +44,7 @@ private fun testSqlite() {
         }
 
         val sqliteSource: Source = run {
-            val sqliteUrl = requireNotNull(App::class.java.getResource("sqlite3_3450000.wasm"))
+            val sqliteUrl = requireNotNull(App::class.java.getResource("sqlite3_3460000.wasm"))
             Source.newBuilder("wasm", sqliteUrl).build()
         }
         wasmContext.eval(sqliteSource)
@@ -53,9 +53,16 @@ private fun testSqlite() {
 
         println("keys: ${wasmMainBindings.memberKeys}")
 
-        SqliteBindings(wasmContext.getBindings("wasm").getMember("main"))
+        SqliteBindings(
+            wasmContext.getBindings("wasm").getMember("env"),
+            wasmContext.getBindings("wasm")
+                .getMember("main")
+        )
     }
     println("wasm: binding = ${sqlite3Bindings.sqlite3_initialize}. duration: $evalDuration")
+
+
+    SqliteBasicDemo1(sqlite3Bindings).run()
 
 }
 

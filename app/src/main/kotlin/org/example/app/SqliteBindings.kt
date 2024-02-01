@@ -3,10 +3,14 @@ package org.example.app
 import org.graalvm.polyglot.Value
 
 class SqliteBindings(
-    val mainBindings: Value
+    val envBindings: Value,
+    val mainBindings: Value,
 ) {
+    val memory = envBindings.getMember("memory")
+
+    val _initialize = mainBindings.getMember("_initialize") // 34
     val __errno_location = mainBindings.getMember("__errno_location") // 2644
-    val __wasm_call_ctors = mainBindings.getMember("__wasm_call_ctors") // 34
+    // val __wasm_call_ctors = mainBindings.getMember("__wasm_call_ctors") // 34
     val __indirect_function_table = mainBindings.getMember("__indirect_function_table") // 0
 
     val malloc = mainBindings.getMember("malloc") // 2815
@@ -220,15 +224,15 @@ class SqliteBindings(
     val sqlite3session_config = mainBindings.getMember("sqlite3session_config") // 652
     val sqlite3_sourceid = mainBindings.getMember("sqlite3_sourceid") // 653
 
-    val sqlite3_wasm_pstack_ptr = mainBindings.getMember("sqlite3_wasm_pstack_ptr") // 654
-    val sqlite3_wasm_pstack_restore = mainBindings.getMember("sqlite3_wasm_pstack_restore") // 655
+    val sqlite3_wasm_pstack_ptr = mainBindings.getMember("sqlite3__wasm_pstack_ptr") // 654
+    val sqlite3_wasm_pstack_restore = mainBindings.getMember("sqlite3__wasm_pstack_restore") // 655
     val sqlite3_wasm_pstack_alloc = mainBindings.getMember("sqlite3_wasm_pstack_alloc") // 656
     val sqlite3_wasm_pstack_remaining = mainBindings.getMember("sqlite3_wasm_pstack_remaining") // 657
     val sqlite3_wasm_pstack_quota = mainBindings.getMember("sqlite3_wasm_pstack_quota") // 658
     val sqlite3_wasm_db_error = mainBindings.getMember("sqlite3_wasm_db_error") // 659
     val sqlite3_wasm_test_struct = mainBindings.getMember("sqlite3_wasm_test_struct") // 660
-    val sqlite3_wasm_enum_json = mainBindings.getMember("sqlite3_wasm_enum_json") // 661
-    val sqlite3_wasm_vfs_unlink = mainBindings.getMember("sqlite3_wasm_vfs_unlink") // 662
+    val sqlite3_wasm_enum_json = mainBindings.getMember("sqlite3__wasm_enum_json") // 661
+    val sqlite3_wasm_vfs_unlink = mainBindings.getMember("sqlite3__wasm_vfs_unlink") // 662
     val sqlite3_wasm_db_vfs = mainBindings.getMember("sqlite3_wasm_db_vfs") // 663
     val sqlite3_wasm_db_reset = mainBindings.getMember("sqlite3_wasm_db_reset") // 664
     val sqlite3_wasm_db_export_chunked = mainBindings.getMember("sqlite3_wasm_db_export_chunked") // 665
@@ -256,4 +260,34 @@ class SqliteBindings(
     val sqlite3_wasm_test_str_hello = mainBindings.getMember("sqlite3_wasm_test_str_hello") // 689
     val sqlite3_wasm_SQLTester_strglob = mainBindings.getMember("sqlite3_wasm_SQLTester_strglob") // 690
 
+    val version: String
+        get() {
+            val resultPtr = sqlite3_libversion.execute()
+            return checkNotNull(memory.readNullTerminatedString(resultPtr))
+        }
+
+    val sourceId: String
+        get() {
+            val resultPtr = sqlite3_sourceid.execute()
+            return checkNotNull(memory.readNullTerminatedString(resultPtr))
+        }
+
+    val versionNumber: Int
+        get() = sqlite3_libversion_number.execute().asInt()
+
+    val wasmEnumJson: String?
+        get() {
+            val resultPtr = sqlite3_wasm_enum_json.execute()
+            return memory.readNullTerminatedString(resultPtr)
+        }
+
+    init {
+        initSqlite()
+    }
+
+    // globalThis.sqlite3InitModule
+    private fun initSqlite() {
+        // __wasm_call_ctors.execute()
+        _initialize.execute()
+    }
 }
