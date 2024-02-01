@@ -1,65 +1,56 @@
 package ru.pixnews.wasm.sqlite3.chicory
 
+import com.dylibso.chicory.runtime.HostFunction
+import com.dylibso.chicory.runtime.HostGlobal
+import com.dylibso.chicory.runtime.HostImports
+import com.dylibso.chicory.runtime.HostMemory
+import com.dylibso.chicory.runtime.HostTable
+import com.dylibso.chicory.runtime.Memory
 import com.dylibso.chicory.runtime.Module
+import com.dylibso.chicory.wasm.types.MemoryLimits
 import com.dylibso.chicory.wasm.types.Value
 import kotlin.time.measureTimedValue
 import ru.pixnews.sqlite3.wasm.Sqlite3Wasm
 
 fun main() {
-    testFactorial()
+    //testFactorial()
+    testSqlite()
 }
 
+const val INITIAL_MEMORY_PAGES = 16_777_216 / 65536
+const val MAX_MEMORY_PAGES = 4_294_967_296 / 65536
+
 private fun testSqlite() {
-//    val (sqlite3Bindings, evalDuration) = measureTimedValue {
-//        val wasmContext: Context = Context.newBuilder("wasm")
-//            .allowAllAccess(true)
-//            //.option("wasm.Builtins", "wasi_snapshot_preview1")
-//            .build()
-//        wasmContext.initialize("wasm")
+    val (libversionNumberFunc, evalDuration) = measureTimedValue {
+        val sqlite3Module = Sqlite3Wasm.Emscripten.sqlite3_346.openStream().use {
+            Module.builder(it)
+                .build()
+        }
+        val hostMemory = HostMemory(
+            /* moduleName = */ "env",
+            /* fieldName = */ "memory",
+            /* memory = */ Memory(
+                MemoryLimits(
+                    INITIAL_MEMORY_PAGES,
+                    MAX_MEMORY_PAGES
+                )
+            )
+        )
+        val hostImports = HostImports(
+            arrayOf<HostFunction>(),
+            arrayOf<HostGlobal>(),
+            hostMemory,
+            arrayOf<HostTable>()
+        )
+        val instance = sqlite3Module.instantiate(hostImports)
 
-//        val webAssembly = wasmContext
-//            .polyglotBindings
-//            .getMember("WebAssembly")
-//            .`as`(WebAssembly::class.java)
-//            ?: error("Can not get WebAssembly instance")
+        instance.export("sqlite3_libversion_number")
+    }
+    val (result, resultDuration) = measureTimedValue {
+        libversionNumberFunc.apply()[0].asLong()
+    }
 
-//        wasmContext.enter()
-//        try {
-//            val instanceContext = WasmContext.get(null)
-//            createSqliteEnvModule(instanceContext)
-//
-//            val wasiInstance = WasiSnapshotPreview1BuiltinsModule().createInstance(
-//                instanceContext.language(),
-//                instanceContext,
-//                "wasi_snapshot_preview1"
-//            )
-//            instanceContext.register(wasiInstance)
-//
-//        } finally {
-//            wasmContext.leave()
-//        }
-//
-//        val sqliteSource: Source = run {
-//            val sqliteUrl = Sqlite3Wasm.Emscripten.sqlite3_346
-//            Source.newBuilder("wasm", sqliteUrl).build()
-//        }
-//        wasmContext.eval(sqliteSource)
-//
-//        val wasmMainBindings = wasmContext.getBindings("wasm")
-//
-//        println("keys: ${wasmMainBindings.memberKeys}")
-//
-//        SqliteBindings(
-//            wasmContext.getBindings("wasm").getMember("env"),
-//            wasmContext.getBindings("wasm")
-//                .getMember("main")
-//        )
-//    }
-//    println("wasm: binding = ${sqlite3Bindings.sqlite3_initialize}. duration: $evalDuration")
-//
-//
-//    SqliteBasicDemo1(sqlite3Bindings).run()
-
+    println("wasm: sqlite3_libversion_number = $result. duration: $evalDuration / $resultDuration")
 }
 
 private fun testFactorial() {
