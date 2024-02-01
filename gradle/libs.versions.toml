@@ -1,8 +1,10 @@
 [versions]
 kotlin-gradle-plugin = "1.9.20"
 graalvm = "23.1.2"
+chicory = "0.0.7"
 
 [libraries]
+chicory = { group = "com.dylibso.chicory", name = "runtime", version.ref = "chicory" }
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin-gradle-plugin" }
 graalvm-polyglot-polyglot = { group = "org.graalvm.polyglot", name = "polyglot", version.ref = "graalvm" }
 graalvm-polyglot-js = { group = "org.graalvm.polyglot", name = "js-community", version.ref = "graalvm" }
