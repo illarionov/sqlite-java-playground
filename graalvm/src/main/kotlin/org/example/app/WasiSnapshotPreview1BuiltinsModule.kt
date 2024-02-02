@@ -75,9 +75,10 @@ class WasiSnapshotPreview1BuiltinsModule : BuiltinModule() {
             WasiEnvironGetNode(language, instance)
         )
         defineFunction(
-            instance, "clock_time_get", types(WasmType.I32_TYPE, WasmType.I64_TYPE, WasmType.I32_TYPE), types(
-                WasmType.I32_TYPE
-            ), WasiClockTimeGetNode(language, instance)
+            instance, "clock_time_get",
+            types(WasmType.I32_TYPE, WasmType.I64_TYPE, WasmType.I32_TYPE),
+            types(WasmType.I32_TYPE),
+            WasiClockTimeGetNode(language, instance)
         )
         defineFunction(instance, "proc_exit", types(WasmType.I32_TYPE), types(), WasiProcExitNode(language, instance))
         defineFunction(
@@ -176,12 +177,14 @@ class WasiSnapshotPreview1BuiltinsModule : BuiltinModule() {
             WasiPathOpenNode(language, instance)
         )
         defineFunction(
-            instance, "path_create_directory", types(WasmType.I32_TYPE, WasmType.I32_TYPE, WasmType.I32_TYPE), types(
+            instance, "path_create_directory",
+            types(WasmType.I32_TYPE, WasmType.I32_TYPE, WasmType.I32_TYPE), types(
                 WasmType.I32_TYPE
             ), WasiPathCreateDirectoryNode(language, instance)
         )
         defineFunction(
-            instance, "path_remove_directory", types(WasmType.I32_TYPE, WasmType.I32_TYPE, WasmType.I32_TYPE), types(
+            instance, "path_remove_directory",
+            types(WasmType.I32_TYPE, WasmType.I32_TYPE, WasmType.I32_TYPE), types(
                 WasmType.I32_TYPE
             ), WasiPathRemoveDirectoryNode(language, instance)
         )
@@ -238,14 +241,20 @@ class WasiSnapshotPreview1BuiltinsModule : BuiltinModule() {
         defineFunction(
             instance,
             "path_symlink",
-            types(WasmType.I32_TYPE, WasmType.I32_TYPE, WasmType.I32_TYPE, WasmType.I32_TYPE, WasmType.I32_TYPE),
+            types(
+                WasmType.I32_TYPE,
+                WasmType.I32_TYPE,
+                WasmType.I32_TYPE,
+                WasmType.I32_TYPE,
+                WasmType.I32_TYPE),
             types(
                 WasmType.I32_TYPE
             ),
             WasiPathSymlinkNode(language, instance)
         )
         defineFunction(
-            instance, "path_unlink_file", types(WasmType.I32_TYPE, WasmType.I32_TYPE, WasmType.I32_TYPE), types(
+            instance, "path_unlink_file",
+            types(WasmType.I32_TYPE, WasmType.I32_TYPE, WasmType.I32_TYPE), types(
                 WasmType.I32_TYPE
             ), WasiPathUnlinkFileNode(language, instance)
         )

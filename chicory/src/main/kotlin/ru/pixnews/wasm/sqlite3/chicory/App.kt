@@ -1,16 +1,19 @@
 package ru.pixnews.wasm.sqlite3.chicory
 
-import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.HostGlobal
 import com.dylibso.chicory.runtime.HostImports
 import com.dylibso.chicory.runtime.HostMemory
 import com.dylibso.chicory.runtime.HostTable
+import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.Memory
 import com.dylibso.chicory.runtime.Module
 import com.dylibso.chicory.wasm.types.MemoryLimits
 import com.dylibso.chicory.wasm.types.Value
 import kotlin.time.measureTimedValue
 import ru.pixnews.sqlite3.wasm.Sqlite3Wasm
+import ru.pixnews.wasm.sqlite3.chicory.sqlite3.Sqlite3CApi
+import ru.pixnews.wasm.sqlite3.chicory.sqlite3.SqliteBindings
+import ru.pixnews.wasm.sqlite3.chicory.sqlite3.WasiSnapshotPreview1Builtins
 
 fun main() {
     //testFactorial()
@@ -21,7 +24,7 @@ const val INITIAL_MEMORY_PAGES = 16_777_216 / 65536
 const val MAX_MEMORY_PAGES = 4_294_967_296 / 65536
 
 private fun testSqlite() {
-    val (libversionNumberFunc, evalDuration) = measureTimedValue {
+    val (bindings, evalDuration) = measureTimedValue {
         val sqlite3Module = Sqlite3Wasm.Emscripten.sqlite3_346.openStream().use {
             Module.builder(it)
                 .build()
@@ -36,18 +39,27 @@ private fun testSqlite() {
                 )
             )
         )
+        val fsWasiBuildins = WasiSnapshotPreview1Builtins()
+
         val hostImports = HostImports(
-            arrayOf<HostFunction>(),
+            fsWasiBuildins.functions.toTypedArray(),
             arrayOf<HostGlobal>(),
             hostMemory,
             arrayOf<HostTable>()
         )
-        val instance = sqlite3Module.instantiate(hostImports)
+        val instance: Instance = sqlite3Module.instantiate(hostImports)
 
-        instance.export("sqlite3_libversion_number")
+        val bingings = SqliteBindings(
+            hostMemory.memory(),
+            instance
+        )
+
+        bingings
     }
+    val api = Sqlite3CApi(bindings)
+
     val (result, resultDuration) = measureTimedValue {
-        libversionNumberFunc.apply()[0].asLong()
+        api.version
     }
 
     println("wasm: sqlite3_libversion_number = $result. duration: $evalDuration / $resultDuration")
