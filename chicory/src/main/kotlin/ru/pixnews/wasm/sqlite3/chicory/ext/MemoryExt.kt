@@ -14,12 +14,12 @@ fun Memory.readNullTerminatedString(offsetValue: Value): String? {
 
 fun Memory.readNullTerminatedString(offset: Int): String {
     val mem = ByteArrayOutputStream()
-    var b: Byte
     var l = offset
     do {
-        b = this.read(l++)
+        val b = this.read(l++)
+        if (b == 0.toByte()) break
         mem.write(b.toInt())
-    } while (b != 0.toByte())
+    } while (true)
 
     return mem.toString()
 }

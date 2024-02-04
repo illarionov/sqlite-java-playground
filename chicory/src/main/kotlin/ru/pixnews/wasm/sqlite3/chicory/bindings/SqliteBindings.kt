@@ -1,4 +1,4 @@
-package ru.pixnews.wasm.sqlite3.chicory.sqlite3
+package ru.pixnews.wasm.sqlite3.chicory.bindings
 
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.Memory

@@ -1,5 +1,7 @@
 package ru.pixnews.wasm.sqlite3.chicory.sqlite3
 
+import ru.pixnews.wasm.sqlite3.chicory.bindings.SqliteBindings
+
 class Sqlite3CApi(
     private val sqlite: SqliteBindings
 ) {

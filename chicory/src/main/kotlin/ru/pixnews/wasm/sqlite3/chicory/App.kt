@@ -12,8 +12,9 @@ import com.dylibso.chicory.wasm.types.Value
 import kotlin.time.measureTimedValue
 import ru.pixnews.sqlite3.wasm.Sqlite3Wasm
 import ru.pixnews.wasm.sqlite3.chicory.sqlite3.Sqlite3CApi
-import ru.pixnews.wasm.sqlite3.chicory.sqlite3.SqliteBindings
-import ru.pixnews.wasm.sqlite3.chicory.sqlite3.WasiSnapshotPreview1Builtins
+import ru.pixnews.wasm.sqlite3.chicory.bindings.SqliteBindings
+import ru.pixnews.wasm.sqlite3.chicory.host.SyscallBindings
+import ru.pixnews.wasm.sqlite3.chicory.host.WasiSnapshotPreview1Builtins
 
 fun main() {
     //testFactorial()
@@ -40,9 +41,11 @@ private fun testSqlite() {
             )
         )
         val fsWasiBuildins = WasiSnapshotPreview1Builtins()
+        val envSyscallBindings = SyscallBindings()
 
         val hostImports = HostImports(
-            fsWasiBuildins.functions.toTypedArray(),
+            (envSyscallBindings.functions
+                    + fsWasiBuildins.functions).toTypedArray(),
             arrayOf<HostGlobal>(),
             hostMemory,
             arrayOf<HostTable>()

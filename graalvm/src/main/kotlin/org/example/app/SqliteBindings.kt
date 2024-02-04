@@ -1,5 +1,6 @@
 package org.example.app
 
+import org.example.app.ext.readNullTerminatedString
 import org.graalvm.polyglot.Value
 
 class SqliteBindings(

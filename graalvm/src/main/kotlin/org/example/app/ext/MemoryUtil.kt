@@ -1,4 +1,4 @@
-package org.example.app
+package org.example.app.ext
 
 import java.io.ByteArrayOutputStream
 import org.graalvm.polyglot.Value
@@ -13,12 +13,12 @@ fun Value.readNullTerminatedString(offsetValue: Value): String? {
 
 fun Value.readNullTerminatedString(offset: Long): String {
     val mem = ByteArrayOutputStream()
-    var b: Byte
     var l = offset
     do {
-        b = readBufferByte(l++)
+        val b = this.readBufferByte(l++)
+        if (b == 0.toByte()) break
         mem.write(b.toInt())
-    } while (b != 0.toByte())
+    } while (true)
 
     return mem.toString()
 }
