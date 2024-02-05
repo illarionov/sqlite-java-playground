@@ -15,7 +15,7 @@ public value class Timestamp(
         check(value.type() == ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Timestamp.Companion.tag)
     }
 
-    public companion object {
-        public val tag = ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.U64
+    public companion object : WasiType {
+        public override val tag = U64
     }
 }

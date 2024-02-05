@@ -6,13 +6,13 @@ import java.io.ByteArrayOutputStream
 
 fun Memory.readNullTerminatedString(offsetValue: Value): String? {
     return if (offsetValue.asExtRef() != Value.REF_NULL_VALUE) {
-        this.readNullTerminatedString(offsetValue.asInt())
+        this.readNullTerminatedString(offsetValue.asWasmAddr())
     } else {
         null
     }
 }
 
-fun Memory.readNullTerminatedString(offset: Int): String {
+fun Memory.readNullTerminatedString(offset: WasmAddr): String {
     val mem = ByteArrayOutputStream()
     var l = offset
     do {
@@ -23,3 +23,17 @@ fun Memory.readNullTerminatedString(offset: Int): String {
 
     return mem.toString()
 }
+
+fun Memory.writeNullTerminatedString(
+    offset: WasmAddr,
+    value: String,
+): Int {
+    val encoded = value.encodeToByteArray()
+    write(offset, encoded)
+    writeByte(offset + encoded.size, 0)
+    return encoded.size + 1
+}
+
+fun String.encodedStringLength(): Int = this.encodeToByteArray().size
+
+fun String.encodedNullTerminatedStringLength(): Int = this.encodeToByteArray().size + 1

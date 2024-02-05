@@ -9,7 +9,7 @@ import com.dylibso.chicory.wasm.types.ValueType
 @JvmInline
 public value class Oflags(
     val rawMask: UShort,
-) {
+)  {
     public constructor(
         vararg flags: Oflags
     ) : this(
@@ -46,7 +46,7 @@ public value class Oflags(
         private constructor(bit: Int) : this(1.shl(bit).toUShort())
     }
 
-    public companion object {
-        val tag: ValueType = ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.U16
+    public companion object : WasiType {
+        override val tag: ValueType = U16
     }
 }

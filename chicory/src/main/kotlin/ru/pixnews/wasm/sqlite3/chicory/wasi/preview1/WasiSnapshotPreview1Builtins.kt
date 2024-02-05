@@ -1,11 +1,12 @@
-package ru.pixnews.wasm.sqlite3.chicory.host
+package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1
 
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.wasm.types.Value
 import com.dylibso.chicory.wasm.types.ValueType
 import ru.pixnews.wasm.sqlite3.chicory.ext.ParamTypes
-import ru.pixnews.wasm.sqlite3.chicory.host.wasifs.environSizeGetHostFunction
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.environGet
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.environSizesGet
 
 //  https://github.com/WebAssembly/WASI/tree/main
 class WasiSnapshotPreview1Builtins(
@@ -31,16 +32,7 @@ class WasiSnapshotPreview1Builtins(
         ParamTypes.i32i32,
         ParamTypes.i32,
     )
-    val environGet: HostFunction = HostFunction(
-        { instance: Instance, args: Array<Value> ->
-            TODO()
-            arrayOf(Value.i32(0))
-        },
-        moduleName,
-        "environ_get",
-        ParamTypes.i32i32,
-        ParamTypes.i32,
-    )
+
     val clockTimeGet: HostFunction = HostFunction(
         { instance: Instance, args: Array<Value> ->
             TODO()
@@ -285,8 +277,8 @@ class WasiSnapshotPreview1Builtins(
     val functions: List<HostFunction> = listOf(
         argsSizesGet,
         argsGet,
-        environSizeGetHostFunction(),
-        environGet,
+        environSizesGet(),
+        environGet(),
         clockTimeGet,
         fdWrite,
         fdRead,

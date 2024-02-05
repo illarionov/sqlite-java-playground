@@ -10,9 +10,9 @@ import com.dylibso.chicory.wasm.types.ValueType
 public value class FileDelta(
     val rawValue: Int,
 ) {
-    val value: Value get() = Value(ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.FileDelta.Companion.tag, rawValue)
+    val value: Value get() = Value(tag, rawValue)
 
-    public companion object {
-        public val tag: ValueType = ValueType.I32
+    public companion object : WasiType {
+        public override val tag: ValueType = ValueType.I32
     }
 }

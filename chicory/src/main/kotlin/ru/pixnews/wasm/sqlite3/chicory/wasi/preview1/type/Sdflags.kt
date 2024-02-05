@@ -36,7 +36,7 @@ public value class Sdflags(
 
         private constructor(bit: Int) : this(1U.shl(bit).toUByte())
     }
-    public companion object {
-        val tag: ValueType = ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.U8
+    public companion object : WasiType {
+        override val tag: ValueType = U8
     }
 }

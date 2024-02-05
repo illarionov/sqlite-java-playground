@@ -28,7 +28,7 @@ public enum class Whence(
 
     private constructor(id: Long) : this(Value.i32(id))
 
-    public companion object {
-        val tag: ValueType = ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.U8
+    public companion object : WasiType {
+        override val tag: ValueType = U8
     }
 }

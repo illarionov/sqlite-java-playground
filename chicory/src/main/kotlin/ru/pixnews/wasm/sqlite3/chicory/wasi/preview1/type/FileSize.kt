@@ -16,7 +16,7 @@ public value class FileSize(
         check(value.type() == tag)
     }
 
-    public companion object {
-        public val tag: ValueType = ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.U64
+    public companion object : WasiType {
+        public override val tag: ValueType = U64
     }
 }

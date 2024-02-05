@@ -37,7 +37,7 @@ public value class Riflags(
         private constructor(bit: Int) : this(1.shl(bit).toUShort())
     }
 
-    public companion object {
-        val tag: ValueType = ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.U16
+    public companion object : WasiType {
+        override val tag: ValueType = U16
     }
 }

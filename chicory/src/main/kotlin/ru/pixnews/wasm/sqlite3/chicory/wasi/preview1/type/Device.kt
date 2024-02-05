@@ -8,7 +8,7 @@ public value class Device(
 ) {
     val value: Value get() = Value(ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Device.Companion.tag, rawValue.toLong())
 
-    public companion object {
-        public val tag = ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.U64
+    public companion object : WasiType {
+        public override val tag = U64
     }
 }

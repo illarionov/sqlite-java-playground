@@ -1,5 +1,7 @@
 package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type
 
+import com.dylibso.chicory.wasm.types.ValueType
+
 /**
  * A directory entry.
  *
@@ -13,4 +15,8 @@ data class Dirent(
     val dIno: Inode, // (field $d_ino $inode)
     val dNamlen: Dirnamlen, // (field $d_namlen $dirnamlen)
     val dType: Filetype, // (field $d_type $filetype)
-)
+) {
+    companion object : WasiType {
+        override val tag: ValueType = U32
+    }
+}

@@ -32,7 +32,7 @@ public value class LookupFlags(
         private constructor(bit: Byte) : this(1U.shl(bit.toInt()))
     }
 
-    public companion object {
-        val tag: ValueType = ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.U32
+    public companion object : WasiType {
+        override val tag: ValueType = U32
     }
 }

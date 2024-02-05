@@ -9,7 +9,7 @@ public value class ExitCode(
 ) {
     val value: Value get() = Value(tag, rawValue.toLong())
 
-    public companion object {
-        public val tag: ValueType = ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.U32
+    public companion object : WasiType {
+        public override val tag: ValueType = U32
     }
 }

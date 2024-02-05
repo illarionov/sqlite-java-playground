@@ -1,5 +1,7 @@
 package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type
 
+import com.dylibso.chicory.wasm.types.ValueType
+
 /**
  * File attributes.
  */
@@ -53,4 +55,8 @@ public data class Filestat(
      * timestamp for this file.
      */
     val ctim: ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Timestamp, // (field $ctim $timestamp)
-)
+) {
+    public companion object : WasiType {
+        public override val tag: ValueType = ValueType.I32
+    }
+}

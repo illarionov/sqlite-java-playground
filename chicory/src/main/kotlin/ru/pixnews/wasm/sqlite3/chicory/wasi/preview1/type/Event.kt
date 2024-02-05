@@ -1,5 +1,7 @@
 package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type
 
+import com.dylibso.chicory.wasm.types.ValueType
+
 /**
  * An event that occurred.
  *
@@ -10,8 +12,12 @@ package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type
  * `eventtype::clock` events ignore this field.
  */
 public data class Event(
-    val userdata: ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Userdata, // (field $userdata $userdata)
-    val error: ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno, // (field $error $errno)
-    val type: ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Eventtype, // (field $type $eventtype)
-    val fdReadwrite: ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.EventFdReadwrite, // (field $fd_readwrite $event_fd_readwrite)
-)
+    val userdata: Userdata, // (field $userdata $userdata)
+    val error: Errno, // (field $error $errno)
+    val type: Eventtype, // (field $type $eventtype)
+    val fdReadwrite: EventFdReadwrite, // (field $fd_readwrite $event_fd_readwrite)
+) {
+    companion object : WasiType {
+        override val tag: ValueType = U32
+    }
+}

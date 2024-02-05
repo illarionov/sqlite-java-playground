@@ -1,6 +1,7 @@
 package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type
 
 import com.dylibso.chicory.wasm.types.Value
+import com.dylibso.chicory.wasm.types.ValueType
 
 /**
  * A region of memory for scatter/gather writes.
@@ -10,5 +11,9 @@ import com.dylibso.chicory.wasm.types.Value
  */
 data class CioVec(
     val buf: Value, // (@witx const_pointer u8))
-    val bufLen: ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Size // (field $buf_len $size)
-)
+    val bufLen: Size // (field $buf_len $size)
+) {
+    companion object : WasiType {
+        override val tag: ValueType = U32
+    }
+}

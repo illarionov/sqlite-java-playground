@@ -1,5 +1,7 @@
 package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type
 
+import com.dylibso.chicory.wasm.types.ValueType
+
 /**
  * The contents of a `subscription` when type is `eventtype::clock`.
  *
@@ -9,8 +11,12 @@ package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type
  * @param flags Flags specifying whether the timeout is absolute or relative
  */
 public data class SubscriptionClock(
-    val id: ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.ClockId, // (field $id $clockid)
-    val timeout: ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Timestamp, // (field $timeout $timestamp)
-    val precision: ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Timestamp, // (field $precision $timestamp)
-    val flags: ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Subclockflags, // (field $flags $subclockflags)
-)
+    val id: ClockId, // (field $id $clockid)
+    val timeout: Timestamp, // (field $timeout $timestamp)
+    val precision: Timestamp, // (field $precision $timestamp)
+    val flags: Subclockflags, // (field $flags $subclockflags)
+) {
+    public companion object : WasiType {
+        public override val tag: ValueType = ValueType.I32
+    }
+}

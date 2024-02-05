@@ -4,7 +4,7 @@ import com.dylibso.chicory.wasm.types.Value
 import com.dylibso.chicory.wasm.types.ValueType
 
 public enum class Errno(
-    public val id: Value,
+    public val value: Value,
 ) {
     /**
      * No error occurred. System call completed successfully.
@@ -395,7 +395,7 @@ public enum class Errno(
 
     private constructor(i: Long) : this(Value.i32(i))
 
-    public companion object {
-        val tag: ValueType = ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.U16
+    public companion object : WasiType {
+        override val tag: ValueType = U16
     }
 }

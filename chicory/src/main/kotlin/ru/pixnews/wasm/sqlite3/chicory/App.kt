@@ -14,7 +14,7 @@ import ru.pixnews.sqlite3.wasm.Sqlite3Wasm
 import ru.pixnews.wasm.sqlite3.chicory.sqlite3.Sqlite3CApi
 import ru.pixnews.wasm.sqlite3.chicory.bindings.SqliteBindings
 import ru.pixnews.wasm.sqlite3.chicory.host.SyscallBindings
-import ru.pixnews.wasm.sqlite3.chicory.host.WasiSnapshotPreview1Builtins
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WasiSnapshotPreview1Builtins
 
 fun main() {
     //testFactorial()

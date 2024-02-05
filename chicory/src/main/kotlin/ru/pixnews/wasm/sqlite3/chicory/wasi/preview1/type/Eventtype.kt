@@ -31,7 +31,7 @@ public enum class Eventtype(
 
     private constructor(id: Long) : this(Value.i32(id))
 
-    companion object {
-        val tag: ValueType = ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.U8
+    companion object : WasiType {
+        override val tag: ValueType = ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.U8
     }
 }

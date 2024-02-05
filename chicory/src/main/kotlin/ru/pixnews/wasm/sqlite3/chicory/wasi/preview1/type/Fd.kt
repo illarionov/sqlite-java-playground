@@ -13,10 +13,10 @@ public value class Fd(
     constructor(value: Long) : this(Value.i32(value))
 
     init {
-        check(value.type() == ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Fd.Companion.tag)
+        check(value.type() == tag)
     }
 
-    public companion object {
-        public val tag: ValueType = ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Handle
+    public companion object : WasiType {
+        public override val tag: ValueType = Handle
     }
 }

@@ -1,5 +1,7 @@
 package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type
 
+import com.dylibso.chicory.wasm.types.ValueType
+
 /**
  * File descriptor attributes.
  *
@@ -10,8 +12,12 @@ package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type
  * through this file descriptor, e.g., through `path_open`.
  */
 public data class FdStat(
-    val fsFiletype: ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Filetype, // (field $fs_filetype $filetype)
-    val fsFlags: ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.FdFlags, // (field $fs_flags $fdflags)
-    val fsRightsBase: ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Rights, // (field $fs_rights_base $rights)
-    val fsRightsInheriting: ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Rights // (field $fs_rights_inheriting $rights)
-)
+    val fsFiletype: Filetype, // (field $fs_filetype $filetype)
+    val fsFlags: FdFlags, // (field $fs_flags $fdflags)
+    val fsRightsBase: Rights, // (field $fs_rights_base $rights)
+    val fsRightsInheriting: Rights // (field $fs_rights_inheriting $rights)
+)  {
+    public companion object : WasiType {
+        override val tag: ValueType = ValueType.I32
+    }
+}

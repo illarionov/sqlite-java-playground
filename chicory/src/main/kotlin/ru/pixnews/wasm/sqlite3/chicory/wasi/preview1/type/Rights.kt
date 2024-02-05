@@ -6,7 +6,7 @@ import com.dylibso.chicory.wasm.types.ValueType
 @JvmInline
 public value class Rights(
     public val mask: Value
-) {
+)  {
     public constructor(
         vararg flags: Flags
     ) : this(
@@ -198,7 +198,7 @@ public value class Rights(
         private constructor(bit: Int) : this(1UL.shl(bit))
     }
 
-    public companion object {
-        val tag: ValueType = ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.U16
+    public companion object : WasiType {
+        override val tag: ValueType = U16
     }
 }
