@@ -1,5 +1,6 @@
 package ru.pixnews.wasm.sqlite3.chicory
 
+import SqliteBasicDemo1
 import com.dylibso.chicory.runtime.HostGlobal
 import com.dylibso.chicory.runtime.HostImports
 import com.dylibso.chicory.runtime.HostMemory
@@ -30,42 +31,44 @@ private fun testSqlite() {
             Module.builder(it)
                 .build()
         }
-        val hostMemory = HostMemory(
-            /* moduleName = */ "env",
-            /* fieldName = */ "memory",
-            /* memory = */ Memory(
-                MemoryLimits(
-                    INITIAL_MEMORY_PAGES,
-                    MAX_MEMORY_PAGES
-                )
-            )
-        )
-        val fsWasiBuildins = WasiSnapshotPreview1Builtins()
-        val envSyscallBindings = SyscallBindings()
-
-        val hostImports = HostImports(
-            (envSyscallBindings.functions
-                    + fsWasiBuildins.functions).toTypedArray(),
-            arrayOf<HostGlobal>(),
-            hostMemory,
-            arrayOf<HostTable>()
-        )
+        val hostImports = setupHostImports()
         val instance: Instance = sqlite3Module.instantiate(hostImports)
 
         val bingings = SqliteBindings(
-            hostMemory.memory(),
+            hostImports.memory(0).memory(),
             instance
         )
 
         bingings
     }
-    val api = Sqlite3CApi(bindings)
+    println("wasm: init duration: $evalDuration")
 
-    val (result, resultDuration) = measureTimedValue {
-        api.version
-    }
+    val demo1 = SqliteBasicDemo1(bindings)
+    demo1.run()
+}
 
-    println("wasm: sqlite3_libversion_number = $result. duration: $evalDuration / $resultDuration")
+private fun setupHostImports() : HostImports {
+    val fsWasiBuildins = WasiSnapshotPreview1Builtins()
+    val envSyscallBindings = SyscallBindings()
+
+    val hostMemory = HostMemory(
+        /* moduleName = */ "env",
+        /* fieldName = */ "memory",
+        /* memory = */ Memory(
+            MemoryLimits(
+                INITIAL_MEMORY_PAGES,
+                MAX_MEMORY_PAGES
+            )
+        )
+    )
+
+    return HostImports(
+        (envSyscallBindings.functions
+                + fsWasiBuildins.functions).toTypedArray(),
+        arrayOf<HostGlobal>(),
+        hostMemory,
+        arrayOf<HostTable>()
+    )
 }
 
 private fun testFactorial() {
