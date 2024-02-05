@@ -16,6 +16,11 @@ class SqliteBasicDemo1(
         val enumJson = sqlite.wasmEnumJson
         log.info { "Internal structures: $enumJson" }
 
+        val dbRes = sqlite.sqlite3_open.execute(
+            "mydb.db",
+            // TODO: p
+        )
+
         val db = oopApi.db("/mydb.sqlite3", "ct")
         log.info { "transient db: ${db.filename}" }
 

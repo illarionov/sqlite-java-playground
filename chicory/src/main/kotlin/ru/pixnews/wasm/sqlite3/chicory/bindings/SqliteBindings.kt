@@ -2,25 +2,24 @@ package ru.pixnews.wasm.sqlite3.chicory.bindings
 
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.Memory
+import com.dylibso.chicory.wasm.types.Value
+import ru.pixnews.wasm.sqlite3.chicory.ext.WASM_ADDR_SIZE
+import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
+import ru.pixnews.wasm.sqlite3.chicory.ext.isNull
+import ru.pixnews.wasm.sqlite3.chicory.ext.readAddr
 import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
+import ru.pixnews.wasm.sqlite3.chicory.ext.writeNullTerminatedString
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Size
 
 class SqliteBindings(
     public val memory: Memory,
     private val runtimeInstance: Instance,
 ) {
-
     val _initialize = runtimeInstance.export("_initialize") // 34
     // val __errno_location = runtimeInstance.export("__errno_location") // 2644
     // val __wasm_call_ctors = runtimeInstance.export("__wasm_call_ctors") // 34
     val __indirect_function_table = runtimeInstance.export("__indirect_function_table") // 0
-
-    val malloc = runtimeInstance.export("malloc") // 2815
-    val free = runtimeInstance.export("free") // 2816
-    val realloc = runtimeInstance.export("realloc") // 2817
-    val stackSave = runtimeInstance.export("stackSave") // 2838
-    val stackRestore = runtimeInstance.export("stackRestore") // 2839
-    // val stackAlloc = runtimeInstance.export("stackAlloc") // 2840
-    // val emscripten_builtin_memalign = runtimeInstance.export("emscripten_builtin_memalign") // 2819
 
     val sqlite3_status64 = runtimeInstance.export("sqlite3_status64") // 35
     val sqlite3_status = runtimeInstance.export("sqlite3_status") // 38
@@ -28,13 +27,9 @@ class SqliteBindings(
     val sqlite3_msize = runtimeInstance.export("sqlite3_msize") // 48
     val sqlite3_vfs_find = runtimeInstance.export("sqlite3_vfs_find") // 58
     val sqlite3_initialize = runtimeInstance.export("sqlite3_initialize") // 59
-    val sqlite3_malloc = runtimeInstance.export("sqlite3_malloc") // 63
-    val sqlite3_free = runtimeInstance.export("sqlite3_free") // 64
     val sqlite3_vfs_register = runtimeInstance.export("sqlite3_vfs_register") // 66
     val sqlite3_vfs_unregister = runtimeInstance.export("sqlite3_vfs_unregister") // 69
-    val sqlite3_malloc64 = runtimeInstance.export("sqlite3_malloc64") // 73
-    val sqlite3_realloc = runtimeInstance.export("sqlite3_realloc") // 74
-    val sqlite3_realloc64 = runtimeInstance.export("sqlite3_realloc64") // 76
+
     val sqlite3_value_text = runtimeInstance.export("sqlite3_value_text") // 95
     val sqlite3_randomness = runtimeInstance.export("sqlite3_randomness") // 107
     val sqlite3_stricmp = runtimeInstance.export("sqlite3_stricmp") // 108
@@ -147,7 +142,7 @@ class SqliteBindings(
     val sqlite3_total_changes64 = runtimeInstance.export("sqlite3_total_changes64") // 464
     val sqlite3_total_changes = runtimeInstance.export("sqlite3_total_changes") // 465
     val sqlite3_txn_state = runtimeInstance.export("sqlite3_txn_state") // 466
-    val sqlite3_close_v2 = runtimeInstance.export("sqlite3_close_v2") // 471
+    private val sqlite3_close_v2 = runtimeInstance.export("sqlite3_close_v2") // 471
     val sqlite3_busy_handler = runtimeInstance.export("sqlite3_busy_handler") // 472
     val sqlite3_progress_handler = runtimeInstance.export("sqlite3_progress_handler") // 473
     val sqlite3_busy_timeout = runtimeInstance.export("sqlite3_busy_timeout") // 474
@@ -165,7 +160,7 @@ class SqliteBindings(
     val sqlite3_extended_errcode = runtimeInstance.export("sqlite3_extended_errcode") // 501
     val sqlite3_errstr = runtimeInstance.export("sqlite3_errstr") // 502
     val sqlite3_limit = runtimeInstance.export("sqlite3_limit") // 503
-    val sqlite3_open = runtimeInstance.export("sqlite3_open") // 504
+    private val sqlite3_open = runtimeInstance.export("sqlite3_open") // 504
     val sqlite3_open_v2 = runtimeInstance.export("sqlite3_open_v2") // 515
     val sqlite3_create_collation = runtimeInstance.export("sqlite3_create_collation") // 516
     val sqlite3_create_collation_v2 = runtimeInstance.export("sqlite3_create_collation_v2") // 517
@@ -261,6 +256,8 @@ class SqliteBindings(
     val sqlite3_wasm_test_str_hello = runtimeInstance.export("sqlite3__wasm_test_str_hello") // 689
     val sqlite3_wasm_SQLTester_strglob = runtimeInstance.export("sqlite3__wasm_SQLTester_strglob") // 690
 
+    public val dynamicMemory = SqliteDynamicMem(memory, runtimeInstance)
+
     val version: String
         get() {
             val resultPtr = sqlite3_libversion.apply()[0]
@@ -282,6 +279,44 @@ class SqliteBindings(
             return memory.readNullTerminatedString(resultPtr)
         }
 
+    fun sqlite3Open(
+        filename: String,
+    ): Value {
+        var ppDb: Value? = null
+        var pFileName: Value? = null
+        var pDb: Value? = null
+        try {
+            ppDb = dynamicMemory.allocOrThrow(WASM_ADDR_SIZE)
+            pFileName = dynamicMemory.allocNullTerminatedString(filename)
+
+            val result = sqlite3_open.apply(pFileName, ppDb)
+
+            pDb = memory.readAddr(ppDb.asWasmAddr())
+            result.throwOnSqliteError("sqlite3_open_v2() failed")
+
+            return pDb
+        } finally {
+            ppDb?.let { dynamicMemory.free(it) }
+            pFileName?.let { dynamicMemory.free(it) }
+            pDb?.let { sqlite3Close(it) }
+        }
+    }
+
+    fun sqlite3Close(
+        sqliteDb: Value
+    ) {
+        sqlite3_close_v2.apply(sqliteDb)
+            .throwOnSqliteError("sqlite3_close_v2() failed")
+    }
+
+    private fun Array<Value>.throwOnSqliteError(msgPrefix: String?) {
+        check(this.size == 1) { "Not an errno" }
+        val errNo = this[0]
+        if (errNo != Errno.SUCCESS.value) {
+            throw Sqlite3Error(errNo, msgPrefix)
+        }
+    }
+
     init {
         initSqlite()
     }
@@ -291,4 +326,5 @@ class SqliteBindings(
         // __wasm_call_ctors.execute()
         _initialize.apply()
     }
+
 }

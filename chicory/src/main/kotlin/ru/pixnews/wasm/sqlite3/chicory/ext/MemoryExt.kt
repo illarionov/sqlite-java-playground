@@ -24,6 +24,8 @@ fun Memory.readNullTerminatedString(offset: WasmAddr): String {
     return mem.toString()
 }
 
+fun Memory.readAddr(offset: WasmAddr): Value = readI32(offset)
+
 fun Memory.writeNullTerminatedString(
     offset: WasmAddr,
     value: String,

@@ -397,5 +397,7 @@ public enum class Errno(
 
     public companion object : WasiType {
         override val tag: ValueType = U16
+
+        fun fromErrNoCode(code: Int): Errno? = entries.firstNotNullOfOrNull { if (it.value.asInt() == code) it else null }
     }
 }
