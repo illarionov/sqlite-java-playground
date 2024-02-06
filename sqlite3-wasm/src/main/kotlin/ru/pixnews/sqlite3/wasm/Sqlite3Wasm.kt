@@ -15,6 +15,12 @@ public object Sqlite3Wasm {
 
         val sqlite3_346: URL
             get() = getUrl("sqlite3_3460000.wasm")
+
+        val sqlite3_346_debug: URL
+            get() = getUrl("sqlite3_3460000_o0_stripped.wasm")
+
+        val sqlite3_346_debug_unstripped: URL
+            get() = getUrl("sqlite3_3460000_o0_unstripped.wasm")
     }
 
     public object WasiSdk {

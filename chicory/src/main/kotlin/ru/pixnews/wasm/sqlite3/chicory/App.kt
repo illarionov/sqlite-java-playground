@@ -33,7 +33,7 @@ const val MAX_MEMORY_PAGES = 4_294_967_296 / 65536
 
 private fun testSqlite() {
     val (bindings, evalDuration) = measureTimedValue {
-        val sqlite3Module = Sqlite3Wasm.Emscripten.sqlite3_346.openStream().use {
+        val sqlite3Module = Sqlite3Wasm.Emscripten.sqlite3_346_debug.openStream().use {
             Module.builder(it)
                 .build()
         }

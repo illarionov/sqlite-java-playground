@@ -293,10 +293,12 @@ class SqliteBindings(
             result.throwOnSqliteError("sqlite3_open() failed", pDb)
 
             return pDb
+        } catch (e: Throwable) {
+            pDb?.let { sqlite3Close(it) }
+            throw e
         } finally {
             ppDb?.let { dynamicMemory.free(it) }
             pFileName?.let { dynamicMemory.free(it) }
-            pDb?.let { sqlite3Close(it) }
         }
     }
 
