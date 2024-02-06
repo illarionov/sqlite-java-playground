@@ -10,6 +10,7 @@ import com.dylibso.chicory.runtime.Memory
 import com.dylibso.chicory.runtime.Module
 import com.dylibso.chicory.wasm.types.MemoryLimits
 import com.dylibso.chicory.wasm.types.Value
+import java.util.logging.LogManager
 import kotlin.time.measureTimedValue
 import ru.pixnews.sqlite3.wasm.Sqlite3Wasm
 import ru.pixnews.wasm.sqlite3.chicory.sqlite3.Sqlite3CApi
@@ -17,7 +18,12 @@ import ru.pixnews.wasm.sqlite3.chicory.bindings.SqliteBindings
 import ru.pixnews.wasm.sqlite3.chicory.host.SyscallBindings
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WasiSnapshotPreview1Builtins
 
+object App
+
 fun main() {
+    App::class.java.getResource("logging.properties")!!.openStream().use {
+        LogManager.getLogManager().readConfiguration(it)
+    }
     //testFactorial()
     testSqlite()
 }

@@ -5,12 +5,9 @@ import com.dylibso.chicory.runtime.Memory
 import com.dylibso.chicory.wasm.types.Value
 import ru.pixnews.wasm.sqlite3.chicory.ext.WASM_ADDR_SIZE
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
-import ru.pixnews.wasm.sqlite3.chicory.ext.isNull
 import ru.pixnews.wasm.sqlite3.chicory.ext.readAddr
 import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
-import ru.pixnews.wasm.sqlite3.chicory.ext.writeNullTerminatedString
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Size
 
 class SqliteBindings(
     public val memory: Memory,
@@ -258,26 +255,27 @@ class SqliteBindings(
 
     public val dynamicMemory = SqliteDynamicMem(memory, runtimeInstance)
 
-    val version: String
+    val sqlite3Version: String
         get() {
             val resultPtr = sqlite3_libversion.apply()[0]
             return checkNotNull(memory.readNullTerminatedString(resultPtr))
         }
 
-    val sourceId: String
+    val sqlite3SourceId: String
         get() {
             val resultPtr = sqlite3_sourceid.apply()[0].asInt()
             return checkNotNull(memory.readNullTerminatedString(resultPtr))
         }
 
-    val versionNumber: Int
+    val sqlite3VersionNumber: Int
         get() = sqlite3_libversion_number.apply()[0].asInt()
 
-    val wasmEnumJson: String?
+    val sqlite3WasmEnumJson: String?
         get() {
             val resultPtr = sqlite3_wasm_enum_json.apply()[0]
             return memory.readNullTerminatedString(resultPtr)
         }
+
 
     fun sqlite3Open(
         filename: String,
@@ -292,7 +290,7 @@ class SqliteBindings(
             val result = sqlite3_open.apply(pFileName, ppDb)
 
             pDb = memory.readAddr(ppDb.asWasmAddr())
-            result.throwOnSqliteError("sqlite3_open_v2() failed")
+            result.throwOnSqliteError("sqlite3_open() failed", pDb)
 
             return pDb
         } finally {
@@ -306,14 +304,46 @@ class SqliteBindings(
         sqliteDb: Value
     ) {
         sqlite3_close_v2.apply(sqliteDb)
-            .throwOnSqliteError("sqlite3_close_v2() failed")
+            .throwOnSqliteError("sqlite3_close_v2() failed", sqliteDb)
     }
 
-    private fun Array<Value>.throwOnSqliteError(msgPrefix: String?) {
+    fun sqlite3ErrMsg(
+        sqliteDb: Value
+    ): String? {
+        val p = sqlite3_errmsg.apply(sqliteDb)[0]
+        return memory.readNullTerminatedString(p)
+    }
+
+    fun sqlite3ErrCode(
+        sqliteDb: Value
+    ): Int {
+        return sqlite3_errcode.apply(sqliteDb)[0].asInt()
+    }
+
+    fun sqlite3ExtendedErrCode(
+        sqliteDb: Value
+    ): Int {
+        return sqlite3_extended_errcode.apply(sqliteDb)[0].asInt()
+    }
+
+    private fun Array<Value>.throwOnSqliteError(
+        msgPrefix: String?,
+        sqliteDb: Value? = null,
+    ) {
         check(this.size == 1) { "Not an errno" }
         val errNo = this[0]
         if (errNo != Errno.SUCCESS.value) {
-            throw Sqlite3Error(errNo, msgPrefix)
+            val extendedErrCode: Int
+            val errMsg: String
+            if (sqliteDb != null) {
+                extendedErrCode = sqlite3ExtendedErrCode(sqliteDb)
+                errMsg = sqlite3ErrMsg(sqliteDb) ?: "null"
+            } else {
+                extendedErrCode = -1
+                errMsg = ""
+            }
+
+            throw Sqlite3Error(errNo.asInt(), extendedErrCode, msgPrefix, errMsg)
         }
     }
 

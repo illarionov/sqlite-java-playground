@@ -23,13 +23,14 @@ class SqliteBasicDemo1(
     }
 
     private fun pringWasmEnumJson(): String? {
-        return sqliteBindings.wasmEnumJson.also {
+        return sqliteBindings.sqlite3WasmEnumJson.also {
             log.info { "wasm: $it" }
         }
     }
 
     private fun openDb() {
-        val dbPointer: Value = sqliteBindings.sqlite3Open("test.db")
+        //val dbPointer: Value = sqliteBindings.sqlite3Open("/test.db")
+        val dbPointer: Value = sqliteBindings.sqlite3Open(":memory:")
 
         sqliteBindings.sqlite3Close(dbPointer)
     }

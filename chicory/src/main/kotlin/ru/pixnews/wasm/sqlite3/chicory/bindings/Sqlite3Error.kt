@@ -1,28 +1,42 @@
 package ru.pixnews.wasm.sqlite3.chicory.bindings
 
 import com.dylibso.chicory.wasm.types.Value
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
 
 class Sqlite3Error(
-    val errNo: Int,
-    private val prefix: String? = null
+    val sqliteErrorCode: Int,
+    val sqliteExetendedErrorCode: Int,
+    private val prefix: String? = null,
+    private val sqliteMsg: String? = null
 ) : RuntimeException(
     buildString {
         append("Sqlite error ")
-        append(errNoName(errNo))
+        append(sqlite3ErrNoName(sqliteErrorCode))
+        append("/")
+        append(sqlite3ErrNoName(sqliteExetendedErrorCode))
         if (prefix?.isNotEmpty() == true) {
             append(": ")
             append(prefix)
         }
+        if (sqliteMsg != null) {
+            append("; ")
+            append(sqliteMsg)
+        }
     }
 ) {
     constructor(
-        errNo: Value,
-        msg: String? = null
-    ) : this(errNo.asInt(), msg)
+        sqliteErrorCode: Value,
+        sqliteExtendedErrorCode: Value,
+        msg: String? = null,
+        sqliteMsg: String? = null,
+    ) : this(
+        sqliteErrorCode.asInt(),
+        sqliteExtendedErrorCode.asInt(),
+        msg,
+        sqliteMsg,
+    )
 
     public companion object {
-        fun errNoName(errNo: Int): String = Errno.fromErrNoCode(errNo)?.name ?: errNo.toString()
+        fun sqlite3ErrNoName(errNo: Int): String = Sqlite3Errno.fromErrNoCode(errNo)?.toString() ?: errNo.toString()
     }
 }
 
