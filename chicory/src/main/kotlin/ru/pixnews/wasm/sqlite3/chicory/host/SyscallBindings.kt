@@ -4,10 +4,16 @@ import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.wasm.types.Value
 import ru.pixnews.wasm.sqlite3.chicory.ext.ParamTypes
+import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
+import ru.pixnews.wasm.sqlite3.chicory.host.func.syscallGetcwd
+
+internal const val ENV_MODULE_NAME = "env"
 
 class SyscallBindings(
-    moduleName: String = "env"
+    moduleName: String = ENV_MODULE_NAME
 ) {
+    val filesystem = FileSystem()
+
     val syscallFaccessat: HostFunction = HostFunction(
         { instance: Instance, args: Array<Value> ->
             TODO()
@@ -58,16 +64,6 @@ class SyscallBindings(
         ParamTypes.i32i32,
         ParamTypes.i32,
     )
-    val syscallGetcwd: HostFunction = HostFunction(
-        { instance: Instance, args: Array<Value> ->
-            TODO()
-            arrayOf(Value.i32(0))
-        },
-        moduleName,
-        "__syscall_getcwd",
-        ParamTypes.i32i32,
-        ParamTypes.i32,
-    )
     val syscallReadlinkat: HostFunction = HostFunction(
         { instance: Instance, args: Array<Value> ->
             TODO()
@@ -115,7 +111,7 @@ class SyscallBindings(
         syscallChmod,
         syscallFchown32,
         syscallFtruncate64,
-        syscallGetcwd,
+        syscallGetcwd(filesystem),
         syscallReadlinkat,
         syscallRmdir,
         syscallUnlinkat,

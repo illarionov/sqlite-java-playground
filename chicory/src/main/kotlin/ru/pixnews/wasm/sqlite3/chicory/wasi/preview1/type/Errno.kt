@@ -4,7 +4,7 @@ import com.dylibso.chicory.wasm.types.Value
 import com.dylibso.chicory.wasm.types.ValueType
 
 public enum class Errno(
-    public val value: Value,
+    public val code: Int,
 ) {
     /**
      * No error occurred. System call completed successfully.
@@ -393,11 +393,11 @@ public enum class Errno(
 
     ;
 
-    private constructor(i: Long) : this(Value.i32(i))
+    public val value: Value get() = Value.i32(code.toLong())
 
     public companion object : WasiType {
         override val tag: ValueType = U16
 
-        fun fromErrNoCode(code: Int): Errno? = entries.firstNotNullOfOrNull { if (it.value.asInt() == code) it else null }
+        fun fromErrNoCode(code: Int): Errno? = entries.firstNotNullOfOrNull { if (it.code == code) it else null }
     }
 }
