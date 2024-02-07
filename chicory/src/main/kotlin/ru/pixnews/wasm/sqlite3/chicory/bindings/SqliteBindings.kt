@@ -7,6 +7,8 @@ import ru.pixnews.wasm.sqlite3.chicory.ext.WASM_ADDR_SIZE
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
 import ru.pixnews.wasm.sqlite3.chicory.ext.readAddr
 import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
+import ru.pixnews.wasm.sqlite3.chicory.sqlite3.model.Sqlite3Errno
+import ru.pixnews.wasm.sqlite3.chicory.sqlite3.model.Sqlite3Exception
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
 
 class SqliteBindings(
@@ -15,9 +17,9 @@ class SqliteBindings(
 ) {
     val memoryBindings = SqliteMemoryBindings(memory, runtimeInstance)
 
-    val _initialize = runtimeInstance.export("_initialize") // 34
+    //val _initialize = runtimeInstance.export("_initialize") // 34
     // val __errno_location = runtimeInstance.export("__errno_location") // 2644
-    // val __wasm_call_ctors = runtimeInstance.export("__wasm_call_ctors") // 34
+    val __wasm_call_ctors = runtimeInstance.export("__wasm_call_ctors") // 34
     val __indirect_function_table = runtimeInstance.export("__indirect_function_table") // 0
 
     val sqlite3_status64 = runtimeInstance.export("sqlite3_status64") // 35
@@ -282,7 +284,12 @@ class SqliteBindings(
 
     // globalThis.sqlite3InitModule
     private fun initSqlite() {
-        // __wasm_call_ctors.execute()
-        _initialize.apply()
+        __wasm_call_ctors.apply()
+        val sqliteInitResult = sqlite3_initialize.apply()[0].asInt()
+        if (sqliteInitResult != Sqlite3Errno.SQLITE_OK.code) {
+            throw Sqlite3Exception(sqliteInitResult, sqliteInitResult)
+        }
+
+        //_initialize.apply()
     }
 }

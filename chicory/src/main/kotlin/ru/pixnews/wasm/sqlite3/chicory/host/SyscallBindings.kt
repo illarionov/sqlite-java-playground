@@ -3,6 +3,7 @@ package ru.pixnews.wasm.sqlite3.chicory.host
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.wasm.types.Value
+import com.dylibso.chicory.wasm.types.ValueType
 import ru.pixnews.wasm.sqlite3.chicory.ext.ParamTypes
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
 import ru.pixnews.wasm.sqlite3.chicory.host.func.syscallGetcwd
@@ -14,6 +15,16 @@ class SyscallBindings(
 ) {
     val filesystem = FileSystem()
 
+    val assertFail: HostFunction = HostFunction(
+        { instance: Instance, args: Array<Value> ->
+            TODO()
+            arrayOf(Value.i32(0))
+        },
+        moduleName,
+        "__assert_fail",
+        ParamTypes.i32i32i32i32,
+        listOf(),
+    )
     val syscallFaccessat: HostFunction = HostFunction(
         { instance: Instance, args: Array<Value> ->
             TODO()
@@ -106,6 +117,7 @@ class SyscallBindings(
     )
 
     val functions: List<HostFunction> = listOf(
+        assertFail,
         syscallFaccessat,
         syscallFchmod,
         syscallChmod,

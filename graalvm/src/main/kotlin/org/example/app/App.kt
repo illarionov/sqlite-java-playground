@@ -45,7 +45,7 @@ private fun testSqlite() {
         }
 
         val sqliteSource: Source = run {
-            val sqliteUrl = Sqlite3Wasm.Emscripten.sqlite3_346
+            val sqliteUrl = Sqlite3Wasm.Emscripten.sqlite3_346_o0
             Source.newBuilder("wasm", sqliteUrl).build()
         }
         wasmContext.eval(sqliteSource)

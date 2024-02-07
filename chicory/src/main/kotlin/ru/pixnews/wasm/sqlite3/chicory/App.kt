@@ -13,7 +13,6 @@ import com.dylibso.chicory.wasm.types.Value
 import java.util.logging.LogManager
 import kotlin.time.measureTimedValue
 import ru.pixnews.sqlite3.wasm.Sqlite3Wasm
-import ru.pixnews.wasm.sqlite3.chicory.sqlite3.Sqlite3CApi
 import ru.pixnews.wasm.sqlite3.chicory.bindings.SqliteBindings
 import ru.pixnews.wasm.sqlite3.chicory.host.SyscallBindings
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WasiSnapshotPreview1Builtins
@@ -33,7 +32,7 @@ const val MAX_MEMORY_PAGES = 4_294_967_296 / 65536
 
 private fun testSqlite() {
     val (bindings, evalDuration) = measureTimedValue {
-        val sqlite3Module = Sqlite3Wasm.Emscripten.sqlite3_346_debug.openStream().use {
+        val sqlite3Module = Sqlite3Wasm.Emscripten.sqlite3_346_o0.openStream().use {
             Module.builder(it)
                 .build()
         }

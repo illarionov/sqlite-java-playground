@@ -39,8 +39,8 @@ class SqliteBasicDemo1(
     }
 
     private fun testDbSqliteVersion() {
-        //val dbPointer: Value = sqliteBindings.sqlite3Open("/test.db")
-        val dbPointer: Value = api.sqlite3Open(":memory:")
+        val dbPointer: Value = api.sqlite3Open("/test.db")
+        // val dbPointer: Value = api.sqlite3Open(":memory:")
 
         try {
             val result = api.sqlite3Exec(dbPointer, "SELECT SQLITE_VERSION()");
@@ -51,8 +51,8 @@ class SqliteBasicDemo1(
     }
 
     private fun testDbTable() {
-        //val dbPointer: Value = sqliteBindings.sqlite3Open("/test.db")
-        val dbPointer: Value = api.sqlite3Open(":memory:")
+        val dbPointer: Value = api.sqlite3Open("/test.db")
+        // val dbPointer: Value = api.sqlite3Open(":memory:")
 
         try {
             val requests = listOf(
