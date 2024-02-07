@@ -13,6 +13,8 @@ class SqliteBindings(
     public val memory: Memory,
     private val runtimeInstance: Instance,
 ) {
+    val memoryBindings = SqliteMemoryBindings(memory, runtimeInstance)
+
     val _initialize = runtimeInstance.export("_initialize") // 34
     // val __errno_location = runtimeInstance.export("__errno_location") // 2644
     // val __wasm_call_ctors = runtimeInstance.export("__wasm_call_ctors") // 34
@@ -139,7 +141,7 @@ class SqliteBindings(
     val sqlite3_total_changes64 = runtimeInstance.export("sqlite3_total_changes64") // 464
     val sqlite3_total_changes = runtimeInstance.export("sqlite3_total_changes") // 465
     val sqlite3_txn_state = runtimeInstance.export("sqlite3_txn_state") // 466
-    private val sqlite3_close_v2 = runtimeInstance.export("sqlite3_close_v2") // 471
+    val sqlite3_close_v2 = runtimeInstance.export("sqlite3_close_v2") // 471
     val sqlite3_busy_handler = runtimeInstance.export("sqlite3_busy_handler") // 472
     val sqlite3_progress_handler = runtimeInstance.export("sqlite3_progress_handler") // 473
     val sqlite3_busy_timeout = runtimeInstance.export("sqlite3_busy_timeout") // 474
@@ -157,7 +159,7 @@ class SqliteBindings(
     val sqlite3_extended_errcode = runtimeInstance.export("sqlite3_extended_errcode") // 501
     val sqlite3_errstr = runtimeInstance.export("sqlite3_errstr") // 502
     val sqlite3_limit = runtimeInstance.export("sqlite3_limit") // 503
-    private val sqlite3_open = runtimeInstance.export("sqlite3_open") // 504
+    val sqlite3_open = runtimeInstance.export("sqlite3_open") // 504
     val sqlite3_open_v2 = runtimeInstance.export("sqlite3_open_v2") // 515
     val sqlite3_create_collation = runtimeInstance.export("sqlite3_create_collation") // 516
     val sqlite3_create_collation_v2 = runtimeInstance.export("sqlite3_create_collation_v2") // 517
@@ -253,8 +255,6 @@ class SqliteBindings(
     val sqlite3_wasm_test_str_hello = runtimeInstance.export("sqlite3__wasm_test_str_hello") // 689
     val sqlite3_wasm_SQLTester_strglob = runtimeInstance.export("sqlite3__wasm_SQLTester_strglob") // 690
 
-    public val dynamicMemory = SqliteDynamicMem(memory, runtimeInstance)
-
     val sqlite3Version: String
         get() {
             val resultPtr = sqlite3_libversion.apply()[0]
@@ -276,79 +276,6 @@ class SqliteBindings(
             return memory.readNullTerminatedString(resultPtr)
         }
 
-
-    fun sqlite3Open(
-        filename: String,
-    ): Value {
-        var ppDb: Value? = null
-        var pFileName: Value? = null
-        var pDb: Value? = null
-        try {
-            ppDb = dynamicMemory.allocOrThrow(WASM_ADDR_SIZE)
-            pFileName = dynamicMemory.allocNullTerminatedString(filename)
-
-            val result = sqlite3_open.apply(pFileName, ppDb)
-
-            pDb = memory.readAddr(ppDb.asWasmAddr())
-            result.throwOnSqliteError("sqlite3_open() failed", pDb)
-
-            return pDb
-        } catch (e: Throwable) {
-            pDb?.let { sqlite3Close(it) }
-            throw e
-        } finally {
-            ppDb?.let { dynamicMemory.free(it) }
-            pFileName?.let { dynamicMemory.free(it) }
-        }
-    }
-
-    fun sqlite3Close(
-        sqliteDb: Value
-    ) {
-        sqlite3_close_v2.apply(sqliteDb)
-            .throwOnSqliteError("sqlite3_close_v2() failed", sqliteDb)
-    }
-
-    fun sqlite3ErrMsg(
-        sqliteDb: Value
-    ): String? {
-        val p = sqlite3_errmsg.apply(sqliteDb)[0]
-        return memory.readNullTerminatedString(p)
-    }
-
-    fun sqlite3ErrCode(
-        sqliteDb: Value
-    ): Int {
-        return sqlite3_errcode.apply(sqliteDb)[0].asInt()
-    }
-
-    fun sqlite3ExtendedErrCode(
-        sqliteDb: Value
-    ): Int {
-        return sqlite3_extended_errcode.apply(sqliteDb)[0].asInt()
-    }
-
-    private fun Array<Value>.throwOnSqliteError(
-        msgPrefix: String?,
-        sqliteDb: Value? = null,
-    ) {
-        check(this.size == 1) { "Not an errno" }
-        val errNo = this[0]
-        if (errNo != Errno.SUCCESS.value) {
-            val extendedErrCode: Int
-            val errMsg: String
-            if (sqliteDb != null) {
-                extendedErrCode = sqlite3ExtendedErrCode(sqliteDb)
-                errMsg = sqlite3ErrMsg(sqliteDb) ?: "null"
-            } else {
-                extendedErrCode = -1
-                errMsg = ""
-            }
-
-            throw Sqlite3Error(errNo.asInt(), extendedErrCode, msgPrefix, errMsg)
-        }
-    }
-
     init {
         initSqlite()
     }
@@ -358,5 +285,4 @@ class SqliteBindings(
         // __wasm_call_ctors.execute()
         _initialize.apply()
     }
-
 }

@@ -1,9 +1,8 @@
-package ru.pixnews.wasm.sqlite3.chicory.bindings
+package ru.pixnews.wasm.sqlite3.chicory.sqlite3.model
 
 import com.dylibso.chicory.wasm.types.Value
 import com.dylibso.chicory.wasm.types.ValueType
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.WasiType
-
 
 enum class Sqlite3Errno(
     public val code: Int,

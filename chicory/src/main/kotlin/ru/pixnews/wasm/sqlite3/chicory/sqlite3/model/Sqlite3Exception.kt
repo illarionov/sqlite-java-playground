@@ -1,8 +1,6 @@
-package ru.pixnews.wasm.sqlite3.chicory.bindings
+package ru.pixnews.wasm.sqlite3.chicory.sqlite3.model
 
-import com.dylibso.chicory.wasm.types.Value
-
-class Sqlite3Error(
+class Sqlite3Exception(
     val sqliteErrorCode: Int,
     val sqliteExetendedErrorCode: Int,
     private val prefix: String? = null,
@@ -23,20 +21,7 @@ class Sqlite3Error(
         }
     }
 ) {
-    constructor(
-        sqliteErrorCode: Value,
-        sqliteExtendedErrorCode: Value,
-        msg: String? = null,
-        sqliteMsg: String? = null,
-    ) : this(
-        sqliteErrorCode.asInt(),
-        sqliteExtendedErrorCode.asInt(),
-        msg,
-        sqliteMsg,
-    )
-
     public companion object {
         fun sqlite3ErrNoName(errNo: Int): String = Sqlite3Errno.fromErrNoCode(errNo)?.toString() ?: errNo.toString()
     }
 }
-

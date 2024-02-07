@@ -6,6 +6,8 @@ import com.dylibso.chicory.wasm.types.ValueType
 
 internal fun Value.asWasmAddr(): WasmAddr = asInt()
 
+internal fun WasmAddr.toValue(): Value = Value.i32(this.toLong())
+
 internal fun Value?.isNull(): Boolean {
     return when (this?.type()) {
         null -> true
@@ -19,3 +21,5 @@ internal fun Value?.isNull(): Boolean {
         ValueType.ExternRef -> this.asExtRef() == REF_NULL_VALUE
     }
 }
+
+internal val SQLITE3_NULL = Value.i32(0)

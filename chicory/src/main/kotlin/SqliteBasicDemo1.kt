@@ -1,18 +1,28 @@
 import com.dylibso.chicory.wasm.types.Value
 import java.util.logging.Logger
+import kotlin.time.measureTime
 import kotlin.time.measureTimedValue
 import ru.pixnews.wasm.sqlite3.chicory.bindings.SqliteBindings
 import ru.pixnews.wasm.sqlite3.chicory.sqlite3.Sqlite3CApi
+import ru.pixnews.wasm.sqlite3.chicory.sqlite3.model.Sqlite3Result
 
 class SqliteBasicDemo1(
     private val sqliteBindings: SqliteBindings,
     private val log: Logger = Logger.getLogger(SqliteBasicDemo1::class.simpleName)
 ) {
-    private val api = Sqlite3CApi(sqliteBindings)
+    private val api = Sqlite3CApi(
+        bindings = sqliteBindings,
+    )
+
     fun run() {
         printVersion()
         pringWasmEnumJson()
-        openDb()
+        // testDbSqliteVersion()
+
+        val t = measureTime {
+            testDbTable()
+        }
+        log.info { "time: $t" }
     }
 
     private fun printVersion() {
@@ -28,11 +38,37 @@ class SqliteBasicDemo1(
         }
     }
 
-    private fun openDb() {
+    private fun testDbSqliteVersion() {
         //val dbPointer: Value = sqliteBindings.sqlite3Open("/test.db")
-        val dbPointer: Value = sqliteBindings.sqlite3Open(":memory:")
+        val dbPointer: Value = api.sqlite3Open(":memory:")
 
-        sqliteBindings.sqlite3Close(dbPointer)
+        try {
+            val result = api.sqlite3Exec(dbPointer, "SELECT SQLITE_VERSION()");
+            log.info { "result: $result" }
+        } finally {
+            api.sqlite3Close(dbPointer)
+        }
     }
 
+    private fun testDbTable() {
+        //val dbPointer: Value = sqliteBindings.sqlite3Open("/test.db")
+        val dbPointer: Value = api.sqlite3Open(":memory:")
+
+        try {
+            val requests = listOf(
+                "CREATE TABLE User(id INTEGER PRIMARY KEY, name TEXT);",
+                """INSERT INTO User(`id`, `name`) VALUES (1, 'user 1'), (2, 'user 2'), (3, 'user 3');""",
+                """SELECT * FROM User;"""
+            )
+            for ((requestNo, sql) in requests.withIndex()) {
+                val result = api.sqlite3Exec(dbPointer, sql)
+                log.info { "${requestNo}: result: $result" }
+                if (result is Sqlite3Result.Error) {
+                    break
+                }
+            }
+        } finally {
+            api.sqlite3Close(dbPointer)
+        }
+    }
 }
