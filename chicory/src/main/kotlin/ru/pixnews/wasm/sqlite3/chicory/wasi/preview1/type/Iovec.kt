@@ -14,6 +14,6 @@ data class Iovec(
     val bufLen: Size // (field $buf_len $size)
 ) {
     public companion object : WasiType {
-        public override val tag: ValueType = ValueType.I32
+        public override val valueType: ValueType = ValueType.I32
     }
 }

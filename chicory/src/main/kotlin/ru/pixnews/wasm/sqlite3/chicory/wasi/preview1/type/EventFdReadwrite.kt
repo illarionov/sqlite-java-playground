@@ -14,6 +14,6 @@ public data class EventFdReadwrite(
     val flags: Eventrwflags, // field $flags $eventrwflags)
 ) {
     companion object : WasiType {
-        override val tag: ValueType = U32
+        override val valueType: ValueType = U32
     }
 }

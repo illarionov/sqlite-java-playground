@@ -3,7 +3,6 @@ package ru.pixnews.wasm.sqlite3.chicory.ext
 import com.dylibso.chicory.runtime.Memory
 import com.dylibso.chicory.wasm.types.Value
 import java.io.ByteArrayOutputStream
-import java.nio.charset.Charset
 
 fun Memory.readNullTerminatedString(offsetValue: Value): String? {
     return if (offsetValue.asExtRef() != Value.REF_NULL_VALUE) {
@@ -13,7 +12,7 @@ fun Memory.readNullTerminatedString(offsetValue: Value): String? {
     }
 }
 
-fun Memory.readNullTerminatedString(offset: WasmAddr): String {
+fun Memory.readNullTerminatedString(offset: WasmPtr): String {
     val mem = ByteArrayOutputStream()
     var l = offset
     do {
@@ -22,13 +21,13 @@ fun Memory.readNullTerminatedString(offset: WasmAddr): String {
         mem.write(b.toInt())
     } while (true)
 
-    return mem.toString()
+    return mem.toString(Charsets.UTF_8)
 }
 
-fun Memory.readAddr(offset: WasmAddr): Value = readI32(offset)
+fun Memory.readAddr(offset: WasmPtr): Value = readI32(offset)
 
 fun Memory.writeNullTerminatedString(
-    offset: WasmAddr,
+    offset: WasmPtr,
     value: String,
 ): Int {
     val encoded = value.encodeToByteArray()

@@ -3,7 +3,7 @@ package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type
 import com.dylibso.chicory.wasm.types.ValueType
 
 public interface WasiType {
-    val tag: ValueType
+    val valueType: ValueType
 }
 
 public val WasiType.pointer: ValueType

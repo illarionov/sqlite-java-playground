@@ -6,9 +6,9 @@ import com.dylibso.chicory.wasm.types.Value
 public value class Device(
     val rawValue: ULong
 ) {
-    val value: Value get() = Value(ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Device.Companion.tag, rawValue.toLong())
+    val value: Value get() = Value(ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Device.Companion.valueType, rawValue.toLong())
 
     public companion object : WasiType {
-        public override val tag = U64
+        public override val valueType = U64
     }
 }

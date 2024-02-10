@@ -16,7 +16,7 @@ public value class LookupFlags(
         flags.fold(0U) { acc, flag -> acc.or(flag.mask) }
     )
 
-    public val value: Value get() = Value(tag, rawMask.toLong())
+    public val value: Value get() = Value(valueType, rawMask.toLong())
 
     public enum class LookupFlag(
         val mask: UInt,
@@ -33,6 +33,6 @@ public value class LookupFlags(
     }
 
     public companion object : WasiType {
-        override val tag: ValueType = U32
+        override val valueType: ValueType = U32
     }
 }

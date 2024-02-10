@@ -18,6 +18,6 @@ public data class Event(
     val fdReadwrite: EventFdReadwrite, // (field $fd_readwrite $event_fd_readwrite)
 ) {
     companion object : WasiType {
-        override val tag: ValueType = U32
+        override val valueType: ValueType = U32
     }
 }

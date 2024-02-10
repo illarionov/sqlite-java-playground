@@ -19,6 +19,6 @@ public enum class Preopentype(
     private constructor(i: Long) : this(Value.i32(i))
 
     public companion object : WasiType {
-        override val tag: ValueType = U8
+        override val valueType: ValueType = U8
     }
 }

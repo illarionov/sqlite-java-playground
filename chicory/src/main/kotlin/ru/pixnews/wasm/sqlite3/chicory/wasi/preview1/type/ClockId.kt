@@ -37,6 +37,6 @@ enum class ClockId(
     private constructor(i: Long) : this(Value.i32(i))
 
     public companion object : WasiType {
-        override val tag: ValueType = U32
+        override val valueType: ValueType = U32
     }
 }

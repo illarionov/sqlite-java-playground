@@ -11,9 +11,9 @@ import com.dylibso.chicory.wasm.types.ValueType
 public value class Userdata(
     val rawValue: ULong,
 ) {
-    val value: Value get() = Value(tag, rawValue.toLong())
+    val value: Value get() = Value(valueType, rawValue.toLong())
 
     public companion object : WasiType {
-        public override val tag: ValueType = U64
+        public override val valueType: ValueType = U64
     }
 }

@@ -1,7 +1,7 @@
 [versions]
 kotlin-gradle-plugin = "1.9.20"
 graalvm = "23.1.2"
-chicory = "0.0.7"
+chicory = "999-SNAPSHOT"
 
 [libraries]
 chicory = { group = "com.dylibso.chicory", name = "runtime", version.ref = "chicory" }

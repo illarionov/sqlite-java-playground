@@ -4,6 +4,11 @@ plugins {
 }
 
 repositories {
+    mavenLocal {
+        mavenContent {
+            includeGroupAndSubgroups("com.dylibso.chicory")
+        }
+    }
     mavenCentral()
 }
 

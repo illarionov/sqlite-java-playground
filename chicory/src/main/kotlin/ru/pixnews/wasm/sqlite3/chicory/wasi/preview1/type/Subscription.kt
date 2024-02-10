@@ -14,6 +14,6 @@ public data class Subscription(
     val u: ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.SubscriptionU, // (field $u $subscription_u)
 ) {
     public companion object : WasiType {
-        public override val tag: ValueType = ValueType.I32
+        public override val valueType: ValueType = ValueType.I32
     }
 }

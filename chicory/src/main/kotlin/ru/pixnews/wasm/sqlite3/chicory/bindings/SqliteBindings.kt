@@ -2,14 +2,9 @@ package ru.pixnews.wasm.sqlite3.chicory.bindings
 
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.Memory
-import com.dylibso.chicory.wasm.types.Value
-import ru.pixnews.wasm.sqlite3.chicory.ext.WASM_ADDR_SIZE
-import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
-import ru.pixnews.wasm.sqlite3.chicory.ext.readAddr
 import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
 import ru.pixnews.wasm.sqlite3.chicory.sqlite3.model.Sqlite3Errno
 import ru.pixnews.wasm.sqlite3.chicory.sqlite3.model.Sqlite3Exception
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
 
 class SqliteBindings(
     public val memory: Memory,
@@ -285,11 +280,34 @@ class SqliteBindings(
     // globalThis.sqlite3InitModule
     private fun initSqlite() {
         __wasm_call_ctors.apply()
+        memoryBindings.init()
+        postRun()
+
+        //_initialize.apply()
+    }
+
+    private fun postRun() {
+        val config = mapOf(
+            "exports" to null,
+            "memory" to null,
+            "bigIntEnabled" to true,
+            "debug" to  null, // console.debug.bind(console)
+            "warn" to  null, // console.warn.bind(console)
+            "error" to  null, // console.error.bind(console)
+            "log" to  null, // console.log.bind(console)
+
+            "wasmfsOpfsDir" to  "/opfs",
+            "useStdAlloc" to false,
+
+            "allocExportName" to "sqlite3_malloc",
+            "deallocExportName" to "sqlite3_free",
+            "reallocExportName" to "sqlite3_realloc",
+
+        )
+
         val sqliteInitResult = sqlite3_initialize.apply()[0].asInt()
         if (sqliteInitResult != Sqlite3Errno.SQLITE_OK.code) {
             throw Sqlite3Exception(sqliteInitResult, sqliteInitResult)
         }
-
-        //_initialize.apply()
     }
 }

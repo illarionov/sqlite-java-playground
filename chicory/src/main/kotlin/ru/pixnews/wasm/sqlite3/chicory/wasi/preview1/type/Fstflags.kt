@@ -16,7 +16,7 @@ public value class Fstflags(
         flags.fold(0.toUShort()) { acc, flag -> acc.or(flag.mask) }
     )
 
-    public val value: Value get() = Value(tag, rawMask.toLong())
+    public val value: Value get() = Value(valueType, rawMask.toLong())
 
     public enum class Fstflags(
         val mask: UShort,
@@ -47,6 +47,6 @@ public value class Fstflags(
     }
 
     public companion object : WasiType {
-        override val tag: ValueType = U16
+        override val valueType: ValueType = U16
     }
 }

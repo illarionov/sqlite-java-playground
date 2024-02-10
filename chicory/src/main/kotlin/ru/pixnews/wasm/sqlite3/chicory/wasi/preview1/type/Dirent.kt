@@ -17,6 +17,6 @@ data class Dirent(
     val dType: Filetype, // (field $d_type $filetype)
 ) {
     companion object : WasiType {
-        override val tag: ValueType = U32
+        override val valueType: ValueType = U32
     }
 }

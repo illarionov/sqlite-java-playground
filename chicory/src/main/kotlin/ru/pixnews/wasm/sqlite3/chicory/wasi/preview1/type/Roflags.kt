@@ -16,7 +16,7 @@ public value class Roflags(
         flags.fold(0.toUShort()) { acc, flag -> acc.or(flag.mask) }
     )
 
-    public val value: Value get() = Value(ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.FdFlags.tag, rawMask.toLong())
+    public val value: Value get() = Value(ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.FdFlags.valueType, rawMask.toLong())
 
 
     public enum class RoFlags(
@@ -33,6 +33,6 @@ public value class Roflags(
     }
 
     public companion object : WasiType {
-        override val tag: ValueType = U16
+        override val valueType: ValueType = U16
     }
 }

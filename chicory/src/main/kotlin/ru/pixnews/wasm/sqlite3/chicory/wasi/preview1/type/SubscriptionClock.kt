@@ -17,6 +17,6 @@ public data class SubscriptionClock(
     val flags: Subclockflags, // (field $flags $subclockflags)
 ) {
     public companion object : WasiType {
-        public override val tag: ValueType = ValueType.I32
+        public override val valueType: ValueType = ValueType.I32
     }
 }

@@ -16,7 +16,7 @@ public value class Subclockflags(
         flags.fold(0.toUShort()) { acc, flag -> acc.or(flag.mask) }
     )
 
-    public val value: Value get() = Value(tag, rawMask.toLong())
+    public val value: Value get() = Value(valueType, rawMask.toLong())
 
     public enum class Subclockflags(
         val mask: UShort,
@@ -37,6 +37,6 @@ public value class Subclockflags(
     }
 
     public companion object : WasiType {
-        override val tag: ValueType = U16
+        override val valueType: ValueType = U16
     }
 }

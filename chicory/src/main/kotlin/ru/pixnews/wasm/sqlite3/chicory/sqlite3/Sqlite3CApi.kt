@@ -4,9 +4,8 @@ import com.dylibso.chicory.wasm.types.Value
 import ru.pixnews.wasm.sqlite3.chicory.sqlite3.model.Sqlite3Exception
 import ru.pixnews.wasm.sqlite3.chicory.bindings.SqliteBindings
 import ru.pixnews.wasm.sqlite3.chicory.ext.SQLITE3_NULL
-import ru.pixnews.wasm.sqlite3.chicory.ext.WASM_ADDR_SIZE
+import ru.pixnews.wasm.sqlite3.chicory.ext.WASM_SIZEOF_PTR
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
-import ru.pixnews.wasm.sqlite3.chicory.ext.toValue
 import ru.pixnews.wasm.sqlite3.chicory.sqlite3.model.Sqlite3Result
 import ru.pixnews.wasm.sqlite3.chicory.sqlite3.model.Sqlite3Version
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
@@ -30,7 +29,7 @@ class Sqlite3CApi(
         var pFileName: Value? = null
         var pDb: Value? = null
         try {
-            ppDb = memory.allocOrThrow(WASM_ADDR_SIZE)
+            ppDb = memory.allocOrThrow(WASM_SIZEOF_PTR)
             pFileName = memory.allocNullTerminatedString(filename)
 
             val result = bindings.sqlite3_open.apply(pFileName, ppDb)
@@ -51,6 +50,7 @@ class Sqlite3CApi(
     fun sqlite3Close(
         sqliteDb: Value
     ) {
+        // TODO: __dbCleanupMap.cleanup(pDb)
         bindings.sqlite3_close_v2.apply(sqliteDb)
             .throwOnSqliteError("sqlite3_close_v2() failed", sqliteDb)
     }
@@ -82,7 +82,7 @@ class Sqlite3CApi(
         var pzErrMsg: Value? = null
         try {
             pSql = memory.allocNullTerminatedString(sql)
-            pzErrMsg = memory.allocOrThrow(WASM_ADDR_SIZE)
+            pzErrMsg = memory.allocOrThrow(WASM_SIZEOF_PTR)
 
             val errNo = bindings.sqlite3_exec.apply(
                 /* sqlite3* */ sqliteDb,

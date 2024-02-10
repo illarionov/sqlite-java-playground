@@ -16,7 +16,7 @@ public value class FdFlags(
         flags.fold(0.toUShort()) { acc, flag -> acc.or(flag.mask) }
     )
 
-    public val value: Value get() = Value(ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.FdFlags.Companion.tag, rawMask.toLong())
+    public val value: Value get() = Value(ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.FdFlags.Companion.valueType, rawMask.toLong())
 
     public enum class Flags(
         val mask: UShort
@@ -54,6 +54,6 @@ public value class FdFlags(
     }
 
     public companion object : WasiType {
-        override val tag: ValueType = U16
+        override val valueType: ValueType = U16
     }
 }

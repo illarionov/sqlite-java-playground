@@ -21,6 +21,6 @@ public sealed class SubscriptionU(
     ) : SubscriptionU(Eventtype.FD_WRITE)
 
     public companion object : WasiType {
-        public override val tag: ValueType = ValueType.I32
+        public override val valueType: ValueType = ValueType.I32
     }
 }

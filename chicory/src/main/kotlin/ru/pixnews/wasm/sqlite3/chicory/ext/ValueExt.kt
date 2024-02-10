@@ -4,9 +4,9 @@ import com.dylibso.chicory.wasm.types.Value
 import com.dylibso.chicory.wasm.types.Value.REF_NULL_VALUE
 import com.dylibso.chicory.wasm.types.ValueType
 
-internal fun Value.asWasmAddr(): WasmAddr = asInt()
+internal fun Value.asWasmAddr(): WasmPtr = asInt()
 
-internal fun WasmAddr.toValue(): Value = Value.i32(this.toLong())
+internal fun WasmPtr.toValue(): Value = Value.i32(this.toLong())
 
 internal fun Value?.isNull(): Boolean {
     return when (this?.type()) {

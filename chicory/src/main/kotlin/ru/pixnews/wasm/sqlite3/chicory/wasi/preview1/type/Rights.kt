@@ -16,7 +16,7 @@ public value class Rights(
     )
 
     init {
-        check(mask.type() == tag)
+        check(mask.type() == valueType)
     }
 
     public enum class Flags(
@@ -199,6 +199,6 @@ public value class Rights(
     }
 
     public companion object : WasiType {
-        override val tag: ValueType = U16
+        override val valueType: ValueType = U16
     }
 }

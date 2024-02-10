@@ -10,9 +10,9 @@ import com.dylibso.chicory.wasm.types.ValueType
 public value class Dirnamlen(
     val rawValue: UInt,
 )  {
-    val value: Value get() = Value(tag, rawValue.toLong())
+    val value: Value get() = Value(valueType, rawValue.toLong())
 
     public companion object : WasiType {
-        public override val tag: ValueType = U32
+        public override val valueType: ValueType = U32
     }
 }

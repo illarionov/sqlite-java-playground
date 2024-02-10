@@ -16,7 +16,7 @@ public value class Riflags(
         flags.fold(0.toUShort()) { acc, flag -> acc.or(flag.mask) }
     )
 
-    public val value: Value get() = Value(tag, rawMask.toLong())
+    public val value: Value get() = Value(valueType, rawMask.toLong())
 
     public enum class RiFlags(
         val mask: UShort
@@ -38,6 +38,6 @@ public value class Riflags(
     }
 
     public companion object : WasiType {
-        override val tag: ValueType = U16
+        override val valueType: ValueType = U16
     }
 }

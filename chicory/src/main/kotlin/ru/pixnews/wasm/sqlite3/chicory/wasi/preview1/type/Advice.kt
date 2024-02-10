@@ -44,6 +44,6 @@ public enum class Advice(
     private constructor(id: Long) : this(Value.i32(id))
 
     companion object : WasiType {
-        override val tag: ValueType = U8
+        override val valueType: ValueType = U8
     }
 }

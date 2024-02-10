@@ -9,10 +9,10 @@ public value class Size(
     constructor(value: UInt) : this(Value.i32(value.toLong()))
 
     init {
-        check(value.type() == tag)
+        check(value.type() == valueType)
     }
 
     public companion object : WasiType {
-        public override val tag = U32
+        public override val valueType = U32
     }
 }

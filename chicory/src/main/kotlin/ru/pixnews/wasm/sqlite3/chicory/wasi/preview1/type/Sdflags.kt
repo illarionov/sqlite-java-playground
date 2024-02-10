@@ -16,7 +16,7 @@ public value class Sdflags(
         flags.fold(0.toUByte()) { acc, flag -> acc.or(flag.mask) }
     )
 
-    public val value: Value get() = Value(tag, rawMask.toLong())
+    public val value: Value get() = Value(valueType, rawMask.toLong())
 
 
     public enum class Sdflags(
@@ -37,6 +37,6 @@ public value class Sdflags(
         private constructor(bit: Int) : this(1U.shl(bit).toUByte())
     }
     public companion object : WasiType {
-        override val tag: ValueType = U8
+        override val valueType: ValueType = U8
     }
 }

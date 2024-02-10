@@ -13,10 +13,10 @@ public value class Fd(
     constructor(value: Long) : this(Value.i32(value))
 
     init {
-        check(value.type() == tag)
+        check(value.type() == valueType)
     }
 
     public companion object : WasiType {
-        public override val tag: ValueType = Handle
+        public override val valueType: ValueType = Handle
     }
 }

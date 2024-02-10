@@ -58,7 +58,7 @@ enum class PosixErrno(
     public val value: Value get() = Value.i32(code.toLong())
 
     public companion object : WasiType {
-        override val tag: ValueType = ValueType.I32
+        override val valueType: ValueType = ValueType.I32
 
         fun fromErrNoCode(code: Int): Errno? = Errno.entries.firstNotNullOfOrNull { if (it.code == code) it else null }
     }

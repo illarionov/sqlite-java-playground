@@ -6,7 +6,7 @@ import com.dylibso.chicory.runtime.Memory
 import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
 import ru.pixnews.wasm.sqlite3.chicory.ext.WASI_SNAPSHOT_PREVIEW1
-import ru.pixnews.wasm.sqlite3.chicory.ext.WasmAddr
+import ru.pixnews.wasm.sqlite3.chicory.ext.WasmPtr
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
 import ru.pixnews.wasm.sqlite3.chicory.ext.writeNullTerminatedString
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
@@ -35,7 +35,7 @@ fun environGet(
         U8.pointer.pointer, // **environ
         U8.pointer, // *environ_buf
     ),
-    listOf(Errno.tag),
+    listOf(Errno.valueType),
 )
 
 private class EnvironGet(
@@ -56,8 +56,8 @@ private class EnvironGet(
 
     private fun environGet(
         memory: Memory,
-        environPAddr: WasmAddr,
-        environBufAddr: WasmAddr,
+        environPAddr: WasmPtr,
+        environBufAddr: WasmPtr,
     ): Errno {
         var pp = environPAddr
         var bufP = environBufAddr

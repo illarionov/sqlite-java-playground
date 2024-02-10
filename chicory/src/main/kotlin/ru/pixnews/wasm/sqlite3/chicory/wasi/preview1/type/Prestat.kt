@@ -13,6 +13,6 @@ public sealed class Prestat(
     ) : Prestat(Preopentype.DIR)
 
     public companion object : WasiType {
-        public override val tag: ValueType = ValueType.I32
+        public override val valueType: ValueType = ValueType.I32
     }
 }

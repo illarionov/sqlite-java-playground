@@ -5,7 +5,7 @@ import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
 import ru.pixnews.wasm.sqlite3.chicory.ext.WASI_SNAPSHOT_PREVIEW1
-import ru.pixnews.wasm.sqlite3.chicory.ext.WasmAddr
+import ru.pixnews.wasm.sqlite3.chicory.ext.WasmPtr
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
 import ru.pixnews.wasm.sqlite3.chicory.ext.encodedNullTerminatedStringLength
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
@@ -35,7 +35,7 @@ fun environSizesGet(
         Size.pointer, // *environ_count
         Size.pointer, // *environ_buf_size
     ),
-    listOf(Errno.tag),
+    listOf(Errno.valueType),
 )
 
 private class EnvironSizesGet(
@@ -56,8 +56,8 @@ private class EnvironSizesGet(
 
     private fun environSizesGet(
         instance: Instance,
-        environCountAddr: WasmAddr,
-        environSizeAddr: WasmAddr,
+        environCountAddr: WasmPtr,
+        environSizeAddr: WasmPtr,
     ): Errno {
         val env = envProvider()
         val count = env.size

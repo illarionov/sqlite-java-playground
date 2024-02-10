@@ -4,59 +4,63 @@ import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
-import com.dylibso.chicory.wasm.types.ValueType.I32
+import java.util.logging.Logger
 import ru.pixnews.wasm.sqlite3.chicory.ext.WasmPtr
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
-import ru.pixnews.wasm.sqlite3.chicory.ext.encodeToNullTerminatedByteArray
+import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
 import ru.pixnews.wasm.sqlite3.chicory.host.ENV_MODULE_NAME
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
+import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.SysException
+import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.pack
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.U8
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.pointer
 
-fun syscallGetcwd(
+fun syscallLstat64(
     filesystem: FileSystem,
     moduleName: String = ENV_MODULE_NAME,
 ): HostFunction = HostFunction(
-    Getcwd(filesystem),
+    Lstat64(filesystem),
     moduleName,
-    "__syscall_getcwd",
+    "__syscall_lstat64",
     listOf(
-        U8.pointer, // buf
-        I32, // size
+        U8.pointer, // pathname
+        U8.pointer, // statbuf
     ),
     listOf(
         Errno.valueType
     ),
 )
 
-private class Getcwd(
+private class Lstat64(
     private val filesystem: FileSystem,
+    private val logger: Logger = Logger.getLogger(Lstat64::class.simpleName)
 ) : WasmFunctionHandle {
+
     override fun apply(instance: Instance, vararg params: Value): Array<Value> {
-        val result = getCwd(
+        val result = lstat64(
             instance,
             params[0].asWasmAddr(),
-            params[1].asInt(),
+            params[1].asWasmAddr(),
         )
         return arrayOf(Value.i32(result.toLong()))
     }
 
-    private fun getCwd(
+    private fun lstat64(
         instance: Instance,
+        pathnamePtr: WasmPtr,
         dst: WasmPtr,
-        size: Int
     ): Int {
-        if (size == 0) return -Errno.INVAL.code
+        try {
+            val path = instance.memory().readNullTerminatedString(pathnamePtr)
+            logger.finest { "lstat64(`$path`, *$dst)" }
 
-        val path = filesystem.getCwd()
-        val pathBytes = path.encodeToNullTerminatedByteArray()
-
-        if (size < pathBytes.size) {
-            return -Errno.RANGE.code
+            val stat = filesystem.stat(path).pack()
+            instance.memory().write(dst, stat)
+        } catch (e: SysException) {
+            return -e.errNo.code
         }
-        instance.memory().write(dst, pathBytes)
 
-        return pathBytes.size
+        return 0
     }
 }

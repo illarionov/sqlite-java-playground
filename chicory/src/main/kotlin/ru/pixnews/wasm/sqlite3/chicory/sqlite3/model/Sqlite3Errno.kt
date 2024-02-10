@@ -138,7 +138,7 @@ enum class Sqlite3Errno(
     public val value: Value get() = Value.i32(code.toLong())
 
     public companion object : WasiType {
-        override val tag: ValueType = ValueType.I32
+        override val valueType: ValueType = ValueType.I32
 
         val entriesMap: Map<Int, Sqlite3Errno> = entries.associateBy(Sqlite3Errno::code)
 

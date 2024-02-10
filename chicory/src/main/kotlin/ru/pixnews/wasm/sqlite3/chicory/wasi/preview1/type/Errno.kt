@@ -396,7 +396,7 @@ public enum class Errno(
     public val value: Value get() = Value.i32(code.toLong())
 
     public companion object : WasiType {
-        override val tag: ValueType = U16
+        override val valueType: ValueType = U16
 
         fun fromErrNoCode(code: Int): Errno? = entries.firstNotNullOfOrNull { if (it.code == code) it else null }
     }

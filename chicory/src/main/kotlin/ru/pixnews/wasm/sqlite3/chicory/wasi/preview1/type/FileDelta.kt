@@ -10,9 +10,9 @@ import com.dylibso.chicory.wasm.types.ValueType
 public value class FileDelta(
     val rawValue: Int,
 ) {
-    val value: Value get() = Value(tag, rawValue)
+    val value: Value get() = Value(valueType, rawValue)
 
     public companion object : WasiType {
-        public override val tag: ValueType = ValueType.I32
+        public override val valueType: ValueType = ValueType.I32
     }
 }

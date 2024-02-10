@@ -14,6 +14,6 @@ data class CioVec(
     val bufLen: Size // (field $buf_len $size)
 ) {
     companion object : WasiType {
-        override val tag: ValueType = U32
+        override val valueType: ValueType = U32
     }
 }

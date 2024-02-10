@@ -13,6 +13,6 @@ public data class PrestatDir(
     public val prNameLen: Size // (field $pr_name_len $size)
 ) {
     public companion object : WasiType {
-        public override val tag: ValueType = ValueType.I32
+        public override val valueType: ValueType = ValueType.I32
     }
 }

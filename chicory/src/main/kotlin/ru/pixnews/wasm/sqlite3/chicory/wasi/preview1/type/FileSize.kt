@@ -13,10 +13,10 @@ public value class FileSize(
     constructor(value: ULong) : this(Value.i64(value.toLong()))
 
     init {
-        check(value.type() == tag)
+        check(value.type() == valueType)
     }
 
     public companion object : WasiType {
-        public override val tag: ValueType = U64
+        public override val valueType: ValueType = U64
     }
 }

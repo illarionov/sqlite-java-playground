@@ -18,6 +18,6 @@ public data class FdStat(
     val fsRightsInheriting: Rights // (field $fs_rights_inheriting $rights)
 )  {
     public companion object : WasiType {
-        override val tag: ValueType = ValueType.I32
+        override val valueType: ValueType = ValueType.I32
     }
 }
