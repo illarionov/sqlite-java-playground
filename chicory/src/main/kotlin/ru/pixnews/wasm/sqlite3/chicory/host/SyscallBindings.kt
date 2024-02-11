@@ -10,6 +10,7 @@ import ru.pixnews.wasm.sqlite3.chicory.ext.ParamTypes
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
 import ru.pixnews.wasm.sqlite3.chicory.host.func.syscallGetcwd
 import ru.pixnews.wasm.sqlite3.chicory.host.func.syscallLstat64
+import ru.pixnews.wasm.sqlite3.chicory.host.func.syscallOpenat
 
 internal const val ENV_MODULE_NAME = "env"
 
@@ -167,13 +168,6 @@ class SyscallBindings(
         HostFunction(
             { instance: Instance, args: Array<Value> -> TODO() },
             moduleName,
-            "__syscall_openat",
-            ParamTypes.i32i32i32i32,
-            ParamTypes.i32,
-        ),
-        HostFunction(
-            { instance: Instance, args: Array<Value> -> TODO() },
-            moduleName,
             "__syscall_ioctl",
             ParamTypes.i32i32i32,
             ParamTypes.i32,
@@ -262,6 +256,7 @@ class SyscallBindings(
         syscallChmod,
         syscallFchown32,
         syscallFtruncate64,
+        syscallOpenat(filesystem),
         syscallLstat64(filesystem),
         syscallGetcwd(filesystem),
         syscallReadlinkat,

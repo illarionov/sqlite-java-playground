@@ -8,7 +8,7 @@ import ru.pixnews.wasm.sqlite3.chicory.sqlite3.model.Sqlite3Result
 
 class SqliteBasicDemo1(
     private val sqliteBindings: SqliteBindings,
-    private val log: Logger = Logger.getLogger(SqliteBasicDemo1::class.simpleName)
+    private val log: Logger = Logger.getLogger(SqliteBasicDemo1::class.qualifiedName)
 ) {
     private val api = Sqlite3CApi(
         bindings = sqliteBindings,

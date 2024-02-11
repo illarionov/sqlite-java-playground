@@ -5,6 +5,7 @@ import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
 import com.dylibso.chicory.wasm.types.ValueType.I32
+import java.util.logging.Logger
 import ru.pixnews.wasm.sqlite3.chicory.ext.WasmPtr
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
 import ru.pixnews.wasm.sqlite3.chicory.ext.encodeToNullTerminatedByteArray
@@ -32,6 +33,7 @@ fun syscallGetcwd(
 
 private class Getcwd(
     private val filesystem: FileSystem,
+    private val logger: Logger = Logger.getLogger(Getcwd::class.qualifiedName)
 ) : WasmFunctionHandle {
     override fun apply(instance: Instance, vararg params: Value): Array<Value> {
         val result = getCwd(
@@ -47,6 +49,7 @@ private class Getcwd(
         dst: WasmPtr,
         size: Int
     ): Int {
+        logger.finest { "getCwd(dst: 0x${dst.toString(16)} size: $size)" }
         if (size == 0) return -Errno.INVAL.code
 
         val path = filesystem.getCwd()

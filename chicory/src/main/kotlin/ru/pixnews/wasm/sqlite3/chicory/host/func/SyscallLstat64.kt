@@ -34,7 +34,7 @@ fun syscallLstat64(
 
 private class Lstat64(
     private val filesystem: FileSystem,
-    private val logger: Logger = Logger.getLogger(Lstat64::class.simpleName)
+    private val logger: Logger = Logger.getLogger(Lstat64::class.qualifiedName)
 ) : WasmFunctionHandle {
 
     override fun apply(instance: Instance, vararg params: Value): Array<Value> {

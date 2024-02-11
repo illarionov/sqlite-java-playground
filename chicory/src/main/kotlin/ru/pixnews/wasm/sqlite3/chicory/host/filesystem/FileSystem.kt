@@ -4,9 +4,11 @@ import java.io.IOException
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
 import java.nio.file.LinkOption
+import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileTime
 import kotlin.io.path.exists
+import kotlin.io.path.pathString
 import kotlin.io.path.readAttributes
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.StructTimespec
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.StructStat
@@ -22,13 +24,10 @@ import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.uid_t
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
 
 class FileSystem(
-    private val javaFs: FileSystem = FileSystems.getDefault()
+    internal val javaFs: FileSystem = FileSystems.getDefault()
 ) {
 
-    fun getCwd(): String {
-        val cwd = javaFs.getPath("").toAbsolutePath().toString();
-        return cwd
-    }
+    public fun getCwd(): String = getCwdPath().pathString
 
     fun stat(
         path: String,
@@ -100,6 +99,15 @@ class FileSystem(
             st_ctim = ctim,
         )
     }
+
+    internal fun getCwdPath(): Path {
+        return javaFs.getPath("").toAbsolutePath()
+    }
+
+    internal fun getPathByFd(fd: Int): Path {
+        throw SysException(Errno.NOSYS, "Not implemented")
+    }
+
 
     private companion object {
         private const val ATTR_UNI_CTIME = "ctime"
