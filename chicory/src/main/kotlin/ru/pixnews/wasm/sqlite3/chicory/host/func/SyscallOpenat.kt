@@ -8,9 +8,12 @@ import com.dylibso.chicory.wasm.types.ValueType
 import java.util.logging.Logger
 import ru.pixnews.wasm.sqlite3.chicory.ext.WasmPtr
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
+import ru.pixnews.wasm.sqlite3.chicory.ext.oMaskToString
 import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
+import ru.pixnews.wasm.sqlite3.chicory.ext.sMaskToString
 import ru.pixnews.wasm.sqlite3.chicory.host.ENV_MODULE_NAME
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
+import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.SysException
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.Fcntl
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.resolveAbsolutePath
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
@@ -65,24 +68,21 @@ private class Openat(
         mode: UInt
     ) : Int {
         val path = instance.memory().readNullTerminatedString(pathnamePtr)
-        val fullPath = filesystem.resolveAbsolutePath(dirfd, path)
+        val absolutePath = filesystem.resolveAbsolutePath(dirfd, path)
 
         logger.finest { "openAt() dirfd: " +
                 "$dirfd, " +
                 "path: `$path`, " +
-                "full path: `$fullPath`, " +
-                "flags: 0x${flags.toString(16)} (${Fcntl.oMaskToString(flags)}), " +
-                "mode: 0x${mode.toString(16)}"
+                "full path: `$absolutePath`, " +
+                "flags: 0${flags.toString(8)} (${Fcntl.oMaskToString(flags)}), " +
+                "mode: ${Fcntl.sMaskToString(mode)}"
         }
-        return -Errno.ACCES.code
-    }
-}
 
-@JvmInline
-internal value class OpenFlags(
-    val mask: UInt
-) {
-    companion object {
-
+        return try {
+            filesystem.open(absolutePath, flags, mode).fd
+        } catch (e: SysException) {
+            logger.finest { "openAt() error ${e.errNo}" }
+            -e.errNo.code
+        }
     }
 }

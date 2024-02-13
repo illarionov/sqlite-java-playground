@@ -12,7 +12,7 @@ public value class Timestamp(
     constructor(value: ULong) : this(Value.i64(value.toLong()))
 
     init {
-        check(value.type() == ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Timestamp.Companion.valueType)
+        check(value.type() == ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Timestamp.valueType)
     }
 
     public companion object : WasiType {

@@ -9,28 +9,28 @@ public data class Filestat(
     /**
      * Device ID of device containing the file.
      */
-    val dev: ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Device, // (field $dev $device)
+    val dev: Device, // (field $dev $device)
 
     /**
      * File serial number.
      */
-    val ino: ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Inode, // (field $ino $inode)
+    val ino: Inode, // (field $ino $inode)
 
     /**
      * File type.
      */
-    val fileType: ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Filetype, // (field $filetype $filetype)
+    val fileType: Filetype, // (field $filetype $filetype)
 
     /**
      * Number of hard links to the file.
      */
-    val nlink: ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Linkcount, // (field $nlink $linkcount)
+    val nlink: Linkcount, // (field $nlink $linkcount)
 
     /**
      * For regular files, the file size in bytes. For symbolic links, the length in bytes of the pathname contained
      * in the symbolic link.
      */
-    val size: ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.FileSize, // (field $size $filesize)
+    val size: FileSize, // (field $size $filesize)
 
     /**
      * Last data access timestamp.
@@ -38,7 +38,7 @@ public data class Filestat(
      * This can be 0 if the underlying platform doesn't provide suitable
      * timestamp for this file.
      */
-    val atim: ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Timestamp, // (field $atim $timestamp)
+    val atim: Timestamp, // (field $atim $timestamp)
 
     /**
      * Last data modification timestamp.
@@ -46,7 +46,7 @@ public data class Filestat(
      * This can be 0 if the underlying platform doesn't provide suitable
      * timestamp for this file.
      */
-    val mtim: ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Timestamp, // (field $mtim $timestamp)
+    val mtim: Timestamp, // (field $mtim $timestamp)
 
     /**
      * Last file status change timestamp.
@@ -54,7 +54,7 @@ public data class Filestat(
      * This can be 0 if the underlying platform doesn't provide suitable
      * timestamp for this file.
      */
-    val ctim: ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Timestamp, // (field $ctim $timestamp)
+    val ctim: Timestamp, // (field $ctim $timestamp)
 ) {
     public companion object : WasiType {
         public override val valueType: ValueType = ValueType.I32

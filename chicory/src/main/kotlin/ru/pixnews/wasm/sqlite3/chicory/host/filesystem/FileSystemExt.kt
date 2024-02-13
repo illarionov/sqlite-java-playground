@@ -24,7 +24,11 @@ internal fun FileSystem.resolveAbsolutePath(
     val root: Path = if (dirFd == AT_FDCWD) {
         getCwdPath()
     } else {
-        getPathByFd(dirFd)
+        try {
+            getPathByFd(dirFd)
+        } catch (e: SysException) {
+            throw SysException(Errno.BADF, "File descriptor ${dirFd} is not open")
+        }
     }
 
     if (path.pathString.isEmpty() && !allowEmpty) {
