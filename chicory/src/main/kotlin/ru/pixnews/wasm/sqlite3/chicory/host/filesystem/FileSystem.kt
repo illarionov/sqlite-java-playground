@@ -41,18 +41,27 @@ class FileSystem(
 
     public fun getCwd(): String = getCwdPath().pathString
 
+
     fun stat(
         path: String,
         followSymlinks: Boolean = true,
     ): StructStat {
-        val linkOptions: Array<LinkOption> = if (followSymlinks) {
-            arrayOf()
-        } else {
-            arrayOf(LinkOption.NOFOLLOW_LINKS)
-        }
+        val filePath: Path = javaFs.getPath(path)
+        return stat(filePath, followSymlinks)
+    }
 
-        val filePath = javaFs.getPath(path)
+    fun stat(
+        fd: Int,
+    ): StructStat {
+        val stream = fileDescriptors.get(fd) ?: throw SysException(Errno.BADF, "File descriptor `$fd` not open")
+        return stat(stream.path, true)
+    }
 
+    fun stat(
+        filePath: Path,
+        followSymlinks: Boolean = true,
+    ): StructStat {
+        val linkOptions = followSymlinksToLinkOptions(followSymlinks)
         if (!filePath.exists(options = linkOptions)) {
             throw SysException(Errno.NOENT)
         }
@@ -111,6 +120,7 @@ class FileSystem(
             st_ctim = ctim,
         )
     }
+
 
     fun open(
         path: Path,
@@ -296,5 +306,14 @@ class FileSystem(
                 tv_nsec = nano.toULong()
             )
         }
+
+        private fun followSymlinksToLinkOptions(
+            followSymlinks: Boolean
+        ): Array<LinkOption> = if (followSymlinks) {
+            arrayOf()
+        } else {
+            arrayOf(LinkOption.NOFOLLOW_LINKS)
+        }
+
     }
 }
