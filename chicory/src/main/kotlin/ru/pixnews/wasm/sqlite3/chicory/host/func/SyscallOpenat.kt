@@ -16,7 +16,6 @@ import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.SysException
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.Fcntl
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.resolveAbsolutePath
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.U8
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.pointer
 

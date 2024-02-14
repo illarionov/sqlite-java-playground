@@ -2,7 +2,12 @@ package ru.pixnews.wasm.sqlite3.chicory.host.filesystem
 
 import com.sun.nio.file.ExtendedOpenOption
 import java.io.IOException
+import java.nio.ByteBuffer
+import java.nio.channels.AsynchronousCloseException
+import java.nio.channels.ClosedByInterruptException
+import java.nio.channels.ClosedChannelException
 import java.nio.channels.FileChannel
+import java.nio.channels.NonReadableChannelException
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
 import java.nio.file.LinkOption
@@ -14,6 +19,7 @@ import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.FileTime
 import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.attribute.PosixFilePermissions
+import java.util.logging.Level
 import java.util.logging.Logger
 import kotlin.io.path.exists
 import kotlin.io.path.pathString
@@ -31,8 +37,10 @@ import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.nlink_t
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.off_t
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.uid_t
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.FdChannel
+import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.position
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Fd
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.IovecArray
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Whence
 
 class FileSystem(
@@ -280,6 +288,48 @@ class FileSystem(
         }
 
         channel.channel.position(newPosition)
+    }
+
+    fun read(
+        fd: Fd,
+        iovecs: List<ByteBuffer>
+    ): Long {
+        logger.finest { "read($fd, ${iovecs})" }
+        val channel = getStreamByFd(fd)
+        val position = channel.position
+        var totalBytesRead = 0L;
+
+        try {
+            for (iovec in iovecs) {
+                val bytesRead = channel.channel.read(iovec)
+                if (bytesRead > 0) {
+                    totalBytesRead += bytesRead
+                }
+                if (bytesRead < iovec.limit()) {
+                    break
+                }
+            }
+            channel.position = position
+        } catch (cce: ClosedChannelException) {
+            throw SysException(Errno.IO, "Channel closed", cce)
+        } catch (ace: AsynchronousCloseException) {
+            throw SysException(Errno.IO, "Channel closed on other thread", ace)
+        } catch (ci: ClosedByInterruptException) {
+            throw SysException(Errno.INTR, "Interrupted", ci)
+        } catch (nre: NonReadableChannelException) {
+            throw SysException(Errno.BADF, "Non readable channel", nre)
+        } catch (ioe: IOException) {
+            throw SysException(Errno.IO, "I/o error", ioe)
+        } finally {
+            try {
+                channel.position = position
+            } catch (e: Throwable) {
+                // Ignore
+                logger.log(Level.INFO, e) { "Can not restore position to `$position`" }
+            }
+        }
+
+        return totalBytesRead
     }
 
     private companion object {

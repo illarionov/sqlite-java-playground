@@ -16,11 +16,21 @@ class FdChannel(
     val channel: FileChannel
 )
 
-val FdChannel.position: Long
+var FdChannel.position: Long
     get() = try {
         channel.position()
     } catch (ce: ClosedChannelException) {
         throw SysException(Errno.BADF)
     } catch (ioe: IOException) {
         throw SysException(Errno.IO)
+    }
+    set(newPosition) = try {
+        channel.position(newPosition)
+        Unit
+    } catch (ce: ClosedChannelException) {
+        throw SysException(Errno.BADF)
+    } catch (ioe: IOException) {
+        throw SysException(Errno.IO)
+    } catch (iae: IllegalArgumentException) {
+        throw SysException(Errno.INVAL, "Negative new position")
     }
