@@ -54,7 +54,7 @@ private class Lstat64(
         try {
             val path = instance.memory().readNullTerminatedString(pathnamePtr)
             val stat = filesystem.stat(path).also {
-                logger.finest { "lStast64($path): $it" }
+                logger.finest { "lStat64($path): $it" }
             }.pack()
             instance.memory().write(dst, stat)
         } catch (e: SysException) {

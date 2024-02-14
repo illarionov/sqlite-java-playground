@@ -8,15 +8,13 @@ import com.dylibso.chicory.wasm.types.ValueType
  */
 @JvmInline
 public value class Fd(
-    val value: Value
+    val fd: Int
 ) {
-    constructor(value: Long) : this(Value.i32(value))
-
-    init {
-        check(value.type() == valueType)
-    }
+    val value: Value get() = Value.i32(fd.toLong())
 
     public companion object : WasiType {
         public override val valueType: ValueType = Handle
     }
+
+    override fun toString(): String = "Fd($fd)"
 }

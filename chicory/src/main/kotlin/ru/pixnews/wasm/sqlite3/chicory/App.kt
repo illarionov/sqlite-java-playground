@@ -15,6 +15,7 @@ import kotlin.time.measureTimedValue
 import ru.pixnews.sqlite3.wasm.Sqlite3Wasm
 import ru.pixnews.wasm.sqlite3.chicory.bindings.SqliteBindings
 import ru.pixnews.wasm.sqlite3.chicory.host.SyscallBindings
+import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WasiSnapshotPreview1Builtins
 
 object App
@@ -53,8 +54,9 @@ private fun testSqlite() {
 }
 
 private fun setupHostImports() : HostImports {
-    val fsWasiBuildins = WasiSnapshotPreview1Builtins()
-    val envSyscallBindings = SyscallBindings()
+    val filesystem = FileSystem()
+    val fsWasiBuildins = WasiSnapshotPreview1Builtins(filesystem)
+    val envSyscallBindings = SyscallBindings(filesystem)
 
     val hostMemory = HostMemory(
         /* moduleName = */ "env",

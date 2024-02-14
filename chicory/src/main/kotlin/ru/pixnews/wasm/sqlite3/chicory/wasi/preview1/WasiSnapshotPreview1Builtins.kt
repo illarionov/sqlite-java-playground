@@ -5,11 +5,14 @@ import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.wasm.types.Value
 import com.dylibso.chicory.wasm.types.ValueType
 import ru.pixnews.wasm.sqlite3.chicory.ext.ParamTypes
+import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdSeek
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.environGet
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.environSizesGet
 
-//  https://github.com/WebAssembly/WASI/tree/main
+// https://github.com/WebAssembly/WASI/tree/main
 class WasiSnapshotPreview1Builtins(
+    fileSystem: FileSystem,
     moduleName: String = "wasi_snapshot_preview1",
 ) {
     val argsSizesGet: HostFunction = HostFunction(
@@ -71,16 +74,6 @@ class WasiSnapshotPreview1Builtins(
         moduleName,
         "fd_close",
         ParamTypes.i32,
-        ParamTypes.i32,
-    )
-    val fdSeek: HostFunction = HostFunction(
-        { instance: Instance, args: Array<Value> ->
-            TODO()
-            arrayOf(Value.i32(0))
-        },
-        moduleName,
-        "fd_seek",
-        listOf(ValueType.I32, ValueType.I64, ValueType.I32, ValueType.I32),
         ParamTypes.i32,
     )
     val fdFdstatGet: HostFunction = HostFunction(
@@ -283,7 +276,7 @@ class WasiSnapshotPreview1Builtins(
         fdWrite,
         fdRead,
         fdClose,
-        fdSeek,
+        fdSeek(fileSystem),
         fdFdstatGet,
         fdFdstatSetFlags,
         fdPrestatGet,

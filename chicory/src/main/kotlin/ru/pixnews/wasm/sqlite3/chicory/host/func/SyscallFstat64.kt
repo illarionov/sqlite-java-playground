@@ -13,6 +13,7 @@ import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.SysException
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.pack
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Fd
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.U8
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.pointer
 
@@ -40,7 +41,7 @@ private class Fstat64(
     override fun apply(instance: Instance, vararg params: Value): Array<Value> {
         val result = fstat64(
             instance,
-            params[0].asInt(),
+            Fd(params[0].asInt()),
             params[1].asWasmAddr(),
         )
         return arrayOf(Value.i32(result.toLong()))
@@ -48,12 +49,12 @@ private class Fstat64(
 
     private fun fstat64(
         instance: Instance,
-        fd: Int,
+        fd: Fd,
         dst: WasmPtr,
     ): Int {
         try {
-            val stat = filesystem.stat(dst).also {
-                logger.finest { "fStast64($fd): $it" }
+            val stat = filesystem.stat(fd).also {
+                logger.finest { "fStat64($fd): $it" }
             }.pack()
             instance.memory().write(dst, stat)
         } catch (e: SysException) {

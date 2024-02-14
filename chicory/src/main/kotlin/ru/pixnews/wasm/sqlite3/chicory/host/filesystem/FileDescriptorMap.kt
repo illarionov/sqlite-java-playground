@@ -4,11 +4,12 @@ import java.nio.channels.FileChannel
 import java.nio.file.Path
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.FdChannel
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Fd
 
 internal class FileDescriptorMap(
     private val fileSystem: FileSystem,
 ) {
-    private val fds: MutableMap<Int, FdChannel> = mutableMapOf()
+    private val fds: MutableMap<Fd, FdChannel> = mutableMapOf()
 
     fun add(
         path: Path,
@@ -26,22 +27,20 @@ internal class FileDescriptorMap(
         }
     }
 
-    public fun remove(fd: Int) {
+    public fun remove(fd: Fd) {
         val old = fds.remove(fd)
         require (old == null) { "Trying to remove already disposed file descriptor" }
     }
 
     public fun get(
-        fd: Int
+        fd: Fd
     ): FdChannel? = fds[fd]
 
-
-
     @Throws(SysException::class)
-    private fun getFreeFd(): Int {
+    private fun getFreeFd(): Fd {
         for (no in MIN_FD .. MAX_FD) {
-            if (!fds.containsKey(no)) {
-                return no
+            if (!fds.containsKey(Fd(no))) {
+                return Fd(no)
             }
         }
         throw SysException(Errno.NFILE)

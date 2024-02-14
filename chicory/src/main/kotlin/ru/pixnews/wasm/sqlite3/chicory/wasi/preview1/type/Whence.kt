@@ -7,7 +7,7 @@ import com.dylibso.chicory.wasm.types.ValueType
  * The position relative to which to set the offset of the file descriptor.
  */
 public enum class Whence(
-    public val id: Value
+    private val code: Int
 ) {
     /**
      * Seek relative to start-of-file.
@@ -26,9 +26,12 @@ public enum class Whence(
 
     ;
 
-    private constructor(id: Long) : this(Value.i32(id))
+    public val id: Value
+        get() = Value.i32(this.code.toLong())
 
     public companion object : WasiType {
         override val valueType: ValueType = U8
+
+        fun fromIdOrNull(whence: Int): Whence? = entries.firstOrNull { it.code == whence }
     }
 }

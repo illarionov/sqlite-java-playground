@@ -16,10 +16,9 @@ import ru.pixnews.wasm.sqlite3.chicory.host.func.syscallOpenat
 internal const val ENV_MODULE_NAME = "env"
 
 class SyscallBindings(
-    moduleName: String = ENV_MODULE_NAME
+    filesystem: FileSystem,
+    moduleName: String = ENV_MODULE_NAME,
 ) {
-    val filesystem = FileSystem()
-
     val assertFail: HostFunction = HostFunction(
         { instance: Instance, args: Array<Value> ->
             TODO()

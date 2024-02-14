@@ -79,7 +79,7 @@ private class Openat(
         }
 
         return try {
-            filesystem.open(absolutePath, flags, mode).fd
+            filesystem.open(absolutePath, flags, mode).fd.fd
         } catch (e: SysException) {
             logger.finest { "openAt() error ${e.errNo}" }
             -e.errNo.code

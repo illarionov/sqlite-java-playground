@@ -32,6 +32,8 @@ import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.off_t
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.uid_t
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.FdChannel
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Fd
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Whence
 
 class FileSystem(
     internal val javaFs: FileSystem = FileSystems.getDefault(),
@@ -40,7 +42,6 @@ class FileSystem(
     private val fileDescriptors: FileDescriptorMap = FileDescriptorMap(this)
 
     public fun getCwd(): String = getCwdPath().pathString
-
 
     fun stat(
         path: String,
@@ -51,7 +52,7 @@ class FileSystem(
     }
 
     fun stat(
-        fd: Int,
+        fd: Fd,
     ): StructStat {
         val stream = fileDescriptors.get(fd) ?: throw SysException(Errno.BADF, "File descriptor `$fd` not open")
         return stat(stream.path, true)
@@ -94,7 +95,7 @@ class FileSystem(
         val gid: gid_t = (unixAttrs[ATTR_UNI_GID] as? Int)?.toULong() ?: 0UL
         val rdev: dev_t = (unixAttrs[ATTR_UNI_RDEV] as? Long)?.toULong() ?: 1UL
         val size: off_t = basicFileAttrs.size().toULong()
-        val blksize: blksize_t = 4096UL;
+        val blksize: blksize_t = 4096UL
         val blocks: blkcnt_t = (size + blksize - 1UL) / blksize
         val mtim: StructTimespec = basicFileAttrs.lastModifiedTime().toTimeSpec()
 
@@ -156,12 +157,16 @@ class FileSystem(
         return fd
     }
 
-    internal fun getCwdPath(): Path {
+    fun getCwdPath(): Path {
         return javaFs.getPath("").toAbsolutePath()
     }
 
-    internal fun getPathByFd(fd: Int): Path {
-        throw SysException(Errno.NOSYS, "Not implemented")
+    fun getPathByFd(fd: Fd): Path = getStreamByFd(fd).path
+
+    fun getStreamByFd(
+        fd: Fd
+    ): FdChannel {
+        return fileDescriptors.get(fd) ?: throw SysException(Errno.BADF, "File descriptor $fd is not opened")
     }
 
     private fun getOpenOptions(
@@ -259,6 +264,23 @@ class FileSystem(
         return PosixFilePermissions.asFileAttribute(permissions)
     }
 
+    fun seek(
+        channel: FdChannel,
+        offset: Long,
+        whence: Whence
+    ) {
+        logger.finest { "seek(${channel.fd}, $offset, $whence)" }
+        val newPosition = when (whence) {
+            Whence.SET -> offset
+            Whence.CUR -> channel.channel.position() + offset
+            Whence.END -> channel.channel.size() - offset
+        }
+        if (newPosition < 0) {
+            throw SysException(Errno.INVAL, "Incorrect new position: $newPosition")
+        }
+
+        channel.channel.position(newPosition)
+    }
 
     private companion object {
         private const val ATTR_UNI_CTIME = "ctime"
