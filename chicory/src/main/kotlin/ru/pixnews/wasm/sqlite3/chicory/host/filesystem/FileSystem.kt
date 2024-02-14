@@ -40,7 +40,6 @@ import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.FdChannel
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.position
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Fd
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.IovecArray
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Whence
 
 class FileSystem(
@@ -231,7 +230,7 @@ class FileSystem(
             logger.info { "O_NOATIME not implemented" }
         }
         if (flags and Fcntl.O_CLOEXEC != 0U) {
-            logger.info { "O_CLOEXEC not implemented" }
+            logger.finest { "O_CLOEXEC not implemented" }
         }
 
         if (flags and Fcntl.O_PATH != 0U) {
@@ -300,15 +299,7 @@ class FileSystem(
         var totalBytesRead = 0L;
 
         try {
-            for (iovec in iovecs) {
-                val bytesRead = channel.channel.read(iovec)
-                if (bytesRead > 0) {
-                    totalBytesRead += bytesRead
-                }
-                if (bytesRead < iovec.limit()) {
-                    break
-                }
-            }
+            totalBytesRead = channel.channel.read(iovecs.toTypedArray())
             channel.position = position
         } catch (cce: ClosedChannelException) {
             throw SysException(Errno.IO, "Channel closed", cce)
@@ -330,6 +321,20 @@ class FileSystem(
         }
 
         return totalBytesRead
+    }
+
+    fun close(fd: Fd) {
+        logger.finest { "close(${fd})" }
+        val channel = fileDescriptors.remove(fd)
+        try {
+            try {
+                channel.channel.force(true)
+            } finally {
+                channel.channel.close()
+            }
+        } catch (ioe: IOException) {
+            throw SysException(Errno.IO, "Can not close channel", ioe)
+        }
     }
 
     private companion object {
