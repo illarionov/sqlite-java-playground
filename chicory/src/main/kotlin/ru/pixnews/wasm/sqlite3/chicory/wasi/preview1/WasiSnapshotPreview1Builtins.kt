@@ -58,8 +58,6 @@ class WasiSnapshotPreview1Builtins(
         listOf(ValueType.I32, ValueType.I32, ValueType.I32, ValueType.I32),
         ParamTypes.i32,
     )
-
-
     val fdFdstatGet: HostFunction = HostFunction(
         { instance: Instance, args: Array<Value> ->
             TODO()

@@ -19,26 +19,48 @@ import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.pointer
 fun syscallLstat64(
     filesystem: FileSystem,
     moduleName: String = ENV_MODULE_NAME,
+): HostFunction = stat64Func(
+    filesystem = filesystem,
+    fieldName = "__syscall_lstat64",
+    followSymlinks = false,
+    moduleName = moduleName
+)
+
+fun syscallStat64(
+    filesystem: FileSystem,
+    moduleName: String = ENV_MODULE_NAME,
+): HostFunction = stat64Func(
+    filesystem = filesystem,
+    fieldName = "__syscall_stat64",
+    followSymlinks = true,
+    moduleName = moduleName
+)
+
+private fun stat64Func(
+    filesystem: FileSystem,
+    fieldName: String,
+    followSymlinks: Boolean = true,
+    moduleName: String = ENV_MODULE_NAME,
 ): HostFunction = HostFunction(
-    Lstat64(filesystem),
+    Stat64(filesystem = filesystem, followSymlinks = followSymlinks),
     moduleName,
-    "__syscall_lstat64",
+    fieldName,
     listOf(
         U8.pointer, // pathname
         U8.pointer, // statbuf
     ),
-    listOf(
-        Errno.valueType
-    ),
+    listOf(Errno.valueType),
 )
 
-private class Lstat64(
+private class Stat64(
     private val filesystem: FileSystem,
-    private val logger: Logger = Logger.getLogger(Lstat64::class.qualifiedName)
+    private val followSymlinks: Boolean = false,
+    private val logger: Logger = Logger.getLogger(Stat64::class.qualifiedName)
 ) : WasmFunctionHandle {
+    private val syscallName = if (followSymlinks) "Stat64" else "Lstat64"
 
     override fun apply(instance: Instance, vararg params: Value): Array<Value> {
-        val result = lstat64(
+        val result = stat64(
             instance,
             params[0].asWasmAddr(),
             params[1].asWasmAddr(),
@@ -46,19 +68,23 @@ private class Lstat64(
         return arrayOf(Value.i32(result.toLong()))
     }
 
-    private fun lstat64(
+    private fun stat64(
         instance: Instance,
         pathnamePtr: WasmPtr,
         dst: WasmPtr,
     ): Int {
+        var path: String = ""
         try {
-            val path = instance.memory().readNullTerminatedString(pathnamePtr)
-            val stat = filesystem.stat(path).also {
-                logger.finest { "lStat64($path): $it" }
+            path = instance.memory().readNullTerminatedString(pathnamePtr)
+            val stat = filesystem.stat(
+                path = path,
+                followSymlinks = followSymlinks
+            ).also {
+                logger.finest { "$syscallName($path): $it" }
             }.pack()
             instance.memory().write(dst, stat)
         } catch (e: SysException) {
-            logger.finest { "lStast64(): error ${e.errNo}" }
+            logger.finest { "$syscallName(`$path`): error ${e.errNo}" }
             return -e.errNo.code
         }
 

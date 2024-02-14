@@ -5,13 +5,13 @@ import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.wasm.types.Value
 import com.dylibso.chicory.wasm.types.ValueType
 import java.time.Clock
-import java.time.Instant
 import ru.pixnews.wasm.sqlite3.chicory.ext.ParamTypes
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
 import ru.pixnews.wasm.sqlite3.chicory.host.func.syscallFstat64
 import ru.pixnews.wasm.sqlite3.chicory.host.func.syscallGetcwd
 import ru.pixnews.wasm.sqlite3.chicory.host.func.syscallLstat64
 import ru.pixnews.wasm.sqlite3.chicory.host.func.syscallOpenat
+import ru.pixnews.wasm.sqlite3.chicory.host.func.syscallStat64
 
 internal const val ENV_MODULE_NAME = "env"
 
@@ -176,13 +176,6 @@ class SyscallBindings(
         HostFunction(
             { instance: Instance, args: Array<Value> -> TODO() },
             moduleName,
-            "__syscall_stat64",
-            ParamTypes.i32i32,
-            ParamTypes.i32,
-        ),
-        HostFunction(
-            { instance: Instance, args: Array<Value> -> TODO() },
-            moduleName,
             "__syscall_newfstatat",
             ParamTypes.i32i32i32i32,
             ParamTypes.i32,
@@ -251,6 +244,7 @@ class SyscallBindings(
         syscallFchown32,
         syscallFtruncate64,
         syscallOpenat(filesystem),
+        syscallStat64(filesystem),
         syscallFstat64(filesystem),
         syscallLstat64(filesystem),
         syscallGetcwd(filesystem),
