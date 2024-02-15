@@ -5,7 +5,7 @@ import com.dylibso.chicory.wasm.types.ValueType
 // (typename $ciovec_array (list $ciovec))
 @JvmInline
 value class CiovecArray(
-    val ciovecList: List<Iovec>
+    val ciovecList: List<CioVec>
 ) {
     companion object : WasiType {
         override val valueType: ValueType = U32

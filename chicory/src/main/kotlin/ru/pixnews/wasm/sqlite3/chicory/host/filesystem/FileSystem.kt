@@ -19,7 +19,6 @@ import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.FileTime
 import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.attribute.PosixFilePermissions
-import java.util.logging.Level
 import java.util.logging.Logger
 import kotlin.io.path.exists
 import kotlin.io.path.pathString
@@ -289,18 +288,26 @@ class FileSystem(
         channel.channel.position(newPosition)
     }
 
-    fun read(
+    fun pRead(
         fd: Fd,
-        iovecs: List<ByteBuffer>
+        iovecs: Array<ByteBuffer>
     ): Long {
-        logger.finest { "read($fd, ${iovecs})" }
+        logger.finest { "pRead($fd, ${iovecs.contentToString()})" }
         val channel = getStreamByFd(fd)
-        val position = channel.position
-        var totalBytesRead = 0L;
 
         try {
-            totalBytesRead = channel.channel.read(iovecs.toTypedArray())
-            channel.position = position
+            val originalPosition = channel.position
+            var position = originalPosition
+            for (iovec in iovecs) {
+                val bytesRead = channel.channel.read(iovec, position)
+                if (bytesRead > 0) {
+                    position += bytesRead
+                }
+                if (bytesRead < iovec.limit()) {
+                    break
+                }
+            }
+            return position - originalPosition
         } catch (cce: ClosedChannelException) {
             throw SysException(Errno.IO, "Channel closed", cce)
         } catch (ace: AsynchronousCloseException) {
@@ -311,16 +318,40 @@ class FileSystem(
             throw SysException(Errno.BADF, "Non readable channel", nre)
         } catch (ioe: IOException) {
             throw SysException(Errno.IO, "I/o error", ioe)
-        } finally {
-            try {
-                channel.position = position
-            } catch (e: Throwable) {
-                // Ignore
-                logger.log(Level.INFO, e) { "Can not restore position to `$position`" }
-            }
         }
+    }
 
-        return totalBytesRead
+    fun pWrite(
+        fd: Fd,
+        cIovecs: Array<ByteBuffer>
+    ): Long {
+        logger.finest { "pWrite($fd, ${cIovecs.contentToString()})" }
+        val channel = getStreamByFd(fd)
+
+        try {
+            val initialPosition = channel.position
+            var position = initialPosition
+            for (ciovec in cIovecs) {
+                val bytesWritten = channel.channel.write(ciovec, position)
+                if (bytesWritten > 0) {
+                    position += bytesWritten
+                }
+                if (bytesWritten < ciovec.limit()) {
+                    break
+                }
+            }
+            return position - initialPosition
+        } catch (cce: ClosedChannelException) {
+            throw SysException(Errno.IO, "Channel closed", cce)
+        } catch (ace: AsynchronousCloseException) {
+            throw SysException(Errno.IO, "Channel closed on other thread", ace)
+        } catch (ci: ClosedByInterruptException) {
+            throw SysException(Errno.INTR, "Interrupted", ci)
+        } catch (nre: NonReadableChannelException) {
+            throw SysException(Errno.BADF, "Non readable channel", nre)
+        } catch (ioe: IOException) {
+            throw SysException(Errno.IO, "I/o error", ioe)
+        }
     }
 
     fun close(fd: Fd) {

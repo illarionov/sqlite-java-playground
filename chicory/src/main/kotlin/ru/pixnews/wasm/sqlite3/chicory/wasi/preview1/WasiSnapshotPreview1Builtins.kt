@@ -11,6 +11,7 @@ import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.environGet
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.environSizesGet
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdClose
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdRead
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdWrite
 
 // https://github.com/WebAssembly/WASI/tree/main
 class WasiSnapshotPreview1Builtins(
@@ -46,16 +47,6 @@ class WasiSnapshotPreview1Builtins(
         moduleName,
         "clock_time_get",
         listOf(ValueType.I32, ValueType.I64, ValueType.I32),
-        ParamTypes.i32,
-    )
-    val fdWrite: HostFunction = HostFunction(
-        { instance: Instance, args: Array<Value> ->
-            TODO()
-            arrayOf(Value.i32(0))
-        },
-        moduleName,
-        "fd_write",
-        listOf(ValueType.I32, ValueType.I32, ValueType.I32, ValueType.I32),
         ParamTypes.i32,
     )
     val fdFdstatGet: HostFunction = HostFunction(
@@ -255,7 +246,7 @@ class WasiSnapshotPreview1Builtins(
         environSizesGet(),
         environGet(),
         clockTimeGet,
-        fdWrite,
+        fdWrite(fileSystem),
         fdRead(fileSystem),
         fdClose(fileSystem),
         fdSeek(fileSystem),

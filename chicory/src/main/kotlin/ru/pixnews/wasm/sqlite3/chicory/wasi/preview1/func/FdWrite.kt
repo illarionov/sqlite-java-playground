@@ -5,7 +5,7 @@ import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.Memory
 import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
-import com.dylibso.chicory.wasm.types.ValueType.I32
+import com.dylibso.chicory.wasm.types.ValueType
 import java.nio.ByteBuffer
 import java.util.logging.Logger
 import ru.pixnews.wasm.sqlite3.chicory.ext.ParamTypes
@@ -21,48 +21,39 @@ import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.IovecArray
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Size
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.pointer
 
-fun fdRead(
+fun fdWrite(
     filesystem: FileSystem,
     moduleName: String = WASI_SNAPSHOT_PREVIEW1,
 ): HostFunction = HostFunction(
-    FdRead(filesystem),
+    FdWrite(filesystem),
     moduleName,
-    "fd_read",
+    "fd_write",
     listOf(
         Fd.valueType, // Fd
-        IovecArray.pointer, // iov
-        I32, // iov_cnt
-        I32.pointer, // pNum
+        IovecArray.pointer, // ciov
+        ValueType.I32, // ciov_cnt
+        ValueType.I32.pointer, // pNum
     ),
     ParamTypes.i32,
 )
 
-private class FdRead(
+private class FdWrite(
     private val filesystem: FileSystem,
-    private val logger: Logger = Logger.getLogger(FdRead::class.qualifiedName)
+    private val logger: Logger = Logger.getLogger(FdWrite::class.qualifiedName)
 ) : WasmFunctionHandle {
     override fun apply(instance: Instance, vararg args: Value): Array<Value> {
         val fd = Fd(args[0].asInt())
-        val pIov = args[1].asWasmAddr()
-        val iovCnt = args[2].asInt()
+        val pCiov = args[1].asWasmAddr()
+        val cIovCnt = args[2].asInt()
         val pNum = args[3].asWasmAddr()
 
         val memory = instance.memory()
-        val ioVecs = readIovecs(memory, pIov, iovCnt)
-        val bbufs = ioVecs.toByteBuffers(memory)
+        val cioVecs = readCiovecs(memory, pCiov, cIovCnt)
+        val bufs = cioVecs.toByteBuffers(memory)
 
         val errNo = try {
-            val readBytes = filesystem.pRead(fd, bbufs)
-            ioVecs.iovecList.forEachIndexed { idx, vec ->
-                val bbuf: ByteBuffer = bbufs[idx]
-                bbuf.flip()
-                if (bbuf.limit() != 0) {
-                    require(bbuf.hasArray())
-                    memory.write(vec.buf.asWasmAddr(), bbuf.array(), 0, bbuf.limit())
-                }
-            }
-
-            memory.writeI32(pNum, readBytes.toInt())
+            val writtenBytes = filesystem.pWrite(fd, bufs)
+            memory.writeI32(pNum, writtenBytes.toInt())
             Errno.SUCCESS
         } catch (e: SysException) {
             e.errNo
@@ -71,16 +62,16 @@ private class FdRead(
         return arrayOf(Value.i32(errNo.code.toLong()))
     }
 
-    private fun readIovecs(
+    private fun readCiovecs(
         memory: Memory,
-        pIov: WasmPtr,
-        iovCnt: Int
+        pCiov: WasmPtr,
+        ciovCnt: Int
     ): IovecArray {
-         val iovecs = MutableList(iovCnt) { idx ->
-            val pIovec = pIov + 8 * idx
+        val iovecs = MutableList(ciovCnt) { idx ->
+            val pCiovec = pCiov + 8 * idx
             Iovec(
-                buf = memory.readI32(pIovec),
-                bufLen = Size(memory.readI32(pIovec + 4))
+                buf = memory.readI32(pCiovec),
+                bufLen = Size(memory.readI32(pCiovec + 4))
             )
         }
         return IovecArray(iovecs)
@@ -88,7 +79,9 @@ private class FdRead(
 
     private fun IovecArray.toByteBuffers(
         memory: Memory
-    ): Array<ByteBuffer> = Array(iovecList.size) {
-        ByteBuffer.allocate(iovecList[it].bufLen.value.asInt())
+    ): Array<ByteBuffer> = Array(iovecList.size) { idx ->
+        val ciovec = iovecList[idx]
+        val bytes = memory.readBytes(ciovec.buf.asWasmAddr(), ciovec.bufLen.value.asInt())
+        ByteBuffer.wrap(bytes)
     }
 }
