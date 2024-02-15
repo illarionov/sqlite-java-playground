@@ -37,7 +37,6 @@ fun syscallOpenat(
     ),
 )
 
-
 private class Openat(
     private val filesystem: FileSystem,
     private val logger: Logger = Logger.getLogger(Openat::class.qualifiedName)

@@ -8,8 +8,10 @@ import java.nio.channels.ClosedByInterruptException
 import java.nio.channels.ClosedChannelException
 import java.nio.channels.FileChannel
 import java.nio.channels.NonReadableChannelException
+import java.nio.file.DirectoryNotEmptyException
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.OpenOption
 import java.nio.file.Path
@@ -21,8 +23,10 @@ import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.attribute.PosixFilePermissions
 import java.util.logging.Logger
 import kotlin.io.path.exists
+import kotlin.io.path.isDirectory
 import kotlin.io.path.pathString
 import kotlin.io.path.readAttributes
+import ru.pixnews.wasm.sqlite3.chicory.ext.oMaskToString
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.Fcntl
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.StructTimespec
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.StructStat
@@ -128,7 +132,6 @@ class FileSystem(
         )
     }
 
-
     fun open(
         path: Path,
         flags: UInt,
@@ -163,6 +166,45 @@ class FileSystem(
         return fd
     }
 
+    fun unlinkAt(
+        dirfd: Int,
+        path: String,
+        flags: UInt
+    ) {
+        val absolutePath = resolveAbsolutePath(dirfd, path)
+        logger.finest { "unlinkAt($absolutePath, flags: 0${flags.toString(8)} (${Fcntl.oMaskToString(flags)}), )" }
+
+        when (flags) {
+            0U -> {
+                if (absolutePath.isDirectory()) throw SysException(Errno.ISDIR)
+                try {
+                    Files.delete(absolutePath)
+                } catch (nsfe: NoSuchFileException) {
+                    throw SysException(Errno.NOENT)
+                } catch (ioe: IOException) {
+                    throw SysException(Errno.IO)
+                } catch (se: SecurityException) {
+                    throw SysException(Errno.ACCES)
+                }
+            }
+            Fcntl.AT_REMOVEDIR -> {
+                if (!absolutePath.isDirectory()) throw SysException(Errno.NOTDIR)
+                try {
+                    Files.delete(absolutePath)
+                } catch (dne: DirectoryNotEmptyException) {
+                    throw SysException(Errno.NOTEMPTY)
+                } catch (ioe: IOException) {
+                    throw SysException(Errno.IO)
+                } catch (se: SecurityException) {
+                    throw SysException(Errno.ACCES)
+                }
+            }
+            else -> {
+                throw SysException(Errno.INVAL, "Invalid flags passed to unlinkAt()")
+            }
+        }
+    }
+
     fun getCwdPath(): Path {
         return javaFs.getPath("").toAbsolutePath()
     }
@@ -173,101 +215,6 @@ class FileSystem(
         fd: Fd
     ): FdChannel {
         return fileDescriptors.get(fd) ?: throw SysException(Errno.BADF, "File descriptor $fd is not opened")
-    }
-
-    private fun getOpenOptions(
-        flags: UInt,
-    ): Set<OpenOption> {
-        val options = mutableSetOf<OpenOption>()
-        if (flags and Fcntl.O_WRONLY != 0U) {
-            options += StandardOpenOption.WRITE
-        } else if (flags and Fcntl.O_RDWR != 0U) {
-            options += StandardOpenOption.READ
-            options += StandardOpenOption.WRITE
-        }
-
-        if (flags and Fcntl.O_APPEND != 0U) {
-            options += StandardOpenOption.APPEND
-        }
-
-        if (flags and Fcntl.O_CREAT != 0U) {
-            options += if (flags and Fcntl.O_EXCL != 0U) {
-                StandardOpenOption.CREATE_NEW
-            } else {
-                StandardOpenOption.CREATE
-            }
-        }
-
-        if (flags and Fcntl.O_TRUNC != 0U) {
-            options += StandardOpenOption.TRUNCATE_EXISTING
-        }
-
-        if (flags and Fcntl.O_NONBLOCK != 0U) {
-            logger.info { "O_NONBLOCK" + " not implemented" }
-        }
-
-        if (flags and Fcntl.O_ASYNC != 0U) {
-            logger.info { "O_ASYNC" + " not implemented" }
-        }
-
-        if (flags and (Fcntl.O_DSYNC or Fcntl.O_SYNC) != 0U) {
-            options += StandardOpenOption.SYNC
-        }
-
-        if (flags and Fcntl.O_DIRECT != 0U) {
-            options += ExtendedOpenOption.DIRECT
-        }
-
-        if (flags and Fcntl.O_DIRECTORY != 0U) {
-            throw SysException(Errno.ISDIR, "O_DIRECTORY" + " not implemented")
-        }
-
-        if (flags and Fcntl.O_NOFOLLOW != 0U) {
-            options += LinkOption.NOFOLLOW_LINKS
-        }
-        if (flags and Fcntl.O_NOATIME != 0U) {
-            logger.info { "O_NOATIME not implemented" }
-        }
-        if (flags and Fcntl.O_CLOEXEC != 0U) {
-            logger.finest { "O_CLOEXEC not implemented" }
-        }
-
-        if (flags and Fcntl.O_PATH != 0U) {
-            throw SysException(Errno.ISDIR, "O_PATH" + " not implemented")
-        }
-
-        if (flags and Fcntl.O_TMPFILE != 0U) {
-            logger.info { "O_TMPFILE not implemented" }
-            options += StandardOpenOption.DELETE_ON_CLOSE
-        }
-
-        return options
-    }
-
-    private fun getOpenFileAttributes(
-        mode: UInt,
-    ): FileAttribute<Set<PosixFilePermission>> {
-        val permissions = mutableSetOf<PosixFilePermission>()
-
-        if (mode and Fcntl.S_IRUSR != 0U) permissions += PosixFilePermission.OWNER_READ
-        if (mode and Fcntl.S_IWUSR != 0U) permissions += PosixFilePermission.OWNER_WRITE
-        if (mode and Fcntl.S_IXUSR != 0U) permissions += PosixFilePermission.OWNER_EXECUTE
-
-        if (mode and Fcntl.S_IRGRP != 0U) permissions += PosixFilePermission.GROUP_READ
-        if (mode and Fcntl.S_IWGRP != 0U) permissions += PosixFilePermission.GROUP_WRITE
-        if (mode and Fcntl.S_IXGRP != 0U) permissions += PosixFilePermission.GROUP_EXECUTE
-
-        if (mode and Fcntl.S_IROTH != 0U) permissions += PosixFilePermission.OTHERS_READ
-        if (mode and Fcntl.S_IWOTH != 0U) permissions += PosixFilePermission.OTHERS_WRITE
-        if (mode and Fcntl.S_IXOTH != 0U) permissions += PosixFilePermission.OTHERS_EXECUTE
-
-        mode.and(SUPPORTED_MODES.inv()).let {
-            if (it != 0U) {
-                logger.info { "Mode 0${it.toString(8)} not supported" }
-            }
-        }
-
-        return PosixFilePermissions.asFileAttribute(permissions)
     }
 
     fun seek(
@@ -368,6 +315,22 @@ class FileSystem(
         }
     }
 
+    fun sync(
+        fd: Fd,
+        metadata: Boolean = true,
+    ) {
+        logger.finest { "sync(${fd})" }
+        val channel = getStreamByFd(fd)
+
+        try {
+            channel.channel.force(metadata)
+        } catch (cce: ClosedChannelException) {
+            throw SysException(Errno.IO, "Channel closed", cce)
+        } catch (ioe: IOException) {
+            throw SysException(Errno.IO, "I/O error", ioe)
+        }
+    }
+
     private companion object {
         private const val ATTR_UNI_CTIME = "ctime"
         private const val ATTR_UNI_DEV = "dev"
@@ -423,5 +386,100 @@ class FileSystem(
             arrayOf(LinkOption.NOFOLLOW_LINKS)
         }
 
+    }
+
+    private fun getOpenOptions(
+        flags: UInt,
+    ): Set<OpenOption> {
+        val options = mutableSetOf<OpenOption>()
+        if (flags and Fcntl.O_WRONLY != 0U) {
+            options += StandardOpenOption.WRITE
+        } else if (flags and Fcntl.O_RDWR != 0U) {
+            options += StandardOpenOption.READ
+            options += StandardOpenOption.WRITE
+        }
+
+        if (flags and Fcntl.O_APPEND != 0U) {
+            options += StandardOpenOption.APPEND
+        }
+
+        if (flags and Fcntl.O_CREAT != 0U) {
+            options += if (flags and Fcntl.O_EXCL != 0U) {
+                StandardOpenOption.CREATE_NEW
+            } else {
+                StandardOpenOption.CREATE
+            }
+        }
+
+        if (flags and Fcntl.O_TRUNC != 0U) {
+            options += StandardOpenOption.TRUNCATE_EXISTING
+        }
+
+        if (flags and Fcntl.O_NONBLOCK != 0U) {
+            logger.info { "O_NONBLOCK" + " not implemented" }
+        }
+
+        if (flags and Fcntl.O_ASYNC != 0U) {
+            logger.info { "O_ASYNC" + " not implemented" }
+        }
+
+        if (flags and (Fcntl.O_DSYNC or Fcntl.O_SYNC) != 0U) {
+            options += StandardOpenOption.SYNC
+        }
+
+        if (flags and Fcntl.O_DIRECT != 0U) {
+            options += ExtendedOpenOption.DIRECT
+        }
+
+        if (flags and Fcntl.O_DIRECTORY != 0U) {
+            throw SysException(Errno.ISDIR, "O_DIRECTORY" + " not implemented")
+        }
+
+        if (flags and Fcntl.O_NOFOLLOW != 0U) {
+            options += LinkOption.NOFOLLOW_LINKS
+        }
+        if (flags and Fcntl.O_NOATIME != 0U) {
+            logger.info { "O_NOATIME not implemented" }
+        }
+        if (flags and Fcntl.O_CLOEXEC != 0U) {
+            logger.finest { "O_CLOEXEC not implemented" }
+        }
+
+        if (flags and Fcntl.O_PATH != 0U) {
+            throw SysException(Errno.ISDIR, "O_PATH" + " not implemented")
+        }
+
+        if (flags and Fcntl.O_TMPFILE != 0U) {
+            logger.info { "O_TMPFILE not implemented" }
+            options += StandardOpenOption.DELETE_ON_CLOSE
+        }
+
+        return options
+    }
+
+    private fun getOpenFileAttributes(
+        mode: UInt,
+    ): FileAttribute<Set<PosixFilePermission>> {
+        val permissions = mutableSetOf<PosixFilePermission>()
+
+        if (mode and Fcntl.S_IRUSR != 0U) permissions += PosixFilePermission.OWNER_READ
+        if (mode and Fcntl.S_IWUSR != 0U) permissions += PosixFilePermission.OWNER_WRITE
+        if (mode and Fcntl.S_IXUSR != 0U) permissions += PosixFilePermission.OWNER_EXECUTE
+
+        if (mode and Fcntl.S_IRGRP != 0U) permissions += PosixFilePermission.GROUP_READ
+        if (mode and Fcntl.S_IWGRP != 0U) permissions += PosixFilePermission.GROUP_WRITE
+        if (mode and Fcntl.S_IXGRP != 0U) permissions += PosixFilePermission.GROUP_EXECUTE
+
+        if (mode and Fcntl.S_IROTH != 0U) permissions += PosixFilePermission.OTHERS_READ
+        if (mode and Fcntl.S_IWOTH != 0U) permissions += PosixFilePermission.OTHERS_WRITE
+        if (mode and Fcntl.S_IXOTH != 0U) permissions += PosixFilePermission.OTHERS_EXECUTE
+
+        mode.and(SUPPORTED_MODES.inv()).let {
+            if (it != 0U) {
+                logger.info { "Mode 0${it.toString(8)} not supported" }
+            }
+        }
+
+        return PosixFilePermissions.asFileAttribute(permissions)
     }
 }

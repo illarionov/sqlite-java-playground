@@ -41,4 +41,10 @@ public object Fcntl {
     const val S_IWOTH = 0x02U
     const val S_IXOTH = 0x01U
     const val S_IRWXO = 0x07U
+
+    const val AT_FDCWD = -100
+    const val AT_SYMLINK_NOFOLLOW = 0x100U
+    const val AT_REMOVEDIR = 0x200U
+    const val AT_SYMLINK_FOLLOW = 0x400U
+    const val AT_EACCESS = 0x200U
 }

@@ -11,6 +11,7 @@ import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.environGet
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.environSizesGet
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdClose
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdRead
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdSync
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdWrite
 
 // https://github.com/WebAssembly/WASI/tree/main
@@ -87,16 +88,6 @@ class WasiSnapshotPreview1Builtins(
         moduleName,
         "fd_prestat_dir_name",
         ParamTypes.i32i32i32,
-        ParamTypes.i32,
-    )
-    val fdSync: HostFunction = HostFunction(
-        { instance: Instance, args: Array<Value> ->
-            TODO()
-            arrayOf(Value.i32(0))
-        },
-        moduleName,
-        "fd_sync",
-        ParamTypes.i32,
         ParamTypes.i32,
     )
     val fdFilestatGet: HostFunction = HostFunction(
@@ -239,7 +230,6 @@ class WasiSnapshotPreview1Builtins(
         ParamTypes.i32i32,
         ParamTypes.i32
     )
-
     val functions: List<HostFunction> = listOf(
         argsSizesGet,
         argsGet,
@@ -254,7 +244,7 @@ class WasiSnapshotPreview1Builtins(
         fdFdstatSetFlags,
         fdPrestatGet,
         fdPrestatDirName,
-        fdSync,
+        fdSync(fileSystem),
         fdFilestatGet,
         pathOpen,
         pathCreateDirectory,
