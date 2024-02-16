@@ -35,7 +35,7 @@ fun syscallOpenat(
         ValueType.I32 // mode / varargs
     ),
     listOf(
-        ValueType.I32 //
+        ValueType.I32
     ),
 )
 

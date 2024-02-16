@@ -7,6 +7,7 @@ import com.dylibso.chicory.wasm.types.ValueType
 import java.time.Clock
 import ru.pixnews.wasm.sqlite3.chicory.ext.ParamTypes
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
+import ru.pixnews.wasm.sqlite3.chicory.host.func.assertFail
 import ru.pixnews.wasm.sqlite3.chicory.host.func.emscriptenResizeHeap
 import ru.pixnews.wasm.sqlite3.chicory.host.func.syscallFchown32
 import ru.pixnews.wasm.sqlite3.chicory.host.func.syscallFstat64
@@ -22,16 +23,6 @@ class SyscallBindings(
     filesystem: FileSystem,
     moduleName: String = ENV_MODULE_NAME,
 ) {
-    val assertFail: HostFunction = HostFunction(
-        { instance: Instance, args: Array<Value> ->
-            TODO()
-            arrayOf(Value.i32(0))
-        },
-        moduleName,
-        "__assert_fail",
-        ParamTypes.i32i32i32i32,
-        listOf(),
-    )
     val syscallFaccessat: HostFunction = HostFunction(
         { instance: Instance, args: Array<Value> ->
             TODO()
@@ -214,7 +205,7 @@ class SyscallBindings(
             listOf(),
         ),
         emscriptenResizeHeap(),
-        assertFail,
+        assertFail(),
         syscallFaccessat,
         syscallFchmod,
         syscallChmod,

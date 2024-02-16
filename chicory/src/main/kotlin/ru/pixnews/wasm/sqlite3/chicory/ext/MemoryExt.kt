@@ -6,7 +6,15 @@ import java.io.ByteArrayOutputStream
 
 fun Memory.readNullTerminatedString(offsetValue: Value): String? {
     return if (offsetValue.asExtRef() != Value.REF_NULL_VALUE) {
-        this.readNullTerminatedString(offsetValue.asWasmAddr())
+        this.readNullableNullTerminatedString(offsetValue.asWasmAddr())
+    } else {
+        null
+    }
+}
+
+fun Memory.readNullableNullTerminatedString(offset: WasmPtr): String? {
+    return if (offset != 0) {
+        readNullTerminatedString(offset)
     } else {
         null
     }
