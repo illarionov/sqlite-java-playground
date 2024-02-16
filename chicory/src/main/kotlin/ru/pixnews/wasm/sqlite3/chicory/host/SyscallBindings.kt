@@ -7,6 +7,7 @@ import com.dylibso.chicory.wasm.types.ValueType
 import java.time.Clock
 import ru.pixnews.wasm.sqlite3.chicory.ext.ParamTypes
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
+import ru.pixnews.wasm.sqlite3.chicory.host.func.syscallFchown32
 import ru.pixnews.wasm.sqlite3.chicory.host.func.syscallFstat64
 import ru.pixnews.wasm.sqlite3.chicory.host.func.syscallGetcwd
 import ru.pixnews.wasm.sqlite3.chicory.host.func.syscallLstat64
@@ -57,16 +58,6 @@ class SyscallBindings(
         },
         moduleName,
         "__syscall_chmod",
-        ParamTypes.i32i32,
-        ParamTypes.i32,
-    )
-    val syscallFchown32: HostFunction = HostFunction(
-        { instance: Instance, args: Array<Value> ->
-            TODO()
-            arrayOf(Value.i32(0))
-        },
-        moduleName,
-        "__syscall_fchown32",
         ParamTypes.i32i32,
         ParamTypes.i32,
     )
@@ -232,7 +223,7 @@ class SyscallBindings(
         syscallFaccessat,
         syscallFchmod,
         syscallChmod,
-        syscallFchown32,
+        syscallFchown32(filesystem),
         syscallFtruncate64,
         syscallOpenat(filesystem),
         syscallStat64(filesystem),

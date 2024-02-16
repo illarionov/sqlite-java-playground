@@ -19,11 +19,13 @@ import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.FileTime
+import java.nio.file.attribute.PosixFileAttributeView
 import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.attribute.PosixFilePermissions
 import java.util.logging.Level
 import java.util.logging.Logger
 import kotlin.io.path.exists
+import kotlin.io.path.fileAttributesView
 import kotlin.io.path.isDirectory
 import kotlin.io.path.pathString
 import kotlin.io.path.readAttributes
@@ -265,10 +267,12 @@ class FileSystem(
                         }
                     }
                 }
+
                 CHANGE_POSITION -> {
                     val bytesRead = channel.channel.read(iovecs)
                     totalBytesRead = if (bytesRead != -1L) bytesRead.toULong() else 0UL
-                }                }
+                }
+            }
             return totalBytesRead
         } catch (cce: ClosedChannelException) {
             throw SysException(Errno.IO, "Channel closed", cce)
@@ -307,6 +311,7 @@ class FileSystem(
                         }
                     }
                 }
+
                 ReadWriteStrategy.CHANGE_POSITION -> {
                     totalBytesWritten = channel.channel.write(cIovecs).toULong()
                 }
@@ -352,6 +357,24 @@ class FileSystem(
             channel.channel.force(metadata)
         } catch (cce: ClosedChannelException) {
             throw SysException(Errno.IO, "Channel closed", cce)
+        } catch (ioe: IOException) {
+            throw SysException(Errno.IO, "I/O error", ioe)
+        }
+    }
+
+    fun chown(fd: Fd, owner: Int, group: Int) {
+        logger.finest { "chown($fd, $owner, $group)" }
+        val channel = getStreamByFd(fd)
+        try {
+            val lookupService = javaFs.userPrincipalLookupService
+            val ownerPrincipal = lookupService.lookupPrincipalByName(owner.toString())
+            val groupPrincipal = lookupService.lookupPrincipalByGroupName(group.toString())
+            channel.path.fileAttributesView<PosixFileAttributeView>().run {
+                setOwner(ownerPrincipal)
+                setGroup(groupPrincipal)
+            }
+        } catch (uoe: UnsupportedOperationException) {
+            throw SysException(Errno.ACCES)
         } catch (ioe: IOException) {
             throw SysException(Errno.IO, "I/O error", ioe)
         }
