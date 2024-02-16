@@ -6,6 +6,7 @@ import com.dylibso.chicory.runtime.Memory
 import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
 import com.dylibso.chicory.wasm.types.ValueType.I32
+import java.lang.reflect.Field
 import java.nio.ByteBuffer
 import java.util.logging.Level
 import java.util.logging.Logger
@@ -54,10 +55,13 @@ private fun fdRead(
 )
 
 private class FdRead(
-    private val filesystem: FileSystem,
-    private val strategy: ReadWriteStrategy,
+    filesystem: FileSystem,
+    strategy: ReadWriteStrategy,
     private val logger: Logger = Logger.getLogger(FdRead::class.qualifiedName)
 ) : WasmFunctionHandle {
+    private val memoryReader: MemoryReader = UnsafeMemoryReader.create(filesystem, strategy)
+        ?: DefaultMemoryReader(filesystem, strategy)
+
     override fun apply(instance: Instance, vararg args: Value): Array<Value> {
         val fd = Fd(args[0].asInt())
         val pIov = args[1].asWasmAddr()
@@ -66,24 +70,8 @@ private class FdRead(
 
         val memory = instance.memory()
         val ioVecs = readIovecs(memory, pIov, iovCnt)
-        val bbufs = ioVecs.toByteBuffers(memory)
-
         val errNo = try {
-            val readBytes = filesystem.read(fd, bbufs, strategy)
-            ioVecs.iovecList.forEachIndexed { idx, vec ->
-                val bbuf: ByteBuffer = bbufs[idx]
-                bbuf.flip()
-                if (bbuf.limit() != 0) {
-                    require(bbuf.hasArray())
-                    memory.write(
-                        vec.buf.asWasmAddr(),
-                        bbuf.array(),
-                        0,
-                        bbuf.limit()
-                    )
-                }
-            }
-
+            val readBytes = memoryReader.read(memory, fd, ioVecs)
             memory.writeI32(pNum, readBytes.toInt())
             Errno.SUCCESS
         } catch (e: SysException) {
@@ -99,7 +87,7 @@ private class FdRead(
         pIov: WasmPtr,
         iovCnt: Int
     ): IovecArray {
-         val iovecs = MutableList(iovCnt) { idx ->
+        val iovecs = MutableList(iovCnt) { idx ->
             val pIovec = pIov + 8 * idx
             Iovec(
                 buf = memory.readI32(pIovec),
@@ -109,9 +97,83 @@ private class FdRead(
         return IovecArray(iovecs)
     }
 
-    private fun IovecArray.toByteBuffers(
-        memory: Memory
-    ): Array<ByteBuffer> = Array(iovecList.size) {
-        ByteBuffer.allocate(iovecList[it].bufLen.value.asInt())
+    private fun interface MemoryReader {
+        fun read(memory: Memory, fd: Fd, ioVecs: IovecArray): ULong
+    }
+
+    private class UnsafeMemoryReader private constructor(
+        private val filesystem: FileSystem,
+        private val strategy: ReadWriteStrategy,
+        private val bufferField: Field
+    ) : MemoryReader {
+
+        override fun read(
+            memory: Memory,
+            fd: Fd,
+            ioVecs: IovecArray
+        ): ULong {
+            val memoryByteBuffer = bufferField.get(memory) as? ByteBuffer
+                ?: error("Can not get memory byte buffer")
+
+            val bbufs = ioVecs.toByteBuffers(memoryByteBuffer)
+            return filesystem.read(fd, bbufs, strategy)
+        }
+
+        private fun IovecArray.toByteBuffers(
+            memoryBuffer: ByteBuffer
+        ): Array<ByteBuffer> = Array(iovecList.size) {
+            val ioVec = iovecList[it]
+            memoryBuffer.slice(
+                ioVec.buf.asWasmAddr(),
+                ioVec.bufLen.value.asInt()
+            )
+        }
+
+        companion object {
+            fun create(
+                filesystem: FileSystem,
+                strategy: ReadWriteStrategy,
+            ): UnsafeMemoryReader? {
+                try {
+                    val bufferField = Memory::class.java.getDeclaredField("buffer")
+                    if (!bufferField.trySetAccessible()) {
+                        return null
+                    }
+                    return UnsafeMemoryReader(filesystem, strategy, bufferField)
+                } catch (nsfe: NoSuchFileException) {
+                    return null
+                } catch (se: SecurityException) {
+                    return null
+                }
+            }
+        }
+    }
+
+    private class DefaultMemoryReader(
+        private val filesystem: FileSystem,
+        private val strategy: ReadWriteStrategy,
+    ) : MemoryReader {
+        override fun read(memory: Memory, fd: Fd, ioVecs: IovecArray): ULong {
+            val bbufs = ioVecs.toByteBuffers()
+            val readBytes = filesystem.read(fd, bbufs, strategy)
+            ioVecs.iovecList.forEachIndexed { idx, vec ->
+                val bbuf: ByteBuffer = bbufs[idx]
+                bbuf.flip()
+                if (bbuf.limit() != 0) {
+                    require(bbuf.hasArray())
+                    memory.write(
+                        vec.buf.asWasmAddr(),
+                        bbuf.array(),
+                        0,
+                        bbuf.limit()
+                    )
+                }
+            }
+            return readBytes
+        }
+
+        private fun IovecArray.toByteBuffers(): Array<ByteBuffer> = Array(iovecList.size) {
+            ByteBuffer.allocate(iovecList[it].bufLen.value.asInt())
+        }
     }
 }
