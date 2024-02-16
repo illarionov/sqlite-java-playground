@@ -1,6 +1,7 @@
 package ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys
 
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.StructTimespec
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.timeMillis
 
@@ -47,10 +48,11 @@ public typealias nlink_t = ULong
 public typealias off_t = ULong
 public typealias uid_t = ULong
 
-
 public fun StructStat.pack(): ByteArray {
     val dstByteArray = ByteArray(96)
-    val dst = ByteBuffer.wrap(dstByteArray)
+    val dst = ByteBuffer.wrap(dstByteArray).apply {
+        order(ByteOrder.LITTLE_ENDIAN)
+    }
 
     dst.putInt(0, st_dev.toInt())
     dst.putInt(4, st_mode.toInt())

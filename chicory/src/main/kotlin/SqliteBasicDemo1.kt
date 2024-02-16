@@ -56,9 +56,8 @@ class SqliteBasicDemo1(
 
         try {
             val requests = listOf(
-                //"""PRAGMA journal_mode=MEMORY;""",
-                //"CREATE TABLE User(id INTEGER PRIMARY KEY, name TEXT);",
-                //"""INSERT INTO User(`id`, `name`) VALUES (1, 'user 1'), (2, 'user 2'), (3, 'user 3');""",
+                "CREATE TABLE User(id INTEGER PRIMARY KEY, name TEXT);",
+                """INSERT INTO User(`id`, `name`) VALUES (1, 'user 1'), (2, 'user 2'), (3, 'user 3');""",
                 """SELECT * FROM User;"""
             )
             for ((requestNo, sql) in requests.withIndex()) {
