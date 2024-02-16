@@ -20,7 +20,8 @@ class SqliteBasicDemo1(
         // testDbSqliteVersion()
 
         val t = measureTime {
-            testDbTable()
+            //testDbTable()
+            testLargeSqliteDatabase()
         }
         log.info { "time: $t" }
     }
@@ -59,6 +60,26 @@ class SqliteBasicDemo1(
                 "CREATE TABLE User(id INTEGER PRIMARY KEY, name TEXT);",
                 """INSERT INTO User(`id`, `name`) VALUES (1, 'user 1'), (2, 'user 2'), (3, 'user 3');""",
                 """SELECT * FROM User;"""
+            )
+            for ((requestNo, sql) in requests.withIndex()) {
+                val result = api.sqlite3Exec(dbPointer, sql)
+                log.info { "REQ $requestNo (`${sql}`): result: $result" }
+                if (result is Sqlite3Result.Error) {
+                    break
+                }
+            }
+        } finally {
+            api.sqlite3Close(dbPointer)
+        }
+    }
+
+    private fun testLargeSqliteDatabase() {
+        val dbPointer: Value = api.sqlite3Open("/home/work/comments_dataset.db")
+        //val dbPointer: Value = api.sqlite3Open(":memory:")
+
+        try {
+            val requests = listOf(
+                """SELECT distinct `author.name` from comments order by `author.name` limit 10 offset 5000;"""
             )
             for ((requestNo, sql) in requests.withIndex()) {
                 val result = api.sqlite3Exec(dbPointer, sql)
