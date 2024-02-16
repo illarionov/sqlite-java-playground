@@ -7,6 +7,7 @@ import com.dylibso.chicory.wasm.types.ValueType
 import java.time.Clock
 import ru.pixnews.wasm.sqlite3.chicory.ext.ParamTypes
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
+import ru.pixnews.wasm.sqlite3.chicory.host.func.emscriptenResizeHeap
 import ru.pixnews.wasm.sqlite3.chicory.host.func.syscallFchown32
 import ru.pixnews.wasm.sqlite3.chicory.host.func.syscallFstat64
 import ru.pixnews.wasm.sqlite3.chicory.host.func.syscallGetcwd
@@ -212,13 +213,7 @@ class SyscallBindings(
             ParamTypes.i32i32i32,
             listOf(),
         ),
-        HostFunction(
-            { instance: Instance, args: Array<Value> -> TODO() },
-            moduleName,
-            "emscripten_resize_heap",
-            ParamTypes.i32,
-            ParamTypes.i32,
-        ),
+        emscriptenResizeHeap(),
         assertFail,
         syscallFaccessat,
         syscallFchmod,
