@@ -54,11 +54,11 @@ private class Fstat64(
     ): Int {
         try {
             val stat = filesystem.stat(fd).also {
-                logger.finest { "fStat64($fd): $it" }
+                logger.finest { "fStat64($fd): OK $it" }
             }.pack()
             instance.memory().write(dst, stat)
         } catch (e: SysException) {
-            logger.finest { "fStast64(): error ${e.errNo}" }
+            logger.finest { "fStat64(${fd}): Error ${e.errNo}" }
             return -e.errNo.code
         }
         return 0

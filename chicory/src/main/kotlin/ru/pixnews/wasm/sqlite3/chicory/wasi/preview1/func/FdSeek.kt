@@ -5,6 +5,7 @@ import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
 import com.dylibso.chicory.wasm.types.ValueType
+import java.util.logging.Level
 import java.util.logging.Logger
 import ru.pixnews.wasm.sqlite3.chicory.ext.ParamTypes
 import ru.pixnews.wasm.sqlite3.chicory.ext.WASI_SNAPSHOT_PREVIEW1
@@ -65,6 +66,7 @@ private class FdSeek(
 
             Errno.SUCCESS
         } catch (sysException: SysException) {
+            logger.log(Level.INFO, sysException) { "fdSeek() error" }
             sysException.errNo
         }
     }

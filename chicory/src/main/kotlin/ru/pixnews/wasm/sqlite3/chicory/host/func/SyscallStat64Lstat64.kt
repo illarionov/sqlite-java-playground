@@ -73,7 +73,7 @@ private class Stat64(
         pathnamePtr: WasmPtr,
         dst: WasmPtr,
     ): Int {
-        var path: String = ""
+        var path = ""
         try {
             path = instance.memory().readNullTerminatedString(pathnamePtr)
             val stat = filesystem.stat(

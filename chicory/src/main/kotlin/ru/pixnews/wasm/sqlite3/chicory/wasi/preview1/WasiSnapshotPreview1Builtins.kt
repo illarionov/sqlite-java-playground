@@ -10,8 +10,10 @@ import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdSeek
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.environGet
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.environSizesGet
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdClose
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdRead
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdPread
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdSync
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdPwrite
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdRead
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdWrite
 
 // https://github.com/WebAssembly/WASI/tree/main
@@ -236,6 +238,8 @@ class WasiSnapshotPreview1Builtins(
         environSizesGet(),
         environGet(),
         clockTimeGet,
+        fdPwrite(fileSystem),
+        fdPread(fileSystem),
         fdWrite(fileSystem),
         fdRead(fileSystem),
         fdClose(fileSystem),

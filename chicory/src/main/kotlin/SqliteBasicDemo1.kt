@@ -51,18 +51,19 @@ class SqliteBasicDemo1(
     }
 
     private fun testDbTable() {
-        val dbPointer: Value = api.sqlite3Open("/home/work/test.db")
-        // val dbPointer: Value = api.sqlite3Open(":memory:")
+        val dbPointer: Value = api.sqlite3Open("/home/work/test7.db")
+        //val dbPointer: Value = api.sqlite3Open(":memory:")
 
         try {
             val requests = listOf(
-                "CREATE TABLE User(id INTEGER PRIMARY KEY, name TEXT);",
-                """INSERT INTO User(`id`, `name`) VALUES (1, 'user 1'), (2, 'user 2'), (3, 'user 3');""",
+                //"""PRAGMA journal_mode=MEMORY;""",
+                //"CREATE TABLE User(id INTEGER PRIMARY KEY, name TEXT);",
+                //"""INSERT INTO User(`id`, `name`) VALUES (1, 'user 1'), (2, 'user 2'), (3, 'user 3');""",
                 """SELECT * FROM User;"""
             )
             for ((requestNo, sql) in requests.withIndex()) {
                 val result = api.sqlite3Exec(dbPointer, sql)
-                log.info { "${requestNo}: result: $result" }
+                log.info { "REQ $requestNo (`${sql}`): result: $result" }
                 if (result is Sqlite3Result.Error) {
                     break
                 }

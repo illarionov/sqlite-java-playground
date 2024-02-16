@@ -4,6 +4,8 @@ import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
+import java.util.logging.Level
+import java.util.logging.Logger
 import ru.pixnews.wasm.sqlite3.chicory.ext.ParamTypes
 import ru.pixnews.wasm.sqlite3.chicory.ext.WASI_SNAPSHOT_PREVIEW1
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
@@ -26,6 +28,7 @@ fun fdSync(
 
 private class FdSync(
     private val filesystem: FileSystem,
+    private val logger: Logger = Logger.getLogger(FdSync::class.qualifiedName),
 ) : WasmFunctionHandle {
     override fun apply(instance: Instance, vararg args: Value): Array<Value> {
         val fd = Fd(args[0].asInt())
@@ -33,6 +36,7 @@ private class FdSync(
             filesystem.sync(fd, metadata = true)
             Errno.SUCCESS
         } catch (e: SysException) {
+            logger.log(Level.INFO, e) { "sync() error" }
             e.errNo
         }
 

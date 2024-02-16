@@ -5,6 +5,7 @@ import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
 import com.dylibso.chicory.wasm.types.ValueType
+import java.nio.file.Path
 import java.util.logging.Logger
 import ru.pixnews.wasm.sqlite3.chicory.ext.WasmPtr
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
@@ -16,6 +17,7 @@ import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.SysException
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.Fcntl
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.resolveAbsolutePath
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Fd
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.U8
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.pointer
 
@@ -64,23 +66,35 @@ private class Openat(
         pathnamePtr: WasmPtr,
         flags: UInt,
         mode: UInt
-    ) : Int {
+    ): Int {
         val path = instance.memory().readNullTerminatedString(pathnamePtr)
         val absolutePath = filesystem.resolveAbsolutePath(dirfd, path)
 
-        logger.finest { "openAt() dirfd: " +
-                "$dirfd, " +
-                "path: `$path`, " +
-                "full path: `$absolutePath`, " +
-                "flags: 0${flags.toString(8)} (${Fcntl.oMaskToString(flags)}), " +
-                "mode: ${Fcntl.sMaskToString(mode)}"
-        }
-
         return try {
-            filesystem.open(absolutePath, flags, mode).fd.fd
+            val fd = filesystem.open(absolutePath, flags, mode).fd
+            logger.finest { formatCallString(dirfd, path, absolutePath, flags, mode, fd) }
+            fd.fd
         } catch (e: SysException) {
-            logger.finest { "openAt() error ${e.errNo}" }
+            logger.finest {
+                formatCallString(dirfd, path, absolutePath, flags, mode, null) +
+                        "openAt() error ${e.errNo}"
+            }
             -e.errNo.code
         }
     }
+
+    private fun formatCallString(
+        dirfd: Int,
+        path: String,
+        absolutePath: Path,
+        flags: UInt,
+        mode: UInt,
+        fd: Fd?
+    ): String = "openAt() dirfd: " +
+            "$dirfd, " +
+            "path: `$path`, " +
+            "full path: `$absolutePath`, " +
+            "flags: 0${flags.toString(8)} (${Fcntl.oMaskToString(flags)}), " +
+            "mode: ${Fcntl.sMaskToString(mode)}" +
+            if (fd != null) ": $fd" else ""
 }

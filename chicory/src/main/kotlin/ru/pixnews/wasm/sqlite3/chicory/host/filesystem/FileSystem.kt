@@ -21,6 +21,7 @@ import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.FileTime
 import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.attribute.PosixFilePermissions
+import java.util.logging.Level
 import java.util.logging.Logger
 import kotlin.io.path.exists
 import kotlin.io.path.isDirectory
@@ -40,6 +41,9 @@ import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.nlink_t
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.off_t
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.uid_t
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.FdChannel
+import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy
+import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy.CHANGE_POSITION
+import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy.DO_NOT_CHANGE_POSITION
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.position
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Fd
@@ -47,6 +51,7 @@ import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Whence
 
 class FileSystem(
     internal val javaFs: FileSystem = FileSystems.getDefault(),
+    private val blockSize: ULong = 512UL,
     private val logger: Logger = Logger.getLogger(ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem::class.qualifiedName)
 ) {
     private val fileDescriptors: FileDescriptorMap = FileDescriptorMap(this)
@@ -105,7 +110,7 @@ class FileSystem(
         val gid: gid_t = (unixAttrs[ATTR_UNI_GID] as? Int)?.toULong() ?: 0UL
         val rdev: dev_t = (unixAttrs[ATTR_UNI_RDEV] as? Long)?.toULong() ?: 1UL
         val size: off_t = basicFileAttrs.size().toULong()
-        val blksize: blksize_t = 4096UL
+        val blksize: blksize_t = blockSize
         val blocks: blkcnt_t = (size + blksize - 1UL) / blksize
         val mtim: StructTimespec = basicFileAttrs.lastModifiedTime().toTimeSpec()
 
@@ -144,7 +149,6 @@ class FileSystem(
         val channel = try {
             val openOptions = getOpenOptions(flags)
             val fileAttributes = getOpenFileAttributes(mode)
-            logger.finest { "open(): path: `$path`, options: `${openOptions}, attrs: ${fileAttributes.value()}`" }
             FileChannel.open(
                 path,
                 openOptions,
@@ -172,7 +176,7 @@ class FileSystem(
         flags: UInt
     ) {
         val absolutePath = resolveAbsolutePath(dirfd, path)
-        logger.finest { "unlinkAt($absolutePath, flags: 0${flags.toString(8)} (${Fcntl.oMaskToString(flags)}), )" }
+        logger.finest { "unlinkAt($absolutePath, flags: 0${flags.toString(8)} (${Fcntl.oMaskToString(flags)}))" }
 
         when (flags) {
             0U -> {
@@ -187,6 +191,7 @@ class FileSystem(
                     throw SysException(Errno.ACCES)
                 }
             }
+
             Fcntl.AT_REMOVEDIR -> {
                 if (!absolutePath.isDirectory()) throw SysException(Errno.NOTDIR)
                 try {
@@ -199,6 +204,7 @@ class FileSystem(
                     throw SysException(Errno.ACCES)
                 }
             }
+
             else -> {
                 throw SysException(Errno.INVAL, "Invalid flags passed to unlinkAt()")
             }
@@ -225,36 +231,45 @@ class FileSystem(
         logger.finest { "seek(${channel.fd}, $offset, $whence)" }
         val newPosition = when (whence) {
             Whence.SET -> offset
-            Whence.CUR -> channel.channel.position() + offset
+            Whence.CUR -> channel.position + offset
             Whence.END -> channel.channel.size() - offset
         }
         if (newPosition < 0) {
             throw SysException(Errno.INVAL, "Incorrect new position: $newPosition")
         }
 
-        channel.channel.position(newPosition)
+        channel.position = newPosition
     }
 
-    fun pRead(
+    fun read(
         fd: Fd,
-        iovecs: Array<ByteBuffer>
-    ): Long {
-        logger.finest { "pRead($fd, ${iovecs.contentToString()})" }
+        iovecs: Array<ByteBuffer>,
+        strategy: ReadWriteStrategy = CHANGE_POSITION,
+    ): ULong {
+        logger.finest { "read($fd, ${iovecs.contentToString()}, $strategy)" }
         val channel = getStreamByFd(fd)
 
         try {
-            val originalPosition = channel.position
-            var position = originalPosition
-            for (iovec in iovecs) {
-                val bytesRead = channel.channel.read(iovec, position)
-                if (bytesRead > 0) {
-                    position += bytesRead
+            var totalBytesRead: ULong = 0U
+            when (strategy) {
+                DO_NOT_CHANGE_POSITION -> {
+                    var position = channel.position
+                    for (iovec in iovecs) {
+                        val bytesRead = channel.channel.read(iovec, position)
+                        if (bytesRead > 0) {
+                            position += bytesRead
+                            totalBytesRead += bytesRead.toULong()
+                        }
+                        if (bytesRead < iovec.limit()) {
+                            break
+                        }
+                    }
                 }
-                if (bytesRead < iovec.limit()) {
-                    break
-                }
-            }
-            return position - originalPosition
+                CHANGE_POSITION -> {
+                    val bytesRead = channel.channel.read(iovecs)
+                    totalBytesRead = if (bytesRead != -1L) bytesRead.toULong() else 0UL
+                }                }
+            return totalBytesRead
         } catch (cce: ClosedChannelException) {
             throw SysException(Errno.IO, "Channel closed", cce)
         } catch (ace: AsynchronousCloseException) {
@@ -268,26 +283,35 @@ class FileSystem(
         }
     }
 
-    fun pWrite(
+    fun write(
         fd: Fd,
-        cIovecs: Array<ByteBuffer>
-    ): Long {
-        logger.finest { "pWrite($fd, ${cIovecs.contentToString()})" }
+        cIovecs: Array<ByteBuffer>,
+        strategy: ReadWriteStrategy = ReadWriteStrategy.CHANGE_POSITION,
+    ): ULong {
+        logger.finest { "write($fd, ${cIovecs.contentToString()}, $strategy)" }
         val channel = getStreamByFd(fd)
 
         try {
-            val initialPosition = channel.position
-            var position = initialPosition
-            for (ciovec in cIovecs) {
-                val bytesWritten = channel.channel.write(ciovec, position)
-                if (bytesWritten > 0) {
-                    position += bytesWritten
+            var totalBytesWritten = 0UL
+            when (strategy) {
+                DO_NOT_CHANGE_POSITION -> {
+                    var position = channel.position
+                    for (ciovec in cIovecs) {
+                        val bytesWritten = channel.channel.write(ciovec, position)
+                        if (bytesWritten > 0) {
+                            position += bytesWritten
+                            totalBytesWritten += bytesWritten.toULong()
+                        }
+                        if (bytesWritten < ciovec.limit()) {
+                            break
+                        }
+                    }
                 }
-                if (bytesWritten < ciovec.limit()) {
-                    break
+                ReadWriteStrategy.CHANGE_POSITION -> {
+                    totalBytesWritten = channel.channel.write(cIovecs).toULong()
                 }
             }
-            return position - initialPosition
+            return totalBytesWritten
         } catch (cce: ClosedChannelException) {
             throw SysException(Errno.IO, "Channel closed", cce)
         } catch (ace: AsynchronousCloseException) {
@@ -307,9 +331,11 @@ class FileSystem(
         try {
             try {
                 channel.channel.force(true)
-            } finally {
-                channel.channel.close()
+            } catch (e: Throwable) {
+                // IGNORE
+                logger.log(Level.FINE, e) { "close(${fd}): sync failed: ${e.message}" }
             }
+            channel.channel.close()
         } catch (ioe: IOException) {
             throw SysException(Errno.IO, "Can not close channel", ioe)
         }
