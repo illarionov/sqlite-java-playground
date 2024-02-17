@@ -1,26 +1,21 @@
-package org.example.app
+package org.example.app.bindings
 
 import org.example.app.ext.readNullTerminatedString
 import org.graalvm.polyglot.Value
+import ru.pixnews.sqlite3.wasm.Sqlite3Errno
+import ru.pixnews.sqlite3.wasm.Sqlite3Exception
 
 class SqliteBindings(
     val envBindings: Value,
     val mainBindings: Value,
 ) {
-    val memory = envBindings.getMember("memory")
+    private val memory = envBindings.getMember("memory")
+    val memoryBindings = SqliteMemoryBindings(mainBindings, memory)
 
-    val _initialize = mainBindings.getMember("_initialize") // 34
+    val _initialize: Value? = mainBindings.getMember("_initialize") // 34
     val __errno_location = mainBindings.getMember("__errno_location") // 2644
-    // val __wasm_call_ctors = mainBindings.getMember("__wasm_call_ctors") // 34
+    val __wasm_call_ctors: Value? = mainBindings.getMember("__wasm_call_ctors") // 34
     val __indirect_function_table = mainBindings.getMember("__indirect_function_table") // 0
-
-    val malloc = mainBindings.getMember("malloc") // 2815
-    val free = mainBindings.getMember("free") // 2816
-    val realloc = mainBindings.getMember("realloc") // 2817
-    val stackSave = mainBindings.getMember("stackSave") // 2838
-    val stackRestore = mainBindings.getMember("stackRestore") // 2839
-    val stackAlloc = mainBindings.getMember("stackAlloc") // 2840
-    val emscripten_builtin_memalign = mainBindings.getMember("emscripten_builtin_memalign") // 2819
 
     val sqlite3_status64 = mainBindings.getMember("sqlite3_status64") // 35
     val sqlite3_status = mainBindings.getMember("sqlite3_status") // 38
@@ -28,13 +23,9 @@ class SqliteBindings(
     val sqlite3_msize = mainBindings.getMember("sqlite3_msize") // 48
     val sqlite3_vfs_find = mainBindings.getMember("sqlite3_vfs_find") // 58
     val sqlite3_initialize = mainBindings.getMember("sqlite3_initialize") // 59
-    val sqlite3_malloc = mainBindings.getMember("sqlite3_malloc") // 63
-    val sqlite3_free = mainBindings.getMember("sqlite3_free") // 64
+
     val sqlite3_vfs_register = mainBindings.getMember("sqlite3_vfs_register") // 66
     val sqlite3_vfs_unregister = mainBindings.getMember("sqlite3_vfs_unregister") // 69
-    val sqlite3_malloc64 = mainBindings.getMember("sqlite3_malloc64") // 73
-    val sqlite3_realloc = mainBindings.getMember("sqlite3_realloc") // 74
-    val sqlite3_realloc64 = mainBindings.getMember("sqlite3_realloc64") // 76
     val sqlite3_value_text = mainBindings.getMember("sqlite3_value_text") // 95
     val sqlite3_randomness = mainBindings.getMember("sqlite3_randomness") // 107
     val sqlite3_stricmp = mainBindings.getMember("sqlite3_stricmp") // 108
@@ -288,7 +279,36 @@ class SqliteBindings(
 
     // globalThis.sqlite3InitModule
     private fun initSqlite() {
-        // __wasm_call_ctors.execute()
-        _initialize.execute()
+         requireNotNull(__wasm_call_ctors) {
+             "__wasm_call_ctors not defined"
+         }.execute()
+        memoryBindings.init()
+        postRun()
+        //_initialize.execute()
+    }
+
+    private fun postRun() {
+        val config = mapOf(
+            "exports" to null,
+            "memory" to null,
+            "bigIntEnabled" to true,
+            "debug" to  null, // console.debug.bind(console)
+            "warn" to  null, // console.warn.bind(console)
+            "error" to  null, // console.error.bind(console)
+            "log" to  null, // console.log.bind(console)
+
+            "wasmfsOpfsDir" to  "/opfs",
+            "useStdAlloc" to false,
+
+            "allocExportName" to "sqlite3_malloc",
+            "deallocExportName" to "sqlite3_free",
+            "reallocExportName" to "sqlite3_realloc",
+
+            )
+
+        val sqliteInitResult = sqlite3_initialize.execute().asInt()
+        if (sqliteInitResult != Sqlite3Errno.SQLITE_OK.code) {
+            throw Sqlite3Exception(sqliteInitResult, sqliteInitResult)
+        }
     }
 }

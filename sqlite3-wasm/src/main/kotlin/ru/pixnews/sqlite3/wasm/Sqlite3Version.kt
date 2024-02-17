@@ -1,4 +1,4 @@
-package ru.pixnews.wasm.sqlite3.chicory.sqlite3.model
+package ru.pixnews.sqlite3.wasm
 
 data class Sqlite3Version(
     val version: String,

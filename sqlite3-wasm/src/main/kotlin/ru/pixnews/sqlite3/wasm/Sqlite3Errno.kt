@@ -1,8 +1,4 @@
-package ru.pixnews.wasm.sqlite3.chicory.sqlite3.model
-
-import com.dylibso.chicory.wasm.types.Value
-import com.dylibso.chicory.wasm.types.ValueType
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.WasiType
+package ru.pixnews.sqlite3.wasm
 
 enum class Sqlite3Errno(
     public val code: Int,
@@ -135,11 +131,7 @@ enum class Sqlite3Errno(
 
     ;
 
-    public val value: Value get() = Value.i32(code.toLong())
-
-    public companion object : WasiType {
-        override val valueType: ValueType = ValueType.I32
-
+    public companion object {
         val entriesMap: Map<Int, Sqlite3Errno> = entries.associateBy(Sqlite3Errno::code)
 
         fun fromErrNoCode(code: Int): Sqlite3Errno? = entriesMap[code]

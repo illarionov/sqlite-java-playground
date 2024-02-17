@@ -1,5 +1,7 @@
 package org.example.app
 
+import org.example.app.bindings.SqliteBindings
+
 class Sqlite3OopApi(
     private val sqlite: SqliteBindings
 ) {

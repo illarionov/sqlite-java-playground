@@ -1,13 +1,15 @@
 package org.example.app
 
+import org.example.app.bindings.SqliteBindings
+
 class Sqlite3CApi(
-    private val sqlite: SqliteBindings
+    private val bindings: SqliteBindings
 ) {
     val version: Sqlite3Version
         get() = Sqlite3Version(
-            sqlite.version,
-            sqlite.versionNumber,
-            sqlite.sourceId,
+            bindings.version,
+            bindings.versionNumber,
+            bindings.sourceId,
         )
 
     data class Sqlite3Version(

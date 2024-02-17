@@ -4,7 +4,7 @@ import kotlin.time.measureTime
 import kotlin.time.measureTimedValue
 import ru.pixnews.wasm.sqlite3.chicory.bindings.SqliteBindings
 import ru.pixnews.wasm.sqlite3.chicory.sqlite3.Sqlite3CApi
-import ru.pixnews.wasm.sqlite3.chicory.sqlite3.model.Sqlite3Result
+import ru.pixnews.sqlite3.wasm.Sqlite3Result
 
 class SqliteBasicDemo1(
     private val sqliteBindings: SqliteBindings,

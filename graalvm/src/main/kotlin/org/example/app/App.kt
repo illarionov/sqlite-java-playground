@@ -1,8 +1,8 @@
 package org.example.app
 
 import kotlin.time.measureTimedValue
+import org.example.app.bindings.SqliteBindings
 import org.graalvm.polyglot.Context
-import org.graalvm.polyglot.HostAccess
 import org.graalvm.polyglot.Source
 import org.graalvm.wasm.WasmContext
 import ru.pixnews.sqlite3.wasm.Sqlite3Wasm
@@ -22,12 +22,6 @@ private fun testSqlite() {
             .build()
         wasmContext.initialize("wasm")
 
-//        val webAssembly = wasmContext
-//            .polyglotBindings
-//            .getMember("WebAssembly")
-//            .`as`(WebAssembly::class.java)
-//            ?: error("Can not get WebAssembly instance")
-
         wasmContext.enter()
         try {
             val instanceContext = WasmContext.get(null)
@@ -45,7 +39,7 @@ private fun testSqlite() {
         }
 
         val sqliteSource: Source = run {
-            val sqliteUrl = Sqlite3Wasm.Emscripten.sqlite3_346_o0
+            val sqliteUrl = Sqlite3Wasm.Emscripten.sqlite3_346_o0_debug
             Source.newBuilder("wasm", sqliteUrl).build()
         }
         wasmContext.eval(sqliteSource)
@@ -65,14 +59,6 @@ private fun testSqlite() {
 
     SqliteBasicDemo1(sqlite3Bindings).run()
 
-}
-
-public class SqliteEnv(
-) {
-    @HostAccess.Export
-    fun __syscall_rmdir(path: String): Int {
-        return 0
-    }
 }
 
 private fun testFactorial() {
