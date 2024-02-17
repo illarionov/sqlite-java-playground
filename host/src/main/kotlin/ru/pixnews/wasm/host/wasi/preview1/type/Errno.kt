@@ -1,6 +1,6 @@
 package ru.pixnews.wasm.host.wasi.preview1.type
 
-import ru.pixnews.wasm.host.WebAssemblyValueType
+import ru.pixnews.wasm.host.WasmValueType
 import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U16
 
 public enum class Errno(
@@ -394,7 +394,7 @@ public enum class Errno(
     ;
 
     public companion object : WasiTypename {
-        override val webAssemblyValueType: WebAssemblyValueType = U16
+        override val wasmValueType: WasmValueType = U16
 
         fun fromErrNoCode(code: Int): Errno? = entries.firstNotNullOfOrNull { if (it.code == code) it else null }
     }

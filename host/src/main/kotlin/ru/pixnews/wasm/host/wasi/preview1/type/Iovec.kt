@@ -1,6 +1,6 @@
 package ru.pixnews.wasm.host.wasi.preview1.type
 
-import ru.pixnews.wasm.host.WebAssemblyValueType
+import ru.pixnews.wasm.host.WasmValueType
 
 /**
  * A region of memory for scatter/gather reads.
@@ -13,6 +13,6 @@ data class Iovec(
     val bufLen: Size // (field $buf_len $size)
 ) {
     public companion object : WasiTypename {
-        public override val webAssemblyValueType: WebAssemblyValueType = WebAssemblyValueType.I32
+        public override val wasmValueType: WasmValueType = WasmValueType.I32
     }
 }

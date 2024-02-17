@@ -8,6 +8,6 @@ public value class Timestamp(
     val value: ULong
 ) {
     public companion object : WasiTypename {
-        public override val webAssemblyValueType = WasiValueTypes.U64
+        public override val wasmValueType = WasiValueTypes.U64
     }
 }

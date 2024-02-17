@@ -4,7 +4,7 @@ import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
-import ru.pixnews.wasm.host.WebAssemblyValueType
+import ru.pixnews.wasm.host.WasmValueType
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.sqlite3.chicory.ext.chicory
 import ru.pixnews.wasm.sqlite3.chicory.ext.valueType
@@ -13,14 +13,14 @@ internal const val WASI_SNAPSHOT_PREVIEW1 = "wasi_snapshot_preview1"
 
 internal fun wasiHostFunction(
     funcName: String,
-    paramTypes : List<WebAssemblyValueType>,
+    paramTypes : List<WasmValueType>,
     moduleName: String = WASI_SNAPSHOT_PREVIEW1,
     handle: WasiHostFunction,
 ) : HostFunction = HostFunction(
     WasiHostFunctionAdapter(handle),
     moduleName,
     funcName,
-    paramTypes.map(WebAssemblyValueType::chicory),
+    paramTypes.map(WasmValueType::chicory),
     listOf(Errno.valueType)
 )
 

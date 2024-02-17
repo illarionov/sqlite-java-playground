@@ -5,8 +5,8 @@ import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.wasm.types.Value
 import java.util.logging.Level
 import java.util.logging.Logger
-import ru.pixnews.wasm.host.WebAssemblyValueType.WebAssemblyTypes.I32
-import ru.pixnews.wasm.host.WebAssemblyValueType.WebAssemblyTypes.I64
+import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I32
+import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I64
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.wasi.preview1.type.Fd
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
@@ -27,7 +27,7 @@ fun fdSeek(
 ): HostFunction = wasiHostFunction(
     funcName = "fd_seek",
     paramTypes = listOf(
-        Fd.webAssemblyValueType, // fd
+        Fd.wasmValueType, // fd
         I64, // offset
         I32, // whence
         I64.pointer // *newOffset

@@ -5,6 +5,6 @@ public value class Size(
     val value: UInt
 ) {
     public companion object : WasiTypename {
-        public override val webAssemblyValueType = WasiValueTypes.U32
+        public override val wasmValueType = WasiValueTypes.U32
     }
 }

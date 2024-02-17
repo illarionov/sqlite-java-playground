@@ -4,7 +4,7 @@ import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.wasm.types.Value
 import java.util.logging.Logger
-import ru.pixnews.wasm.host.WebAssemblyValueType
+import ru.pixnews.wasm.host.WasmValueType
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.sqlite3.chicory.host.ENV_MODULE_NAME
 import ru.pixnews.wasm.sqlite3.chicory.host.EmscryptenHostFunction
@@ -17,11 +17,11 @@ fun syscallIoctl(
 ): HostFunction = emscriptenEnvHostFunction(
     funcName = "__syscall_ioctl",
     paramTypes = listOf(
-        WebAssemblyValueType.I32,
-        WebAssemblyValueType.I32,
-        WebAssemblyValueType.I32,
+        WasmValueType.I32,
+        WasmValueType.I32,
+        WasmValueType.I32,
     ),
-    returnType = Errno.webAssemblyValueType,
+    returnType = Errno.wasmValueType,
     moduleName = moduleName,
     handle = SyscallIoctl(filesystem)
 )

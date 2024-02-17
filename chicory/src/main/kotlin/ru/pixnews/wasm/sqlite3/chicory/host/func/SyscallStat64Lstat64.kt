@@ -48,7 +48,7 @@ private fun stat64Func(
         U8.pointer, // pathname
         U8.pointer, // statbuf
     ),
-    returnType = Errno.webAssemblyValueType,
+    returnType = Errno.wasmValueType,
     moduleName = moduleName,
     handle = Stat64(filesystem = filesystem, followSymlinks = followSymlinks)
 )

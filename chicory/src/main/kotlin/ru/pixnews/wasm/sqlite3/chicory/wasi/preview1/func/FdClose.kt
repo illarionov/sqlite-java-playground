@@ -19,7 +19,7 @@ fun fdClose(
 ): HostFunction = wasiHostFunction(
     funcName = "fd_close",
     paramTypes = listOf(
-        Fd.webAssemblyValueType, // Fd
+        Fd.wasmValueType, // Fd
     ),
     moduleName = moduleName,
     handle = FdClose(filesystem)

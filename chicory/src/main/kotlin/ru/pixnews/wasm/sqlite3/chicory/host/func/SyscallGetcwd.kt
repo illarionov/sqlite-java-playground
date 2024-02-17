@@ -4,7 +4,7 @@ import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.wasm.types.Value
 import java.util.logging.Logger
-import ru.pixnews.wasm.host.WebAssemblyValueType.WebAssemblyTypes.I32
+import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I32
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U8
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
@@ -25,7 +25,7 @@ fun syscallGetcwd(
         U8.pointer, // buf
         I32, // size
     ),
-    returnType = Errno.webAssemblyValueType,
+    returnType = Errno.wasmValueType,
     moduleName = moduleName,
     handle = Getcwd(filesystem)
 )

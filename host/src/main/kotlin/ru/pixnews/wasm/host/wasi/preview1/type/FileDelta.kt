@@ -1,6 +1,6 @@
 package ru.pixnews.wasm.host.wasi.preview1.type
 
-import ru.pixnews.wasm.host.WebAssemblyValueType
+import ru.pixnews.wasm.host.WasmValueType
 
 /**
  * Relative offset within a file.
@@ -10,6 +10,6 @@ public value class FileDelta(
     val rawValue: Int,
 ) {
     public companion object : WasiTypename {
-        public override val webAssemblyValueType: WebAssemblyValueType = WebAssemblyValueType.I32
+        public override val wasmValueType: WasmValueType = WasmValueType.I32
     }
 }

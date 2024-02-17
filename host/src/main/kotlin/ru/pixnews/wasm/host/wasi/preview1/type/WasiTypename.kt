@@ -1,7 +1,7 @@
 package ru.pixnews.wasm.host.wasi.preview1.type
 
-import ru.pixnews.wasm.host.WebAssemblyValueType
+import ru.pixnews.wasm.host.WasmValueType
 
 public interface WasiTypename {
-    val webAssemblyValueType: WebAssemblyValueType
+    val wasmValueType: WasmValueType
 }

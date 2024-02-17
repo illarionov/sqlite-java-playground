@@ -1,6 +1,6 @@
 package ru.pixnews.wasm.host.wasi.preview1.type
 
-import ru.pixnews.wasm.host.WebAssemblyValueType
+import ru.pixnews.wasm.host.WasmValueType
 
 /**
  * A reference to the offset of a directory entry.
@@ -12,6 +12,6 @@ public value class Dircookie(
     val rawValue: ULong,
 ) {
     public companion object : WasiTypename {
-        public override val webAssemblyValueType: WebAssemblyValueType = WasiValueTypes.U64
+        public override val wasmValueType: WasmValueType = WasiValueTypes.U64
     }
 }

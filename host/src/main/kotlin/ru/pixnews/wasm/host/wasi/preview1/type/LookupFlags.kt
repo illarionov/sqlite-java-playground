@@ -1,6 +1,6 @@
 package ru.pixnews.wasm.host.wasi.preview1.type
 
-import ru.pixnews.wasm.host.WebAssemblyValueType
+import ru.pixnews.wasm.host.WasmValueType
 
 /**
  * Flags determining the method of how paths are resolved.
@@ -30,6 +30,6 @@ public value class LookupFlags(
     }
 
     public companion object : WasiTypename {
-        override val webAssemblyValueType: WebAssemblyValueType = WasiValueTypes.U32
+        override val wasmValueType: WasmValueType = WasiValueTypes.U32
     }
 }

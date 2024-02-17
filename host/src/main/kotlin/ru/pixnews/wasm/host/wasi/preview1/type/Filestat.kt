@@ -1,6 +1,6 @@
 package ru.pixnews.wasm.host.wasi.preview1.type
 
-import ru.pixnews.wasm.host.WebAssemblyValueType
+import ru.pixnews.wasm.host.WasmValueType
 
 /**
  * File attributes.
@@ -57,6 +57,6 @@ public data class Filestat(
     val ctim: Timestamp, // (field $ctim $timestamp)
 ) {
     public companion object : WasiTypename {
-        public override val webAssemblyValueType: WebAssemblyValueType = WebAssemblyValueType.I32
+        public override val wasmValueType: WasmValueType = WasmValueType.I32
     }
 }

@@ -1,8 +1,8 @@
 package ru.pixnews.wasm.sqlite3.chicory.host.func
 
 import com.dylibso.chicory.runtime.HostFunction
-import ru.pixnews.wasm.host.WebAssemblyValueType
-import ru.pixnews.wasm.host.WebAssemblyValueType.WebAssemblyTypes.I32
+import ru.pixnews.wasm.host.WasmValueType
+import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I32
 import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U8
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
@@ -19,7 +19,7 @@ fun assertFail(
         I32, // line
         U8.pointer // func
     ),
-    returnType = WebAssemblyValueType.F64,
+    returnType = WasmValueType.F64,
     moduleName = moduleName,
 ) { instance, params ->
     val memory = instance.memory()

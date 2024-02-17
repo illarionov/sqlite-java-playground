@@ -5,6 +5,6 @@ public value class Device(
     val rawValue: ULong
 ) {
     public companion object : WasiTypename {
-        public override val webAssemblyValueType = WasiValueTypes.U64
+        public override val wasmValueType = WasiValueTypes.U64
     }
 }

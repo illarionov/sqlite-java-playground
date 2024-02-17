@@ -1,6 +1,6 @@
 package ru.pixnews.wasm.host.wasi.preview1.type
 
-import ru.pixnews.wasm.host.WebAssemblyValueType
+import ru.pixnews.wasm.host.WasmValueType
 
 /**
  * Flags provided to `sock_recv`.
@@ -35,6 +35,6 @@ public value class Riflags(
     }
 
     public companion object : WasiTypename {
-        override val webAssemblyValueType: WebAssemblyValueType = WasiValueTypes.U16
+        override val wasmValueType: WasmValueType = WasiValueTypes.U16
     }
 }

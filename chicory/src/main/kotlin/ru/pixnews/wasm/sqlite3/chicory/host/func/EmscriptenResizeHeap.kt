@@ -5,7 +5,7 @@ import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.Memory.PAGE_SIZE
 import com.dylibso.chicory.wasm.types.Value
 import java.util.logging.Logger
-import ru.pixnews.wasm.host.WebAssemblyValueType.WebAssemblyTypes.I32
+import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I32
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.sqlite3.chicory.host.ENV_MODULE_NAME
 import ru.pixnews.wasm.sqlite3.chicory.host.EmscryptenHostFunction

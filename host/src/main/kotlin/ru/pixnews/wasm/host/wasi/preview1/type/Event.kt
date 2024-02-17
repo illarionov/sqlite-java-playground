@@ -1,6 +1,6 @@
 package ru.pixnews.wasm.host.wasi.preview1.type
 
-import ru.pixnews.wasm.host.WebAssemblyValueType
+import ru.pixnews.wasm.host.WasmValueType
 
 /**
  * An event that occurred.
@@ -18,6 +18,6 @@ public data class Event(
     val fdReadwrite: EventFdReadwrite, // (field $fd_readwrite $event_fd_readwrite)
 ) {
     companion object : WasiTypename {
-        override val webAssemblyValueType: WebAssemblyValueType = WasiValueTypes.U32
+        override val wasmValueType: WasmValueType = WasiValueTypes.U32
     }
 }

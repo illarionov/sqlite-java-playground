@@ -1,6 +1,6 @@
 package ru.pixnews.wasm.host.wasi.preview1.type
 
-import ru.pixnews.wasm.host.WebAssemblyValueType
+import ru.pixnews.wasm.host.WasmValueType
 
 
 /**
@@ -14,6 +14,6 @@ data class CioVec(
     val bufLen: Size // (field $buf_len $size)
 ) {
     companion object : WasiTypename {
-        override val webAssemblyValueType: WebAssemblyValueType = WasiValueTypes.U32
+        override val wasmValueType: WasmValueType = WasiValueTypes.U32
     }
 }

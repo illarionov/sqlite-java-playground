@@ -1,6 +1,6 @@
 package ru.pixnews.wasm.host.wasi.preview1.type
 
-import ru.pixnews.wasm.host.WebAssemblyValueType
+import ru.pixnews.wasm.host.WasmValueType
 
 /**
  * The contents of a `prestat` when type is `preopentype::dir`.
@@ -13,6 +13,6 @@ public data class PrestatDir(
     public val prNameLen: Size // (field $pr_name_len $size)
 ) {
     public companion object : WasiTypename {
-        public override val webAssemblyValueType: WebAssemblyValueType = WebAssemblyValueType.I32
+        public override val wasmValueType: WasmValueType = WasmValueType.I32
     }
 }

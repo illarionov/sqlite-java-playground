@@ -23,10 +23,10 @@ fun syscallFstat64(
 ): HostFunction = emscriptenEnvHostFunction(
     funcName = "__syscall_fstat64",
     paramTypes = listOf(
-        Fd.webAssemblyValueType,
+        Fd.wasmValueType,
         U8.pointer, // statbuf
     ),
-    returnType = Errno.webAssemblyValueType,
+    returnType = Errno.wasmValueType,
     moduleName = moduleName,
     handle = Fstat64(filesystem)
 )

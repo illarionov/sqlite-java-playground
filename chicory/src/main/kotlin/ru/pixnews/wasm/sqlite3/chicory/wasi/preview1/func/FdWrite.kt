@@ -8,7 +8,7 @@ import java.lang.reflect.Field
 import java.nio.ByteBuffer
 import java.util.logging.Level
 import java.util.logging.Logger
-import ru.pixnews.wasm.host.WebAssemblyValueType.WebAssemblyTypes.I32
+import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I32
 import ru.pixnews.wasm.host.wasi.preview1.type.CioVec
 import ru.pixnews.wasm.host.wasi.preview1.type.CiovecArray
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
@@ -45,7 +45,7 @@ private fun fdWrite(
 ): HostFunction = wasiHostFunction(
     funcName = fieldName,
     paramTypes = listOf(
-        Fd.webAssemblyValueType, // Fd
+        Fd.wasmValueType, // Fd
         IovecArray.pointer, // ciov
         I32, // ciov_cnt
         I32.pointer, // pNum

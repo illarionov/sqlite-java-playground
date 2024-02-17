@@ -19,7 +19,7 @@ fun fdSync(
 ): HostFunction = wasiHostFunction(
     funcName = "fd_sync",
     paramTypes = listOf(
-        Fd.webAssemblyValueType, // fd
+        Fd.wasmValueType, // fd
     ),
     moduleName = moduleName,
     handle = FdSync(filesystem)

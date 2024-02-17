@@ -4,20 +4,20 @@ import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
-import ru.pixnews.wasm.host.WebAssemblyValueType
+import ru.pixnews.wasm.host.WasmValueType
 import ru.pixnews.wasm.sqlite3.chicory.ext.chicory
 
 internal fun emscriptenEnvHostFunction(
     funcName: String,
-    paramTypes : List<WebAssemblyValueType>,
-    returnType: WebAssemblyValueType?,
+    paramTypes : List<WasmValueType>,
+    returnType: WasmValueType?,
     moduleName: String = ENV_MODULE_NAME,
     handle: EmscryptenHostFunction,
 ) : HostFunction = HostFunction(
     HostFunctionAdapter(handle),
     moduleName,
     funcName,
-    paramTypes.map(WebAssemblyValueType::chicory),
+    paramTypes.map(WasmValueType::chicory),
     returnType?.let { listOf(it.chicory) } ?: listOf()
 )
 

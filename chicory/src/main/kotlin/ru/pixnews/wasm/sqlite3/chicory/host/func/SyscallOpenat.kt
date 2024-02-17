@@ -5,7 +5,7 @@ import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.wasm.types.Value
 import java.nio.file.Path
 import java.util.logging.Logger
-import ru.pixnews.wasm.host.WebAssemblyValueType.WebAssemblyTypes.I32
+import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I32
 import ru.pixnews.wasm.host.wasi.preview1.type.Fd
 import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U8
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr

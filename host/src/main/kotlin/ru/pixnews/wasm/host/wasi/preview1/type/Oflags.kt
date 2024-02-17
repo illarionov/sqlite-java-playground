@@ -1,6 +1,6 @@
 package ru.pixnews.wasm.host.wasi.preview1.type
 
-import ru.pixnews.wasm.host.WebAssemblyValueType
+import ru.pixnews.wasm.host.WasmValueType
 
 /**
  * Open flags used by `path_open`.
@@ -44,6 +44,6 @@ public value class Oflags(
     }
 
     public companion object : WasiTypename {
-        override val webAssemblyValueType: WebAssemblyValueType = WasiValueTypes.U16
+        override val wasmValueType: WasmValueType = WasiValueTypes.U16
     }
 }

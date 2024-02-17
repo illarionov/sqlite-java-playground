@@ -1,6 +1,6 @@
 package ru.pixnews.wasm.host.wasi.preview1.type
 
-import ru.pixnews.wasm.host.WebAssemblyValueType
+import ru.pixnews.wasm.host.WasmValueType
 
 /**
  * Subscription to an event.
@@ -14,6 +14,6 @@ public data class Subscription(
     val u: SubscriptionU, // (field $u $subscription_u)
 ) {
     public companion object : WasiTypename {
-        public override val webAssemblyValueType: WebAssemblyValueType = WebAssemblyValueType.I32
+        public override val wasmValueType: WasmValueType = WasmValueType.I32
     }
 }

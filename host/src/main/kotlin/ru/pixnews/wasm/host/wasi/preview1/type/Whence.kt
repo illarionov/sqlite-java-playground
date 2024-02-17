@@ -1,6 +1,6 @@
 package ru.pixnews.wasm.host.wasi.preview1.type
 
-import ru.pixnews.wasm.host.WebAssemblyValueType
+import ru.pixnews.wasm.host.WasmValueType
 
 /**
  * The position relative to which to set the offset of the file descriptor.
@@ -26,7 +26,7 @@ public enum class Whence(
     ;
 
     public companion object : WasiTypename {
-        override val webAssemblyValueType: WebAssemblyValueType = WasiValueTypes.U8
+        override val wasmValueType: WasmValueType = WasiValueTypes.U8
 
         fun fromIdOrNull(whence: Int): Whence? = entries.firstOrNull { it.code == whence }
     }

@@ -1,6 +1,6 @@
 package ru.pixnews.wasm.host.wasi.preview1.type
 
-import ru.pixnews.wasm.host.WebAssemblyValueType
+import ru.pixnews.wasm.host.WasmValueType
 
 /**
  * Non-negative file size or length of a region within a file.
@@ -10,6 +10,6 @@ public value class FileSize(
     val value: ULong
 ) {
     public companion object : WasiTypename {
-        public override val webAssemblyValueType: WebAssemblyValueType = WasiValueTypes.U64
+        public override val wasmValueType: WasmValueType = WasiValueTypes.U64
     }
 }
