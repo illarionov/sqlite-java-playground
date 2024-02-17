@@ -4,13 +4,14 @@ import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
+import ru.pixnews.wasm.host.wasi.preview1.type.Errno
+import ru.pixnews.wasm.host.wasi.preview1.type.Size
+import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 import ru.pixnews.wasm.sqlite3.chicory.ext.WASI_SNAPSHOT_PREVIEW1
-import ru.pixnews.wasm.sqlite3.chicory.ext.WasmPtr
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
+import ru.pixnews.wasm.sqlite3.chicory.ext.chicoryPointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.encodedNullTerminatedStringLength
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Size
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.pointer
+import ru.pixnews.wasm.sqlite3.chicory.ext.valueType
 
 /**
  * Return environment variable data sizes.
@@ -32,8 +33,8 @@ fun environSizesGet(
     moduleName,
     "environ_sizes_get",
     listOf(
-        Size.pointer, // *environ_count
-        Size.pointer, // *environ_buf_size
+        Size.chicoryPointer, // *environ_count
+        Size.chicoryPointer, // *environ_buf_size
     ),
     listOf(Errno.valueType),
 )
@@ -51,7 +52,7 @@ private class EnvironSizesGet(
             params[1].asWasmAddr()
         )
 
-        return arrayOf(result.value)
+        return arrayOf(Value.i32(result.code.toLong()))
     }
 
     private fun environSizesGet(

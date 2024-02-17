@@ -4,10 +4,10 @@ import java.io.IOException
 import java.nio.channels.ClosedChannelException
 import java.nio.channels.FileChannel
 import java.nio.file.Path
+import ru.pixnews.wasm.host.wasi.preview1.type.Errno
+import ru.pixnews.wasm.host.wasi.preview1.type.Fd
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.SysException
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Fd
+import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
 
 class FdChannel(
     val fileSystem: FileSystem,

@@ -5,10 +5,11 @@ import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
 import com.dylibso.chicory.wasm.types.ValueType
+import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U8
+import ru.pixnews.wasm.host.wasi.preview1.type.pointer
+import ru.pixnews.wasm.sqlite3.chicory.ext.chicory
 import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
 import ru.pixnews.wasm.sqlite3.chicory.host.ENV_MODULE_NAME
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.U8
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.pointer
 
 fun assertFail(
     moduleName: String = ENV_MODULE_NAME,
@@ -17,10 +18,10 @@ fun assertFail(
     moduleName,
     "__assert_fail",
     listOf(
-        U8.pointer, // pCondition
-        U8.pointer, // filename
+        U8.pointer.chicory, // pCondition
+        U8.pointer.chicory, // filename
         ValueType.I32, // line
-        U8.pointer // func
+        U8.pointer.chicory // func
     ),
     listOf(),
 )

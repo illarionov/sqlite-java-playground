@@ -11,6 +11,7 @@ application {
 dependencies {
     implementation(libs.chicory)
     implementation(project(":sqlite3-wasm"))
+    implementation(project(":host"))
 }
 dependencies {
     testImplementation("junit:junit:4.13.2")

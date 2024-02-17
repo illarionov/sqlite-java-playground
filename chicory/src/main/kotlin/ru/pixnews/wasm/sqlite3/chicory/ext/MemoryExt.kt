@@ -3,6 +3,7 @@ package ru.pixnews.wasm.sqlite3.chicory.ext
 import com.dylibso.chicory.runtime.Memory
 import com.dylibso.chicory.wasm.types.Value
 import java.io.ByteArrayOutputStream
+import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 
 fun Memory.readNullTerminatedString(offsetValue: Value): String? {
     return if (offsetValue.asExtRef() != Value.REF_NULL_VALUE) {

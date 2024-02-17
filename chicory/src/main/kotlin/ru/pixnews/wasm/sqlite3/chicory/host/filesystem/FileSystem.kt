@@ -29,6 +29,9 @@ import kotlin.io.path.fileAttributesView
 import kotlin.io.path.isDirectory
 import kotlin.io.path.pathString
 import kotlin.io.path.readAttributes
+import ru.pixnews.wasm.host.wasi.preview1.type.Errno
+import ru.pixnews.wasm.host.wasi.preview1.type.Fd
+import ru.pixnews.wasm.host.wasi.preview1.type.Whence
 import ru.pixnews.wasm.sqlite3.chicory.ext.oMaskToString
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.Fcntl
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.StructTimespec
@@ -47,9 +50,7 @@ import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy.CHANGE_POSITION
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy.DO_NOT_CHANGE_POSITION
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.position
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Fd
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Whence
+import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
 
 class FileSystem(
     internal val javaFs: FileSystem = FileSystems.getDefault(),

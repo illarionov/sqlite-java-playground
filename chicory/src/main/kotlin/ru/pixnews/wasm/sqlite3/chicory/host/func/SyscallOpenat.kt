@@ -7,19 +7,20 @@ import com.dylibso.chicory.wasm.types.Value
 import com.dylibso.chicory.wasm.types.ValueType
 import java.nio.file.Path
 import java.util.logging.Logger
-import ru.pixnews.wasm.sqlite3.chicory.ext.WasmPtr
+import ru.pixnews.wasm.host.wasi.preview1.type.Fd
+import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U8
+import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
+import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
+import ru.pixnews.wasm.sqlite3.chicory.ext.chicory
 import ru.pixnews.wasm.sqlite3.chicory.ext.oMaskToString
 import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
 import ru.pixnews.wasm.sqlite3.chicory.ext.sMaskToString
 import ru.pixnews.wasm.sqlite3.chicory.host.ENV_MODULE_NAME
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.SysException
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.Fcntl
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.resolveAbsolutePath
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Fd
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.U8
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.pointer
+import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
 
 fun syscallOpenat(
     filesystem: FileSystem,
@@ -30,7 +31,7 @@ fun syscallOpenat(
     "__syscall_openat",
     listOf(
         ValueType.I32, // dirfd
-        U8.pointer, // pathname
+        U8.pointer.chicory, // pathname
         ValueType.I32, // flags
         ValueType.I32 // mode / varargs
     ),

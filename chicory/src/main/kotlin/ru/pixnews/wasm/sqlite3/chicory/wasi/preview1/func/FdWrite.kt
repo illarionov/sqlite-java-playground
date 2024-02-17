@@ -10,22 +10,24 @@ import java.lang.reflect.Field
 import java.nio.ByteBuffer
 import java.util.logging.Level
 import java.util.logging.Logger
+import ru.pixnews.wasm.host.wasi.preview1.type.CioVec
+import ru.pixnews.wasm.host.wasi.preview1.type.CiovecArray
+import ru.pixnews.wasm.host.wasi.preview1.type.Errno
+import ru.pixnews.wasm.host.wasi.preview1.type.Fd
+import ru.pixnews.wasm.host.wasi.preview1.type.IovecArray
+import ru.pixnews.wasm.host.wasi.preview1.type.Size
+import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 import ru.pixnews.wasm.sqlite3.chicory.ext.ParamTypes
 import ru.pixnews.wasm.sqlite3.chicory.ext.WASI_SNAPSHOT_PREVIEW1
-import ru.pixnews.wasm.sqlite3.chicory.ext.WasmPtr
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
+import ru.pixnews.wasm.sqlite3.chicory.ext.chicoryPointer
+import ru.pixnews.wasm.sqlite3.chicory.ext.pointer
+import ru.pixnews.wasm.sqlite3.chicory.ext.valueType
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.SysException
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy.CHANGE_POSITION
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy.DO_NOT_CHANGE_POSITION
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.CioVec
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.CiovecArray
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Fd
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.IovecArray
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Size
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.pointer
+import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
 
 fun fdWrite(
     filesystem: FileSystem,
@@ -48,7 +50,7 @@ private fun fdWrite(
     fieldName,
     listOf(
         Fd.valueType, // Fd
-        IovecArray.pointer, // ciov
+        IovecArray.chicoryPointer, // ciov
         ValueType.I32, // ciov_cnt
         ValueType.I32.pointer, // pNum
     ),
@@ -91,8 +93,8 @@ private class FdWrite(
         val iovecs = MutableList(ciovCnt) { idx ->
             val pCiovec = pCiov + 8 * idx
             CioVec(
-                buf = memory.readI32(pCiovec),
-                bufLen = Size(memory.readI32(pCiovec + 4))
+                buf = memory.readI32(pCiovec).asWasmAddr(),
+                bufLen = Size(memory.readI32(pCiovec + 4).asInt().toUInt())
             )
         }
         return CiovecArray(iovecs)
@@ -125,8 +127,8 @@ private class FdWrite(
         ): Array<ByteBuffer> = Array(ciovecList.size) {
             val ioVec = ciovecList[it]
             memoryBuffer.slice(
-                ioVec.buf.asWasmAddr(),
-                ioVec.bufLen.value.asInt()
+                ioVec.buf,
+                ioVec.bufLen.value.toInt()
             )
         }
 
@@ -164,8 +166,8 @@ private class FdWrite(
         ): Array<ByteBuffer> = Array(ciovecList.size) { idx ->
             val ciovec = ciovecList[idx]
             val bytes = memory.readBytes(
-                ciovec.buf.asWasmAddr(),
-                ciovec.bufLen.value.asInt()
+                ciovec.buf,
+                ciovec.bufLen.value.toInt()
             )
             ByteBuffer.wrap(bytes)
         }

@@ -5,16 +5,18 @@ import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
 import java.util.logging.Logger
-import ru.pixnews.wasm.sqlite3.chicory.ext.WasmPtr
+import ru.pixnews.wasm.host.wasi.preview1.type.Errno
+import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U8
+import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
+import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
+import ru.pixnews.wasm.sqlite3.chicory.ext.chicory
 import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
+import ru.pixnews.wasm.sqlite3.chicory.ext.valueType
 import ru.pixnews.wasm.sqlite3.chicory.host.ENV_MODULE_NAME
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.SysException
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.pack
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.U8
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.pointer
+import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
 
 fun syscallLstat64(
     filesystem: FileSystem,
@@ -46,8 +48,8 @@ private fun stat64Func(
     moduleName,
     fieldName,
     listOf(
-        U8.pointer, // pathname
-        U8.pointer, // statbuf
+        U8.pointer.chicory, // pathname
+        U8.pointer.chicory, // statbuf
     ),
     listOf(Errno.valueType),
 )

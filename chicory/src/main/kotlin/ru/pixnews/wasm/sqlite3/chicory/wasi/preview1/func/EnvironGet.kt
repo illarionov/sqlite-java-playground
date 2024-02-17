@@ -5,13 +5,15 @@ import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.Memory
 import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
+import ru.pixnews.wasm.host.wasi.preview1.type.Errno
+import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U8
+import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
+import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.WASI_SNAPSHOT_PREVIEW1
-import ru.pixnews.wasm.sqlite3.chicory.ext.WasmPtr
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
+import ru.pixnews.wasm.sqlite3.chicory.ext.chicory
+import ru.pixnews.wasm.sqlite3.chicory.ext.valueType
 import ru.pixnews.wasm.sqlite3.chicory.ext.writeNullTerminatedString
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.U8
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.pointer
 
 /**
  * Read environment variable data.
@@ -32,8 +34,8 @@ fun environGet(
     moduleName,
     "environ_get",
     listOf(
-        U8.pointer.pointer, // **environ
-        U8.pointer, // *environ_buf
+        U8.pointer.chicory, // **environ
+        U8.pointer.chicory, // *environ_buf
     ),
     listOf(Errno.valueType),
 )
@@ -51,7 +53,7 @@ private class EnvironGet(
             params[1].asWasmAddr()
         )
 
-        return arrayOf(result.value)
+        return arrayOf(Value.i32(result.code.toLong()))
     }
 
     private fun environGet(

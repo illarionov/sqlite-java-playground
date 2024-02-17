@@ -5,26 +5,29 @@ import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.Memory
 import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
-import com.dylibso.chicory.wasm.types.ValueType.I32
 import java.lang.reflect.Field
 import java.nio.ByteBuffer
 import java.util.logging.Level
 import java.util.logging.Logger
+import ru.pixnews.wasm.host.WebAssemblyValueType.WebAssemblyTypes.I32
+import ru.pixnews.wasm.host.wasi.preview1.type.Errno
+import ru.pixnews.wasm.host.wasi.preview1.type.Fd
+import ru.pixnews.wasm.host.wasi.preview1.type.Iovec
+import ru.pixnews.wasm.host.wasi.preview1.type.IovecArray
+import ru.pixnews.wasm.host.wasi.preview1.type.Size
+import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
+import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.ParamTypes
 import ru.pixnews.wasm.sqlite3.chicory.ext.WASI_SNAPSHOT_PREVIEW1
-import ru.pixnews.wasm.sqlite3.chicory.ext.WasmPtr
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
+import ru.pixnews.wasm.sqlite3.chicory.ext.chicory
+import ru.pixnews.wasm.sqlite3.chicory.ext.chicoryPointer
+import ru.pixnews.wasm.sqlite3.chicory.ext.valueType
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.SysException
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy.CHANGE_POSITION
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy.DO_NOT_CHANGE_POSITION
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Fd
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Iovec
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.IovecArray
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Size
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.pointer
+import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
 
 fun fdRead(
     filesystem: FileSystem,
@@ -47,9 +50,10 @@ private fun fdRead(
     fieldName,
     listOf(
         Fd.valueType, // Fd
-        IovecArray.pointer, // iov
-        I32, // iov_cnt
-        I32.pointer, // pNum
+        IovecArray.chicoryPointer, // iov
+        I32.chicory, // iov_cnt
+        I32.chicory,
+        I32.pointer.chicory, // pNum
     ),
     ParamTypes.i32,
 )
@@ -90,8 +94,8 @@ private class FdRead(
         val iovecs = MutableList(iovCnt) { idx ->
             val pIovec = pIov + 8 * idx
             Iovec(
-                buf = memory.readI32(pIovec),
-                bufLen = Size(memory.readI32(pIovec + 4))
+                buf = memory.readI32(pIovec).asWasmAddr(),
+                bufLen = Size(memory.readI32(pIovec + 4).asInt().toUInt())
             )
         }
         return IovecArray(iovecs)
@@ -124,8 +128,8 @@ private class FdRead(
         ): Array<ByteBuffer> = Array(iovecList.size) {
             val ioVec = iovecList[it]
             memoryBuffer.slice(
-                ioVec.buf.asWasmAddr(),
-                ioVec.bufLen.value.asInt()
+                ioVec.buf,
+                ioVec.bufLen.value.toInt()
             )
         }
 
@@ -162,7 +166,7 @@ private class FdRead(
                 if (bbuf.limit() != 0) {
                     require(bbuf.hasArray())
                     memory.write(
-                        vec.buf.asWasmAddr(),
+                        vec.buf,
                         bbuf.array(),
                         0,
                         bbuf.limit()
@@ -173,7 +177,7 @@ private class FdRead(
         }
 
         private fun IovecArray.toByteBuffers(): Array<ByteBuffer> = Array(iovecList.size) {
-            ByteBuffer.allocate(iovecList[it].bufLen.value.asInt())
+            ByteBuffer.allocate(iovecList[it].bufLen.value.toInt())
         }
     }
 }

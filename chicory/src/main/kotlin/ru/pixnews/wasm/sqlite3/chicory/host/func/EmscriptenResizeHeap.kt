@@ -7,10 +7,10 @@ import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
 import com.dylibso.chicory.wasm.types.ValueType
 import java.util.logging.Logger
+import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.sqlite3.chicory.ext.ParamTypes
 import ru.pixnews.wasm.sqlite3.chicory.host.ENV_MODULE_NAME
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.SysException
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
+import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
 
 fun emscriptenResizeHeap(
     moduleName: String = ENV_MODULE_NAME,

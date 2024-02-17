@@ -4,11 +4,11 @@ import com.dylibso.chicory.wasm.types.Value
 import ru.pixnews.sqlite3.wasm.Sqlite3Exception
 import ru.pixnews.wasm.sqlite3.chicory.bindings.SqliteBindings
 import ru.pixnews.wasm.sqlite3.chicory.ext.SQLITE3_NULL
-import ru.pixnews.wasm.sqlite3.chicory.ext.WASM_SIZEOF_PTR
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
 import ru.pixnews.sqlite3.wasm.Sqlite3Result
 import ru.pixnews.sqlite3.wasm.Sqlite3Version
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
+import ru.pixnews.wasm.host.wasi.preview1.type.Errno
+import ru.pixnews.wasm.host.wasi.preview1.type.WASM_SIZEOF_PTR
 
 class Sqlite3CApi(
     private val bindings: SqliteBindings,
@@ -90,17 +90,17 @@ class Sqlite3CApi(
                 /* int (*callback)(void*,int,char**,char**) */ SQLITE3_NULL,
                 /* void * */ SQLITE3_NULL,
                 /* char **errmsg */ pzErrMsg,
-            )[0]
+            )[0].asInt()
 
-            if (errNo == Errno.SUCCESS.value) {
+            if (errNo == Errno.SUCCESS.code) {
                 return Sqlite3Result.Success(Unit)
             } else {
                 val errMsgAddr = memory.readAddr(pzErrMsg.asWasmAddr())
                 val errMsg = memory.readNullTerminatedString(errMsgAddr)
                 memory.freeSilent(errMsgAddr)
                 return Sqlite3Result.Error(
-                    errNo.asInt(),
-                    errNo.asInt(),
+                    errNo,
+                    errNo,
                     errMsg,
                 )
             }
@@ -117,8 +117,8 @@ class Sqlite3CApi(
         sqliteDb: Value? = null,
     ) {
         check(this.size == 1) { "Not an errno" }
-        val errNo = this[0]
-        if (errNo != Errno.SUCCESS.value) {
+        val errNo = this[0].asInt()
+        if (errNo != Errno.SUCCESS.code) {
             val extendedErrCode: Int
             val errMsg: String
             if (sqliteDb != null) {
@@ -129,7 +129,7 @@ class Sqlite3CApi(
                 errMsg = ""
             }
 
-            throw Sqlite3Exception(errNo.asInt(), extendedErrCode, msgPrefix, errMsg)
+            throw Sqlite3Exception(errNo, extendedErrCode, msgPrefix, errMsg)
         }
     }
 }

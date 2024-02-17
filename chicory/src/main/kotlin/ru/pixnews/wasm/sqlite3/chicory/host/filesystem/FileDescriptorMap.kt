@@ -2,9 +2,10 @@ package ru.pixnews.wasm.sqlite3.chicory.host.filesystem
 
 import java.nio.channels.FileChannel
 import java.nio.file.Path
+import ru.pixnews.wasm.host.wasi.preview1.type.Errno
+import ru.pixnews.wasm.host.wasi.preview1.type.Fd
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.FdChannel
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Errno
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Fd
+import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
 
 internal class FileDescriptorMap(
     private val fileSystem: FileSystem,

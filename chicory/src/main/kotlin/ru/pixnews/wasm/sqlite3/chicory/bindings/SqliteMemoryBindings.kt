@@ -4,12 +4,12 @@ import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.Memory
 import com.dylibso.chicory.wasm.types.Value
 import com.dylibso.chicory.wasm.types.ValueType
-import ru.pixnews.wasm.sqlite3.chicory.ext.WasmPtr
+import ru.pixnews.wasm.host.wasi.preview1.type.Size
+import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
 import ru.pixnews.wasm.sqlite3.chicory.ext.isNull
 import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
 import ru.pixnews.wasm.sqlite3.chicory.ext.writeNullTerminatedString
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.Size
 
 class SqliteMemoryBindings(
     public val memory: Memory,
@@ -44,7 +44,7 @@ class SqliteMemoryBindings(
     public fun allocOrThrow(len: UInt): Value {
         check (len > 0U)
         val mem = sqlite3_malloc.apply(
-            Size(len).value
+            Value.i32(len.toLong())
         ).getOrNull(0)
 
         if (mem.isNull()) throw OutOfMemoryError()
