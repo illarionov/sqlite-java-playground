@@ -11,16 +11,16 @@ import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U8
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
-import ru.pixnews.wasm.sqlite3.chicory.ext.oMaskToString
 import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
-import ru.pixnews.wasm.sqlite3.chicory.ext.sMaskToString
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.ENV_MODULE_NAME
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.EmscryptenHostFunction
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.emscriptenEnvHostFunction
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.Fcntl
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.resolveAbsolutePath
-import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
+import ru.pixnews.wasm.host.filesystem.FileSystem
+import ru.pixnews.wasm.host.include.Fcntl
+import ru.pixnews.wasm.host.filesystem.SysException
+import ru.pixnews.wasm.host.filesystem.resolveAbsolutePath
+import ru.pixnews.wasm.host.include.oMaskToString
+import ru.pixnews.wasm.host.include.sMaskToString
 
 fun syscallOpenat(
     filesystem: FileSystem,

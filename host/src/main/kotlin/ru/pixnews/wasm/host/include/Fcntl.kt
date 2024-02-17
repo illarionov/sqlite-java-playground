@@ -1,4 +1,4 @@
-package ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include
+package ru.pixnews.wasm.host.include
 
 object Fcntl {
     const val O_RDONLY = 0x0U

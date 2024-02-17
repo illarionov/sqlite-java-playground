@@ -1,4 +1,4 @@
-package ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model
+package ru.pixnews.wasm.host.filesystem
 
 enum class ReadWriteStrategy{
     DO_NOT_CHANGE_POSITION,

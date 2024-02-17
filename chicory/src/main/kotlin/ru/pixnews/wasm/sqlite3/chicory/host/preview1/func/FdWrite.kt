@@ -18,14 +18,14 @@ import ru.pixnews.wasm.host.wasi.preview1.type.Size
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy.CHANGE_POSITION
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy.DO_NOT_CHANGE_POSITION
+import ru.pixnews.wasm.host.filesystem.FileSystem
+import ru.pixnews.wasm.host.filesystem.ReadWriteStrategy
+import ru.pixnews.wasm.host.filesystem.ReadWriteStrategy.CHANGE_POSITION
+import ru.pixnews.wasm.host.filesystem.ReadWriteStrategy.DO_NOT_CHANGE_POSITION
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunction
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction
-import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
+import ru.pixnews.wasm.host.filesystem.SysException
 
 fun fdWrite(
     filesystem: FileSystem,

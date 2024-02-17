@@ -7,8 +7,6 @@ import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 
 internal fun Value.asWasmAddr(): WasmPtr = asInt()
 
-internal fun WasmPtr.toValue(): Value = Value.i32(this.toLong())
-
 internal fun Value?.isNull(): Boolean {
     return when (this?.type()) {
         null -> true

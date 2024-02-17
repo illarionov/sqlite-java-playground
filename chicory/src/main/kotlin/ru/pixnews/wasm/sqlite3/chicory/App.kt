@@ -15,7 +15,7 @@ import kotlin.time.measureTimedValue
 import ru.pixnews.sqlite3.wasm.Sqlite3Wasm
 import ru.pixnews.wasm.sqlite3.chicory.bindings.SqliteBindings
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.EmscriptenEnvBindings
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
+import ru.pixnews.wasm.host.filesystem.FileSystem
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiSnapshotPreview1Builtins
 
 object App

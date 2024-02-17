@@ -7,7 +7,6 @@ import com.dylibso.chicory.wasm.types.Value
 import ru.pixnews.wasm.host.WasmValueType
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.sqlite3.chicory.ext.chicory
-import ru.pixnews.wasm.sqlite3.chicory.ext.valueType
 
 internal const val WASI_SNAPSHOT_PREVIEW1 = "wasi_snapshot_preview1"
 
@@ -21,7 +20,7 @@ internal fun wasiHostFunction(
     moduleName,
     funcName,
     paramTypes.map(WasmValueType::chicory),
-    listOf(Errno.valueType)
+    listOf(Errno.wasmValueType.chicory)
 )
 
 internal fun interface WasiHostFunction {

@@ -1,9 +1,8 @@
-package ru.pixnews.wasm.sqlite3.chicory.ext
+package ru.pixnews.wasm.host.include
 
 import kotlin.reflect.KProperty0
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.Fcntl
 
-internal fun Fcntl.oMaskToString(mask: UInt): String {
+fun Fcntl.oMaskToString(mask: UInt): String {
     val startNames = if (mask.and(O_ACCMODE) == 0U) {
         listOf(Fcntl::O_RDONLY.name)
     } else {
@@ -37,9 +36,9 @@ internal fun Fcntl.oMaskToString(mask: UInt): String {
     )
 }
 
-internal fun Fcntl.sMaskToString(mask: UInt): String = "0" + mask.toString(8)
+fun Fcntl.sMaskToString(mask: UInt): String = "0" + mask.toString(8)
 
-internal fun Fcntl.sMaskToStringLong(mask: UInt): String = maskToString(mask, listOf(
+fun Fcntl.sMaskToStringLong(mask: UInt): String = maskToString(mask, listOf(
     Fcntl::S_ISUID,
     Fcntl::S_ISGID,
     Fcntl::S_ISVTX,

@@ -1,4 +1,4 @@
-package ru.pixnews.wasm.sqlite3.chicory.host.filesystem
+package ru.pixnews.wasm.host.filesystem
 
 import com.sun.nio.file.ExtendedOpenOption
 import java.io.IOException
@@ -9,7 +9,6 @@ import java.nio.channels.ClosedChannelException
 import java.nio.channels.FileChannel
 import java.nio.channels.NonReadableChannelException
 import java.nio.file.DirectoryNotEmptyException
-import java.nio.file.FileSystem
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.LinkOption
@@ -29,33 +28,32 @@ import kotlin.io.path.fileAttributesView
 import kotlin.io.path.isDirectory
 import kotlin.io.path.pathString
 import kotlin.io.path.readAttributes
+import ru.pixnews.wasm.host.filesystem.ReadWriteStrategy.CHANGE_POSITION
+import ru.pixnews.wasm.host.filesystem.ReadWriteStrategy.DO_NOT_CHANGE_POSITION
+import ru.pixnews.wasm.host.filesystem.fd.FdChannel
+import ru.pixnews.wasm.host.filesystem.fd.FileDescriptorMap
+import ru.pixnews.wasm.host.filesystem.fd.position
+import ru.pixnews.wasm.host.include.Fcntl
+import ru.pixnews.wasm.host.include.StructTimespec
+import ru.pixnews.wasm.host.include.oMaskToString
+import ru.pixnews.wasm.host.include.sys.StructStat
+import ru.pixnews.wasm.host.include.sys.blkcnt_t
+import ru.pixnews.wasm.host.include.sys.blksize_t
+import ru.pixnews.wasm.host.include.sys.dev_t
+import ru.pixnews.wasm.host.include.sys.gid_t
+import ru.pixnews.wasm.host.include.sys.ino_t
+import ru.pixnews.wasm.host.include.sys.mode_t
+import ru.pixnews.wasm.host.include.sys.nlink_t
+import ru.pixnews.wasm.host.include.sys.off_t
+import ru.pixnews.wasm.host.include.sys.uid_t
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.wasi.preview1.type.Fd
 import ru.pixnews.wasm.host.wasi.preview1.type.Whence
-import ru.pixnews.wasm.sqlite3.chicory.ext.oMaskToString
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.Fcntl
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.StructTimespec
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.StructStat
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.blkcnt_t
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.blksize_t
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.dev_t
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.gid_t
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.ino_t
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.mode_t
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.nlink_t
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.off_t
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.uid_t
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.FdChannel
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy.CHANGE_POSITION
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy.DO_NOT_CHANGE_POSITION
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.position
-import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
 
 class FileSystem(
-    internal val javaFs: FileSystem = FileSystems.getDefault(),
+    internal val javaFs: java.nio.file.FileSystem = FileSystems.getDefault(),
     private val blockSize: ULong = 512UL,
-    private val logger: Logger = Logger.getLogger(ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem::class.qualifiedName)
+    private val logger: Logger = Logger.getLogger(FileSystem::class.qualifiedName)
 ) {
     private val fileDescriptors: FileDescriptorMap = FileDescriptorMap(this)
 
@@ -217,8 +215,6 @@ class FileSystem(
     fun getCwdPath(): Path {
         return javaFs.getPath("").toAbsolutePath()
     }
-
-    fun getPathByFd(fd: Fd): Path = getStreamByFd(fd).path
 
     fun getStreamByFd(
         fd: Fd

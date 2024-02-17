@@ -1,9 +1,9 @@
-package ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys
+package ru.pixnews.wasm.host.include.sys
 
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.StructTimespec
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.timeMillis
+import ru.pixnews.wasm.host.include.StructTimespec
+import ru.pixnews.wasm.host.include.timeMillis
 
 /**
  * <sys/stat.h> struct stat

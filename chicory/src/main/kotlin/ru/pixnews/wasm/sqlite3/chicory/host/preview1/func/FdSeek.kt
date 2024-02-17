@@ -13,13 +13,13 @@ import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 import ru.pixnews.wasm.host.wasi.preview1.type.Whence
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.FdChannel
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.position
+import ru.pixnews.wasm.host.filesystem.FileSystem
+import ru.pixnews.wasm.host.filesystem.fd.FdChannel
+import ru.pixnews.wasm.host.filesystem.fd.position
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunction
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction
-import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
+import ru.pixnews.wasm.host.filesystem.SysException
 
 fun fdSeek(
     filesystem: FileSystem,

@@ -1,4 +1,4 @@
-package ru.pixnews.wasm.sqlite3.host.filesystem
+package ru.pixnews.wasm.host.filesystem
 
 import java.lang.RuntimeException
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno

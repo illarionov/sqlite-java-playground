@@ -2,7 +2,7 @@ package ru.pixnews.wasm.sqlite3.chicory.host.emscrypten
 
 import com.dylibso.chicory.runtime.HostFunction
 import java.time.Clock
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
+import ru.pixnews.wasm.host.filesystem.FileSystem
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.func.emscriptenDateNow
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.func.emscriptenGetNow
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.func.emscriptenGetNowIsMonotonic

@@ -7,7 +7,7 @@ import java.util.logging.Logger
 import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I32
 import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I64
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
-import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
+import ru.pixnews.wasm.host.filesystem.FileSystem
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunction
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction

@@ -1,4 +1,4 @@
-package ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include
+package ru.pixnews.wasm.host.include
 
 data class StructTimespec(
     val tv_sec: time_t,

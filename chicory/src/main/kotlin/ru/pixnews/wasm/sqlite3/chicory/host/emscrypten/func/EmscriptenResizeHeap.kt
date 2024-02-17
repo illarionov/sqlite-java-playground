@@ -10,7 +10,7 @@ import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.ENV_MODULE_NAME
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.EmscryptenHostFunction
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.emscriptenEnvHostFunction
-import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
+import ru.pixnews.wasm.host.filesystem.SysException
 
 fun emscriptenResizeHeap(
     moduleName: String = ENV_MODULE_NAME,
