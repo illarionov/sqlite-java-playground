@@ -2,17 +2,17 @@ package ru.pixnews.wasm.sqlite3.chicory.host.func
 
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
-import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
-import com.dylibso.chicory.wasm.types.ValueType
 import java.nio.file.Path
 import java.util.logging.Logger
+import ru.pixnews.wasm.host.WebAssemblyValueType.WebAssemblyTypes.I32
 import ru.pixnews.wasm.host.wasi.preview1.type.Fd
 import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U8
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
+import ru.pixnews.wasm.sqlite3.chicory.ext.EmscryptenHostFunction
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
-import ru.pixnews.wasm.sqlite3.chicory.ext.chicory
+import ru.pixnews.wasm.sqlite3.chicory.ext.emscriptenEnvHostFunction
 import ru.pixnews.wasm.sqlite3.chicory.ext.oMaskToString
 import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
 import ru.pixnews.wasm.sqlite3.chicory.ext.sMaskToString
@@ -25,40 +25,38 @@ import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
 fun syscallOpenat(
     filesystem: FileSystem,
     moduleName: String = ENV_MODULE_NAME,
-): HostFunction = HostFunction(
-    Openat(filesystem),
-    moduleName,
-    "__syscall_openat",
-    listOf(
-        ValueType.I32, // dirfd
-        U8.pointer.chicory, // pathname
-        ValueType.I32, // flags
-        ValueType.I32 // mode / varargs
+): HostFunction = emscriptenEnvHostFunction(
+    funcName = "__syscall_openat",
+    paramTypes = listOf(
+        I32, // dirfd
+        U8.pointer, // pathname
+        I32, // flags
+        I32 // mode / varargs
     ),
-    listOf(
-        ValueType.I32
-    ),
+    returnType = I32,
+    moduleName = moduleName,
+    handle = Openat(filesystem)
 )
 
 private class Openat(
     private val filesystem: FileSystem,
     private val logger: Logger = Logger.getLogger(Openat::class.qualifiedName)
-) : WasmFunctionHandle {
-    override fun apply(instance: Instance, vararg params: Value): Array<Value> {
-        val mode = if (params.lastIndex == 3) {
-            instance.memory().readI32(params[3].asWasmAddr()).asInt().toUInt()
+) : EmscryptenHostFunction {
+    override fun apply(instance: Instance, vararg args: Value): Value {
+        val mode = if (args.lastIndex == 3) {
+            instance.memory().readI32(args[3].asWasmAddr()).asInt().toUInt()
         } else {
             0U
         }
 
         val fdOrErrno = openAt(
             instance = instance,
-            dirfd = params[0].asInt(),
-            pathnamePtr = params[1].asWasmAddr(),
-            flags = params[2].asInt().toUInt(),
+            dirfd = args[0].asInt(),
+            pathnamePtr = args[1].asWasmAddr(),
+            flags = args[2].asInt().toUInt(),
             mode = mode,
         )
-        return arrayOf(Value.i32(fdOrErrno.toLong()))
+        return Value.i32(fdOrErrno.toLong())
     }
 
     private fun openAt(

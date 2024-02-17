@@ -2,17 +2,16 @@ package ru.pixnews.wasm.sqlite3.chicory.host.func
 
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
-import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
 import java.util.logging.Logger
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U8
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
+import ru.pixnews.wasm.sqlite3.chicory.ext.EmscryptenHostFunction
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
-import ru.pixnews.wasm.sqlite3.chicory.ext.chicory
+import ru.pixnews.wasm.sqlite3.chicory.ext.emscriptenEnvHostFunction
 import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
-import ru.pixnews.wasm.sqlite3.chicory.ext.valueType
 import ru.pixnews.wasm.sqlite3.chicory.host.ENV_MODULE_NAME
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.sys.pack
@@ -43,31 +42,31 @@ private fun stat64Func(
     fieldName: String,
     followSymlinks: Boolean = true,
     moduleName: String = ENV_MODULE_NAME,
-): HostFunction = HostFunction(
-    Stat64(filesystem = filesystem, followSymlinks = followSymlinks),
-    moduleName,
-    fieldName,
-    listOf(
-        U8.pointer.chicory, // pathname
-        U8.pointer.chicory, // statbuf
+): HostFunction = emscriptenEnvHostFunction(
+    funcName = fieldName,
+    paramTypes = listOf(
+        U8.pointer, // pathname
+        U8.pointer, // statbuf
     ),
-    listOf(Errno.valueType),
+    returnType = Errno.webAssemblyValueType,
+    moduleName = moduleName,
+    handle = Stat64(filesystem = filesystem, followSymlinks = followSymlinks)
 )
 
 private class Stat64(
     private val filesystem: FileSystem,
     private val followSymlinks: Boolean = false,
     private val logger: Logger = Logger.getLogger(Stat64::class.qualifiedName)
-) : WasmFunctionHandle {
+) : EmscryptenHostFunction {
     private val syscallName = if (followSymlinks) "Stat64" else "Lstat64"
 
-    override fun apply(instance: Instance, vararg params: Value): Array<Value> {
+    override fun apply(instance: Instance, vararg args: Value): Value {
         val result = stat64(
             instance,
-            params[0].asWasmAddr(),
-            params[1].asWasmAddr(),
+            args[0].asWasmAddr(),
+            args[1].asWasmAddr(),
         )
-        return arrayOf(Value.i32(result.toLong()))
+        return Value.i32(result.toLong())
     }
 
     private fun stat64(

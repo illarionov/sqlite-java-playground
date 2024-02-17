@@ -2,14 +2,13 @@ package ru.pixnews.wasm.sqlite3.chicory.host.func
 
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
-import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
-import com.dylibso.chicory.wasm.types.ValueType
 import java.util.logging.Logger
+import ru.pixnews.wasm.host.WebAssemblyValueType.WebAssemblyTypes.I32
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.wasi.preview1.type.Fd
-import ru.pixnews.wasm.sqlite3.chicory.ext.ParamTypes
-import ru.pixnews.wasm.sqlite3.chicory.ext.valueType
+import ru.pixnews.wasm.sqlite3.chicory.ext.EmscryptenHostFunction
+import ru.pixnews.wasm.sqlite3.chicory.ext.emscriptenEnvHostFunction
 import ru.pixnews.wasm.sqlite3.chicory.host.ENV_MODULE_NAME
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
 import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
@@ -17,26 +16,26 @@ import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
 fun syscallFchown32(
     filesystem: FileSystem,
     moduleName: String = ENV_MODULE_NAME,
-): HostFunction = HostFunction(
-    Fchown32(filesystem),
-    moduleName,
-    "__syscall_fchown32",
-    listOf(
-        Fd.valueType, // fd
-        ValueType.I32, // owner,
-        ValueType.I32 // group,
+): HostFunction = emscriptenEnvHostFunction(
+    funcName = "__syscall_fchown32",
+    paramTypes = listOf(
+        Fd.webAssemblyValueType,  // fd
+        I32, // owner,
+        I32, // group,
     ),
-    ParamTypes.i32,
+    returnType = I32,
+    moduleName = moduleName,
+    handle = Fchown32(filesystem)
 )
 
 private class Fchown32(
     private val filesystem: FileSystem,
     private val logger: Logger = Logger.getLogger(Fchown32::class.qualifiedName)
-) : WasmFunctionHandle {
-    override fun apply(instance: Instance, vararg params: Value): Array<Value> {
-        val fd = Fd(params[0].asInt())
-        val owner = params[1].asInt()
-        val group = params[2].asInt()
+) : EmscryptenHostFunction {
+    override fun apply(instance: Instance, vararg args: Value): Value {
+        val fd = Fd(args[0].asInt())
+        val owner = args[1].asInt()
+        val group = args[2].asInt()
         val code = try {
             filesystem.chown(fd, owner, group)
             Errno.SUCCESS
@@ -44,6 +43,6 @@ private class Fchown32(
             logger.finest { "chown($fd, $owner, $group): Error ${e.errNo}" }
             e.errNo
         }
-        return arrayOf(Value.i32(-code.code.toLong()))
+        return Value.i32(-code.code.toLong())
     }
 }
