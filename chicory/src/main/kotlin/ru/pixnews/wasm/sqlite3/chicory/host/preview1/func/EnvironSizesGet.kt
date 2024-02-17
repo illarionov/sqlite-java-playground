@@ -25,8 +25,8 @@ import ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction
  */
 fun environSizesGet(
     envProvider: () -> Map<String, String> = System::getenv,
-    moduleName: String = ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1,
-): HostFunction = ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction(
+    moduleName: String = WASI_SNAPSHOT_PREVIEW1,
+): HostFunction = wasiHostFunction(
     funcName = "environ_sizes_get",
     paramTypes = listOf(
         Size.pointer, // *environ_count

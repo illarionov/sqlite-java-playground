@@ -10,8 +10,8 @@ import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunction
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction
 
 fun schedYield(
-    moduleName: String = ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1,
-): HostFunction = ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction(
+    moduleName: String = WASI_SNAPSHOT_PREVIEW1,
+): HostFunction = wasiHostFunction(
     funcName = "random_get",
     paramTypes = listOf(),
     moduleName = moduleName,
@@ -20,7 +20,7 @@ fun schedYield(
 
 private class SchedYield(
     private val logger: Logger = Logger.getLogger(SchedYield::class.qualifiedName),
-) : ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunction {
+) : WasiHostFunction {
     override fun apply(instance: Instance, vararg args: Value): Errno {
         TODO("Not yet implemented")
     }

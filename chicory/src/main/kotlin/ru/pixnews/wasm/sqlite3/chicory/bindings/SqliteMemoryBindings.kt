@@ -11,7 +11,7 @@ import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
 import ru.pixnews.wasm.sqlite3.chicory.ext.writeNullTerminatedString
 
 class SqliteMemoryBindings(
-    public val memory: Memory,
+    val memory: Memory,
     runtimeInstance: Instance,
 ) {
     private val malloc = runtimeInstance.export("malloc") // 2815
@@ -36,11 +36,11 @@ class SqliteMemoryBindings(
     private val sqlite3_realloc64 = runtimeInstance.export("sqlite3_realloc64") // 76
 
     // https://github.com/emscripten-core/emscripten/blob/main/system/lib/README.md
-    public fun init() {
+    fun init() {
         initEmscriptenStack()
     }
 
-    public fun allocOrThrow(len: UInt): Value {
+    fun allocOrThrow(len: UInt): Value {
         check (len > 0U)
         val mem = sqlite3_malloc.apply(
             Value.i32(len.toLong())
@@ -51,15 +51,15 @@ class SqliteMemoryBindings(
         return mem!!
     }
 
-    public fun free(value: Value) {
+    fun free(value: Value) {
         sqlite3_free.apply(value)
     }
 
-    public fun freeSilent(value: Value): Result<Unit> = kotlin.runCatching {
+    fun freeSilent(value: Value): Result<Unit> = kotlin.runCatching {
         free(value)
     }
 
-    public fun allocNullTerminatedString(string: String): Value {
+    fun allocNullTerminatedString(string: String): Value {
         val bytes = string.encodeToByteArray()
         val mem = allocOrThrow(bytes.size.toUInt() + 1U)
         memory.writeNullTerminatedString(mem.asWasmAddr(), string)

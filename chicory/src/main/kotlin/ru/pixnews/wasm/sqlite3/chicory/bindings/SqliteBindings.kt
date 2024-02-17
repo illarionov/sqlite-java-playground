@@ -7,7 +7,7 @@ import ru.pixnews.sqlite3.wasm.Sqlite3Exception
 import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
 
 class SqliteBindings(
-    public val memory: Memory,
+    val memory: Memory,
     private val runtimeInstance: Instance,
 ) {
     val memoryBindings = SqliteMemoryBindings(memory, runtimeInstance)

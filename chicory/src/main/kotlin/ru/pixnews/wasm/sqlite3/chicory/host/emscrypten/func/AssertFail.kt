@@ -1,4 +1,4 @@
-package ru.pixnews.wasm.sqlite3.chicory.host.func
+package ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.func
 
 import com.dylibso.chicory.runtime.HostFunction
 import ru.pixnews.wasm.host.WasmValueType
@@ -6,8 +6,8 @@ import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I32
 import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U8
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
-import ru.pixnews.wasm.sqlite3.chicory.host.ENV_MODULE_NAME
-import ru.pixnews.wasm.sqlite3.chicory.host.emscriptenEnvHostFunction
+import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.ENV_MODULE_NAME
+import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.emscriptenEnvHostFunction
 
 fun assertFail(
     moduleName: String = ENV_MODULE_NAME,
@@ -31,12 +31,19 @@ fun assertFail(
     )
 }
 
-public class AssertionFailed(
+class AssertionFailed(
     val condition: String?,
     val filename: String?,
     val line: Int,
     val func: String?,
-) : RuntimeException(formatErrMsg(condition, filename, line, func)) {
+) : RuntimeException(
+    formatErrMsg(
+        condition,
+        filename,
+        line,
+        func
+    )
+) {
     private companion object {
         fun formatErrMsg(
             condition: String?,

@@ -4,7 +4,7 @@ import kotlin.reflect.KProperty0
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.Fcntl
 
 internal fun Fcntl.oMaskToString(mask: UInt): String {
-    val startNames = if (mask.and(Fcntl.O_ACCMODE) == 0U) {
+    val startNames = if (mask.and(O_ACCMODE) == 0U) {
         listOf(Fcntl::O_RDONLY.name)
     } else {
         emptyList()

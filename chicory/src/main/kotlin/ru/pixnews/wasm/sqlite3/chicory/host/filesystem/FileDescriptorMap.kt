@@ -28,11 +28,11 @@ internal class FileDescriptorMap(
         }
     }
 
-    public fun remove(fd: Fd): FdChannel {
+    fun remove(fd: Fd): FdChannel {
         return fds.remove(fd) ?: throw SysException(Errno.BADF, "Trying to remove already disposed file descriptor")
     }
 
-    public fun get(
+    fun get(
         fd: Fd
     ): FdChannel? = fds[fd]
 

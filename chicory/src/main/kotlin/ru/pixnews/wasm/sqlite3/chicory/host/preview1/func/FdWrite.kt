@@ -29,12 +29,12 @@ import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
 
 fun fdWrite(
     filesystem: FileSystem,
-    moduleName: String = ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1,
+    moduleName: String = WASI_SNAPSHOT_PREVIEW1,
 ): HostFunction = fdWrite(filesystem, moduleName, "fd_write", CHANGE_POSITION)
 
 fun fdPwrite(
     filesystem: FileSystem,
-    moduleName: String = ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1,
+    moduleName: String = WASI_SNAPSHOT_PREVIEW1,
 ): HostFunction = fdWrite(filesystem, moduleName, "fd_pwrite", DO_NOT_CHANGE_POSITION)
 
 private fun fdWrite(
@@ -42,7 +42,7 @@ private fun fdWrite(
     moduleName: String,
     fieldName: String,
     strategy: ReadWriteStrategy
-): HostFunction = ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction(
+): HostFunction = wasiHostFunction(
     funcName = fieldName,
     paramTypes = listOf(
         Fd.wasmValueType, // Fd
@@ -58,7 +58,7 @@ private class FdWrite(
     filesystem: FileSystem,
     strategy: ReadWriteStrategy,
     private val logger: Logger = Logger.getLogger(FdWrite::class.qualifiedName)
-) : ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunction {
+) : WasiHostFunction {
     private val memoryWriter: MemoryWriter = UnsafeMemoryWriter.create(filesystem, strategy)
         ?: DefaultMemoryWriter(filesystem, strategy)
 

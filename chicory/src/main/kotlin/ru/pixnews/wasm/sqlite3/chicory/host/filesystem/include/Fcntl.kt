@@ -1,6 +1,6 @@
 package ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include
 
-public object Fcntl {
+object Fcntl {
     const val O_RDONLY = 0x0U
     const val O_WRONLY = 0x1U
     const val O_RDWR = 0x2U

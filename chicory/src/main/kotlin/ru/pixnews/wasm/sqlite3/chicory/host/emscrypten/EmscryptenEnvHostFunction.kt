@@ -1,4 +1,4 @@
-package ru.pixnews.wasm.sqlite3.chicory.host
+package ru.pixnews.wasm.sqlite3.chicory.host.emscrypten
 
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance

@@ -23,8 +23,8 @@ import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
 
 fun fdSeek(
     filesystem: FileSystem,
-    moduleName: String = ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1,
-): HostFunction = ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction(
+    moduleName: String = WASI_SNAPSHOT_PREVIEW1,
+): HostFunction = wasiHostFunction(
     funcName = "fd_seek",
     paramTypes = listOf(
         Fd.wasmValueType, // fd
@@ -39,7 +39,7 @@ fun fdSeek(
 private class FdSeek(
     private val filesystem: FileSystem,
     private val logger: Logger = Logger.getLogger(FdSeek::class.qualifiedName)
-) : ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunction {
+) : WasiHostFunction {
     override fun apply(instance: Instance, vararg params: Value): Errno {
         val fd = Fd(params[0].asInt())
         val offset = params[1].asLong()

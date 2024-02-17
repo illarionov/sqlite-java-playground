@@ -39,7 +39,7 @@ class WasiSnapshotPreview1Builtins(
     argsProvider: () -> List<String> = ::emptyList,
     envProvider: () -> Map<String, String> = System::getenv,
     clock: Clock = Clock.systemDefaultZone(),
-    moduleName: String = ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1,
+    moduleName: String = WASI_SNAPSHOT_PREVIEW1,
 ) {
     val functions: List<HostFunction> = listOf(
         argsGet(argsProvider),            // Not yet implemented

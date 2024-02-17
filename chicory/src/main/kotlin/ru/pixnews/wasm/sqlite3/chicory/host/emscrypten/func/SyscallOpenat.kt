@@ -1,4 +1,4 @@
-package ru.pixnews.wasm.sqlite3.chicory.host.func
+package ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.func
 
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
@@ -14,9 +14,9 @@ import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
 import ru.pixnews.wasm.sqlite3.chicory.ext.oMaskToString
 import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
 import ru.pixnews.wasm.sqlite3.chicory.ext.sMaskToString
-import ru.pixnews.wasm.sqlite3.chicory.host.ENV_MODULE_NAME
-import ru.pixnews.wasm.sqlite3.chicory.host.EmscryptenHostFunction
-import ru.pixnews.wasm.sqlite3.chicory.host.emscriptenEnvHostFunction
+import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.ENV_MODULE_NAME
+import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.EmscryptenHostFunction
+import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.emscriptenEnvHostFunction
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.include.Fcntl
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.resolveAbsolutePath

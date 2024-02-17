@@ -15,8 +15,8 @@ import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
 
 fun fdSync(
     filesystem: FileSystem,
-    moduleName: String = ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1,
-): HostFunction = ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction(
+    moduleName: String = WASI_SNAPSHOT_PREVIEW1,
+): HostFunction = wasiHostFunction(
     funcName = "fd_sync",
     paramTypes = listOf(
         Fd.wasmValueType, // fd
@@ -28,7 +28,7 @@ fun fdSync(
 private class FdSync(
     private val filesystem: FileSystem,
     private val logger: Logger = Logger.getLogger(FdSync::class.qualifiedName),
-) : ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunction {
+) : WasiHostFunction {
     override fun apply(instance: Instance, vararg args: Value): Errno {
         val fd = Fd(args[0].asInt())
         return try {

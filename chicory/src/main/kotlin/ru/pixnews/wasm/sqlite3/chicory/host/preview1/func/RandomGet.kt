@@ -13,8 +13,8 @@ import ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction
 
 fun randomGet(
     filesystem: FileSystem,
-    moduleName: String = ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1,
-): HostFunction = ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction(
+    moduleName: String = WASI_SNAPSHOT_PREVIEW1,
+): HostFunction = wasiHostFunction(
     funcName = "random_get",
     paramTypes = listOf(I32, I32),
     moduleName = moduleName,
@@ -24,7 +24,7 @@ fun randomGet(
 private class RandomGet(
     fileSystem: FileSystem,
     private val logger: Logger = Logger.getLogger(RandomGet::class.qualifiedName),
-) : ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunction {
+) : WasiHostFunction {
     override fun apply(instance: Instance, vararg args: Value): Errno {
         TODO("Not yet implemented")
     }

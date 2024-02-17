@@ -38,17 +38,17 @@ data class StructStat(
     val st_ctim: StructTimespec,
 )
 
-public typealias blkcnt_t = ULong
-public typealias blksize_t = ULong
-public typealias dev_t = ULong
-public typealias gid_t = ULong
-public typealias ino_t = ULong
-public typealias mode_t = ULong
-public typealias nlink_t = ULong
-public typealias off_t = ULong
-public typealias uid_t = ULong
+typealias blkcnt_t = ULong
+typealias blksize_t = ULong
+typealias dev_t = ULong
+typealias gid_t = ULong
+typealias ino_t = ULong
+typealias mode_t = ULong
+typealias nlink_t = ULong
+typealias off_t = ULong
+typealias uid_t = ULong
 
-public fun StructStat.pack(): ByteArray {
+fun StructStat.pack(): ByteArray {
     val dstByteArray = ByteArray(96)
     val dst = ByteBuffer.wrap(dstByteArray).apply {
         order(ByteOrder.LITTLE_ENDIAN)

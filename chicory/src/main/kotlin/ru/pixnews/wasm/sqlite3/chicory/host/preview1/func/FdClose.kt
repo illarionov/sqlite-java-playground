@@ -15,8 +15,8 @@ import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
 
 fun fdClose(
     filesystem: FileSystem,
-    moduleName: String = ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1,
-): HostFunction = ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction(
+    moduleName: String = WASI_SNAPSHOT_PREVIEW1,
+): HostFunction = wasiHostFunction(
     funcName = "fd_close",
     paramTypes = listOf(
         Fd.wasmValueType, // Fd
@@ -28,7 +28,7 @@ fun fdClose(
 private class FdClose(
     private val filesystem: FileSystem,
     private val logger: Logger = Logger.getLogger(FdClose::class.qualifiedName)
-) : ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunction {
+) : WasiHostFunction {
     override fun apply(instance: Instance, vararg args: Value): Errno {
         val fd = Fd(args[0].asInt())
         return try {

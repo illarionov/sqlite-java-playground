@@ -59,7 +59,7 @@ class FileSystem(
 ) {
     private val fileDescriptors: FileDescriptorMap = FileDescriptorMap(this)
 
-    public fun getCwd(): String = getCwdPath().pathString
+    fun getCwd(): String = getCwdPath().pathString
 
     fun stat(
         path: String,
@@ -291,7 +291,7 @@ class FileSystem(
     fun write(
         fd: Fd,
         cIovecs: Array<ByteBuffer>,
-        strategy: ReadWriteStrategy = ReadWriteStrategy.CHANGE_POSITION,
+        strategy: ReadWriteStrategy = CHANGE_POSITION,
     ): ULong {
         logger.finest { "write($fd, ${cIovecs.contentToString()}, $strategy)" }
         val channel = getStreamByFd(fd)
@@ -313,7 +313,7 @@ class FileSystem(
                     }
                 }
 
-                ReadWriteStrategy.CHANGE_POSITION -> {
+                CHANGE_POSITION -> {
                     totalBytesWritten = channel.channel.write(cIovecs).toULong()
                 }
             }

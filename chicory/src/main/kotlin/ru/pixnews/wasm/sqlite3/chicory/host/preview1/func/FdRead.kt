@@ -28,12 +28,12 @@ import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
 
 fun fdRead(
     filesystem: FileSystem,
-    moduleName: String = ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1,
+    moduleName: String = WASI_SNAPSHOT_PREVIEW1,
 ): HostFunction = fdRead(filesystem, moduleName, "fd_read", CHANGE_POSITION)
 
 fun fdPread(
     filesystem: FileSystem,
-    moduleName: String = ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1,
+    moduleName: String = WASI_SNAPSHOT_PREVIEW1,
 ): HostFunction = fdRead(filesystem, moduleName, "fd_pread", DO_NOT_CHANGE_POSITION)
 
 private fun fdRead(
@@ -41,7 +41,7 @@ private fun fdRead(
     moduleName: String,
     fieldName: String,
     strategy: ReadWriteStrategy
-): HostFunction = ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction(
+): HostFunction = wasiHostFunction(
     funcName = fieldName,
     paramTypes = listOf(
         Fd.wasmValueType, // Fd
@@ -57,7 +57,7 @@ private class FdRead(
     filesystem: FileSystem,
     strategy: ReadWriteStrategy,
     private val logger: Logger = Logger.getLogger(FdRead::class.qualifiedName)
-) : ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunction {
+) : WasiHostFunction {
     private val memoryReader: MemoryReader = UnsafeMemoryReader.create(filesystem, strategy)
         ?: DefaultMemoryReader(filesystem, strategy)
 
