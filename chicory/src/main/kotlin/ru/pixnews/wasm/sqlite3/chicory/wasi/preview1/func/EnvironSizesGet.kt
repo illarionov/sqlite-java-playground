@@ -25,8 +25,8 @@ import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.pointer
  *
  */
 fun environSizesGet(
+    envProvider: () -> Map<String, String> = System::getenv,
     moduleName: String = WASI_SNAPSHOT_PREVIEW1,
-    envProvider: () -> Map<String, String> = System::getenv
 ) : HostFunction = HostFunction(
     EnvironSizesGet(envProvider),
     moduleName,
@@ -39,7 +39,7 @@ fun environSizesGet(
 )
 
 private class EnvironSizesGet(
-    private val envProvider: () -> Map<String, String> = System::getenv
+    private val envProvider: () -> Map<String, String>
 ) : WasmFunctionHandle {
     override fun apply(
         instance: Instance,

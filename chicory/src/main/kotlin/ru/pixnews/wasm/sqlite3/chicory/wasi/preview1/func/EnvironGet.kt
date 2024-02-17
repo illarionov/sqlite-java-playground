@@ -25,8 +25,8 @@ import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.type.pointer
  *   )
  */
 fun environGet(
+    envProvider: () -> Map<String, String> = System::getenv,
     moduleName: String = WASI_SNAPSHOT_PREVIEW1,
-    envProvider: () -> Map<String, String> = System::getenv
 ): HostFunction = HostFunction(
     EnvironGet(envProvider),
     moduleName,
