@@ -5,9 +5,9 @@ import ru.pixnews.wasm.host.WebAssemblyValueType
 import ru.pixnews.wasm.host.WebAssemblyValueType.WebAssemblyTypes.I32
 import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U8
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
-import ru.pixnews.wasm.sqlite3.chicory.ext.emscriptenEnvHostFunction
 import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
 import ru.pixnews.wasm.sqlite3.chicory.host.ENV_MODULE_NAME
+import ru.pixnews.wasm.sqlite3.chicory.host.emscriptenEnvHostFunction
 
 fun assertFail(
     moduleName: String = ENV_MODULE_NAME,

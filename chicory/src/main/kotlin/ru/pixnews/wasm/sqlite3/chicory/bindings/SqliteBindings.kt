@@ -2,9 +2,9 @@ package ru.pixnews.wasm.sqlite3.chicory.bindings
 
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.Memory
-import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
 import ru.pixnews.sqlite3.wasm.Sqlite3Errno
 import ru.pixnews.sqlite3.wasm.Sqlite3Exception
+import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
 
 class SqliteBindings(
     public val memory: Memory,

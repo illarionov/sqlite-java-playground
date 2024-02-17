@@ -1,11 +1,11 @@
-package ru.pixnews.wasm.sqlite3.chicory.ext
+package ru.pixnews.wasm.sqlite3.chicory.host
 
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
 import ru.pixnews.wasm.host.WebAssemblyValueType
-import ru.pixnews.wasm.sqlite3.chicory.host.ENV_MODULE_NAME
+import ru.pixnews.wasm.sqlite3.chicory.ext.chicory
 
 internal fun emscriptenEnvHostFunction(
     funcName: String,
@@ -21,7 +21,7 @@ internal fun emscriptenEnvHostFunction(
     returnType?.let { listOf(it.chicory) } ?: listOf()
 )
 
-public fun interface EmscryptenHostFunction {
+internal fun interface EmscryptenHostFunction {
     fun apply(instance: Instance, vararg args: Value): Value?
 }
 

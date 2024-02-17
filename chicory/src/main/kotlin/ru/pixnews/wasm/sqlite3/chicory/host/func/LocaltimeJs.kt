@@ -7,9 +7,9 @@ import java.time.Clock
 import java.util.logging.Logger
 import ru.pixnews.wasm.host.WebAssemblyValueType.WebAssemblyTypes.I32
 import ru.pixnews.wasm.host.WebAssemblyValueType.WebAssemblyTypes.I64
-import ru.pixnews.wasm.sqlite3.chicory.ext.EmscryptenHostFunction
-import ru.pixnews.wasm.sqlite3.chicory.ext.emscriptenEnvHostFunction
 import ru.pixnews.wasm.sqlite3.chicory.host.ENV_MODULE_NAME
+import ru.pixnews.wasm.sqlite3.chicory.host.EmscryptenHostFunction
+import ru.pixnews.wasm.sqlite3.chicory.host.emscriptenEnvHostFunction
 
 fun localtimeJs(
     clock: Clock = Clock.systemDefaultZone(),

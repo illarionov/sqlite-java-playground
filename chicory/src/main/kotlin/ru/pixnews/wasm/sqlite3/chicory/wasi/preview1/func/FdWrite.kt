@@ -3,13 +3,12 @@ package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.Memory
-import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
-import com.dylibso.chicory.wasm.types.ValueType
 import java.lang.reflect.Field
 import java.nio.ByteBuffer
 import java.util.logging.Level
 import java.util.logging.Logger
+import ru.pixnews.wasm.host.WebAssemblyValueType.WebAssemblyTypes.I32
 import ru.pixnews.wasm.host.wasi.preview1.type.CioVec
 import ru.pixnews.wasm.host.wasi.preview1.type.CiovecArray
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
@@ -17,16 +16,15 @@ import ru.pixnews.wasm.host.wasi.preview1.type.Fd
 import ru.pixnews.wasm.host.wasi.preview1.type.IovecArray
 import ru.pixnews.wasm.host.wasi.preview1.type.Size
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
-import ru.pixnews.wasm.sqlite3.chicory.ext.ParamTypes
-import ru.pixnews.wasm.sqlite3.chicory.ext.WASI_SNAPSHOT_PREVIEW1
+import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
-import ru.pixnews.wasm.sqlite3.chicory.ext.chicoryPointer
-import ru.pixnews.wasm.sqlite3.chicory.ext.pointer
-import ru.pixnews.wasm.sqlite3.chicory.ext.valueType
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy.CHANGE_POSITION
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy.DO_NOT_CHANGE_POSITION
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WASI_SNAPSHOT_PREVIEW1
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WasiHostFunction
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.wasiHostFunction
 import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
 
 fun fdWrite(
@@ -44,28 +42,27 @@ private fun fdWrite(
     moduleName: String,
     fieldName: String,
     strategy: ReadWriteStrategy
-): HostFunction = HostFunction(
-    FdWrite(filesystem, strategy),
-    moduleName,
-    fieldName,
-    listOf(
-        Fd.valueType, // Fd
-        IovecArray.chicoryPointer, // ciov
-        ValueType.I32, // ciov_cnt
-        ValueType.I32.pointer, // pNum
+): HostFunction = wasiHostFunction(
+    funcName = fieldName,
+    paramTypes = listOf(
+        Fd.webAssemblyValueType, // Fd
+        IovecArray.pointer, // ciov
+        I32, // ciov_cnt
+        I32.pointer, // pNum
     ),
-    ParamTypes.i32,
+    moduleName = moduleName,
+    handle = FdWrite(filesystem, strategy)
 )
 
 private class FdWrite(
     filesystem: FileSystem,
     strategy: ReadWriteStrategy,
     private val logger: Logger = Logger.getLogger(FdWrite::class.qualifiedName)
-) : WasmFunctionHandle {
+) : WasiHostFunction {
     private val memoryWriter: MemoryWriter = UnsafeMemoryWriter.create(filesystem, strategy)
         ?: DefaultMemoryWriter(filesystem, strategy)
 
-    override fun apply(instance: Instance, vararg args: Value): Array<Value> {
+    override fun apply(instance: Instance, vararg args: Value): Errno {
         val fd = Fd(args[0].asInt())
         val pCiov = args[1].asWasmAddr()
         val cIovCnt = args[2].asInt()
@@ -73,7 +70,7 @@ private class FdWrite(
 
         val memory = instance.memory()
         val cioVecs = readCiovecs(memory, pCiov, cIovCnt)
-        val errNo = try {
+        return try {
             val writtenBytes = memoryWriter.write(memory, fd, cioVecs)
             memory.writeI32(pNum, writtenBytes.toInt())
             Errno.SUCCESS
@@ -81,8 +78,6 @@ private class FdWrite(
             logger.log(Level.INFO, e) { "fd_write() error" }
             e.errNo
         }
-
-        return arrayOf(Value.i32(errNo.code.toLong()))
     }
 
     private fun readCiovecs(

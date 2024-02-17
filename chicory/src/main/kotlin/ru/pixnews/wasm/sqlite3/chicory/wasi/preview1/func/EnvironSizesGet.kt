@@ -2,16 +2,14 @@ package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func
 
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
-import com.dylibso.chicory.runtime.WasmFunctionHandle
-import com.dylibso.chicory.wasm.types.Value
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.wasi.preview1.type.Size
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
-import ru.pixnews.wasm.sqlite3.chicory.ext.WASI_SNAPSHOT_PREVIEW1
+import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
-import ru.pixnews.wasm.sqlite3.chicory.ext.chicoryPointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.encodedNullTerminatedStringLength
-import ru.pixnews.wasm.sqlite3.chicory.ext.valueType
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WASI_SNAPSHOT_PREVIEW1
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.wasiHostFunction
 
 /**
  * Return environment variable data sizes.
@@ -28,46 +26,35 @@ import ru.pixnews.wasm.sqlite3.chicory.ext.valueType
 fun environSizesGet(
     envProvider: () -> Map<String, String> = System::getenv,
     moduleName: String = WASI_SNAPSHOT_PREVIEW1,
-) : HostFunction = HostFunction(
-    EnvironSizesGet(envProvider),
-    moduleName,
-    "environ_sizes_get",
-    listOf(
-        Size.chicoryPointer, // *environ_count
-        Size.chicoryPointer, // *environ_buf_size
+): HostFunction = wasiHostFunction(
+    funcName = "environ_sizes_get",
+    paramTypes = listOf(
+        Size.pointer, // *environ_count
+        Size.pointer, // *environ_buf_size
     ),
-    listOf(Errno.valueType),
-)
+    moduleName = moduleName,
+) { instance, params ->
+    environSizesGet(
+        envProvider,
+        instance,
+        params[0].asWasmAddr(),
+        params[1].asWasmAddr()
+    )
+}
 
-private class EnvironSizesGet(
-    private val envProvider: () -> Map<String, String>
-) : WasmFunctionHandle {
-    override fun apply(
-        instance: Instance,
-        vararg params: Value
-    ): Array<Value> {
-        val result = environSizesGet(
-            instance,
-            params[0].asWasmAddr(),
-            params[1].asWasmAddr()
-        )
+private fun environSizesGet(
+    envProvider: () -> Map<String, String>,
+    instance: Instance,
+    environCountAddr: WasmPtr,
+    environSizeAddr: WasmPtr,
+): Errno {
+    val env = envProvider()
+    val count = env.size
+    val dataLength = env.entries.sumOf { it.encodeEnvToWasi().encodedNullTerminatedStringLength() }
 
-        return arrayOf(Value.i32(result.code.toLong()))
-    }
-
-    private fun environSizesGet(
-        instance: Instance,
-        environCountAddr: WasmPtr,
-        environSizeAddr: WasmPtr,
-    ): Errno {
-        val env = envProvider()
-        val count = env.size
-        val dataLength = env.entries.sumOf { it.encodeEnvToWasi().encodedNullTerminatedStringLength() }
-
-        instance.memory().writeI32(environCountAddr, count)
-        instance.memory().writeI32(environSizeAddr, dataLength)
-        return Errno.SUCCESS
-    }
+    instance.memory().writeI32(environCountAddr, count)
+    instance.memory().writeI32(environSizeAddr, dataLength)
+    return Errno.SUCCESS
 }
 
 // TODO: sanitize `=`?

@@ -2,13 +2,13 @@ package ru.pixnews.wasm.sqlite3.chicory.sqlite3
 
 import com.dylibso.chicory.wasm.types.Value
 import ru.pixnews.sqlite3.wasm.Sqlite3Exception
-import ru.pixnews.wasm.sqlite3.chicory.bindings.SqliteBindings
-import ru.pixnews.wasm.sqlite3.chicory.ext.SQLITE3_NULL
-import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
 import ru.pixnews.sqlite3.wasm.Sqlite3Result
 import ru.pixnews.sqlite3.wasm.Sqlite3Version
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.wasi.preview1.type.WASM_SIZEOF_PTR
+import ru.pixnews.wasm.sqlite3.chicory.bindings.SqliteBindings
+import ru.pixnews.wasm.sqlite3.chicory.ext.SQLITE3_NULL
+import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
 
 class Sqlite3CApi(
     private val bindings: SqliteBindings,

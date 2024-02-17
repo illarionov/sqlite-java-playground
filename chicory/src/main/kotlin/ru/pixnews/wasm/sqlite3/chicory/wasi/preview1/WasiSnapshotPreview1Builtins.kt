@@ -2,12 +2,10 @@ package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1
 
 import com.dylibso.chicory.runtime.HostFunction
 import java.time.Clock
-import ru.pixnews.wasm.sqlite3.chicory.ext.WASI_SNAPSHOT_PREVIEW1
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.argsGet
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.argsSizesGet
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.clockTimeGet
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdSeek
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.environGet
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.environSizesGet
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdClose
@@ -17,9 +15,10 @@ import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdFilestatGet
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdPread
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdPrestatDirName
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdPrestatGet
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdSync
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdPwrite
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdRead
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdSeek
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdSync
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.fdWrite
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.pathCreateDirectory
 import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func.pathFilestatGet
@@ -40,7 +39,7 @@ class WasiSnapshotPreview1Builtins(
     argsProvider: () -> List<String> = ::emptyList,
     envProvider: () -> Map<String, String> = System::getenv,
     clock: Clock = Clock.systemDefaultZone(),
-    moduleName: String = WASI_SNAPSHOT_PREVIEW1,
+    moduleName: String = ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WASI_SNAPSHOT_PREVIEW1,
 ) {
     val functions: List<HostFunction> = listOf(
         argsGet(argsProvider),            // Not yet implemented

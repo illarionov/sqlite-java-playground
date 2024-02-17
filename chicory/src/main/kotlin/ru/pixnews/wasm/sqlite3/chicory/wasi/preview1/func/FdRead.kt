@@ -3,7 +3,6 @@ package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.Memory
-import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
 import java.lang.reflect.Field
 import java.nio.ByteBuffer
@@ -17,16 +16,14 @@ import ru.pixnews.wasm.host.wasi.preview1.type.IovecArray
 import ru.pixnews.wasm.host.wasi.preview1.type.Size
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
-import ru.pixnews.wasm.sqlite3.chicory.ext.ParamTypes
-import ru.pixnews.wasm.sqlite3.chicory.ext.WASI_SNAPSHOT_PREVIEW1
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
-import ru.pixnews.wasm.sqlite3.chicory.ext.chicory
-import ru.pixnews.wasm.sqlite3.chicory.ext.chicoryPointer
-import ru.pixnews.wasm.sqlite3.chicory.ext.valueType
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy.CHANGE_POSITION
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy.DO_NOT_CHANGE_POSITION
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WASI_SNAPSHOT_PREVIEW1
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WasiHostFunction
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.wasiHostFunction
 import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
 
 fun fdRead(
@@ -44,29 +41,27 @@ private fun fdRead(
     moduleName: String,
     fieldName: String,
     strategy: ReadWriteStrategy
-): HostFunction = HostFunction(
-    FdRead(filesystem, strategy),
-    moduleName,
-    fieldName,
-    listOf(
-        Fd.valueType, // Fd
-        IovecArray.chicoryPointer, // iov
-        I32.chicory, // iov_cnt
-        I32.chicory,
-        I32.pointer.chicory, // pNum
+): HostFunction = wasiHostFunction(
+    funcName = fieldName,
+    paramTypes = listOf(
+            Fd.webAssemblyValueType, // Fd
+            IovecArray.pointer, // iov
+            I32, // iov_cnt
+            I32.pointer, // pNum
     ),
-    ParamTypes.i32,
+    moduleName = moduleName,
+    handle = FdRead(filesystem, strategy)
 )
 
 private class FdRead(
     filesystem: FileSystem,
     strategy: ReadWriteStrategy,
     private val logger: Logger = Logger.getLogger(FdRead::class.qualifiedName)
-) : WasmFunctionHandle {
+) : WasiHostFunction {
     private val memoryReader: MemoryReader = UnsafeMemoryReader.create(filesystem, strategy)
         ?: DefaultMemoryReader(filesystem, strategy)
 
-    override fun apply(instance: Instance, vararg args: Value): Array<Value> {
+    override fun apply(instance: Instance, vararg args: Value): Errno {
         val fd = Fd(args[0].asInt())
         val pIov = args[1].asWasmAddr()
         val iovCnt = args[2].asInt()
@@ -74,7 +69,7 @@ private class FdRead(
 
         val memory = instance.memory()
         val ioVecs = readIovecs(memory, pIov, iovCnt)
-        val errNo = try {
+        return try {
             val readBytes = memoryReader.read(memory, fd, ioVecs)
             memory.writeI32(pNum, readBytes.toInt())
             Errno.SUCCESS
@@ -82,8 +77,6 @@ private class FdRead(
             logger.log(Level.INFO, e) { "read() error" }
             e.errNo
         }
-
-        return arrayOf(Value.i32(errNo.code.toLong()))
     }
 
     private fun readIovecs(

@@ -2,29 +2,30 @@ package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func
 
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
-import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
 import java.util.logging.Logger
-import ru.pixnews.wasm.sqlite3.chicory.ext.ParamTypes
-import ru.pixnews.wasm.sqlite3.chicory.ext.WASI_SNAPSHOT_PREVIEW1
+import ru.pixnews.wasm.host.WebAssemblyValueType.WebAssemblyTypes.I32
+import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WASI_SNAPSHOT_PREVIEW1
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WasiHostFunction
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.wasiHostFunction
 
 fun fdFdstatSetFlags(
     filesystem: FileSystem,
     moduleName: String = WASI_SNAPSHOT_PREVIEW1,
-): HostFunction = HostFunction(
-    FdFdstatSetFlags(filesystem),
-    moduleName,
-    "fd_fdstat_set_flags",
-    ParamTypes.i32i32,
-    ParamTypes.i32,
+): HostFunction = wasiHostFunction(
+    funcName = "fd_fdstat_set_flags",
+    paramTypes = listOf(I32, I32),
+    moduleName = moduleName,
+    handle = FdFdstatSetFlags(filesystem)
 )
 
 private class FdFdstatSetFlags(
     fileSystem: FileSystem,
     private val logger: Logger = Logger.getLogger(FdFdstatSetFlags::class.qualifiedName),
-) : WasmFunctionHandle {
-    override fun apply(instance: Instance, vararg args: Value): Array<Value> {
+) : WasiHostFunction {
+    override fun apply(instance: Instance, vararg args: Value): Errno {
         TODO("Not yet implemented")
     }
 }

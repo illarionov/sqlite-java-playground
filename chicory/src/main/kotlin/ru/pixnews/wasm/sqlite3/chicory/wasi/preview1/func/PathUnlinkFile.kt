@@ -2,29 +2,30 @@ package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func
 
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
-import com.dylibso.chicory.runtime.WasmFunctionHandle
 import com.dylibso.chicory.wasm.types.Value
 import java.util.logging.Logger
-import ru.pixnews.wasm.sqlite3.chicory.ext.ParamTypes
-import ru.pixnews.wasm.sqlite3.chicory.ext.WASI_SNAPSHOT_PREVIEW1
+import ru.pixnews.wasm.host.WebAssemblyValueType.WebAssemblyTypes.I32
+import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WASI_SNAPSHOT_PREVIEW1
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WasiHostFunction
+import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.wasiHostFunction
 
 fun pathUnlinkFile(
     filesystem: FileSystem,
     moduleName: String = WASI_SNAPSHOT_PREVIEW1,
-): HostFunction = HostFunction(
-    PathUnlinkFile(filesystem),
-    moduleName,
-    "path_unlink_file",
-    ParamTypes.i32i32i32,
-    ParamTypes.i32
+): HostFunction = wasiHostFunction(
+    funcName = "path_unlink_file",
+    paramTypes = listOf(I32, I32, I32),
+    moduleName = moduleName,
+    handle = PathUnlinkFile(filesystem)
 )
 
 private class PathUnlinkFile(
     fileSystem: FileSystem,
     private val logger: Logger = Logger.getLogger(PathUnlinkFile::class.qualifiedName),
-) : WasmFunctionHandle {
-    override fun apply(instance: Instance, vararg args: Value): Array<Value> {
+) : WasiHostFunction {
+    override fun apply(instance: Instance, vararg args: Value): Errno {
         TODO("Not yet implemented")
     }
 }
