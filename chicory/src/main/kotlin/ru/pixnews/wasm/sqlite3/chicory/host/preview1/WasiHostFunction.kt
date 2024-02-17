@@ -1,4 +1,4 @@
-package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1
+package ru.pixnews.wasm.sqlite3.chicory.host.preview1
 
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
@@ -14,10 +14,10 @@ internal const val WASI_SNAPSHOT_PREVIEW1 = "wasi_snapshot_preview1"
 internal fun wasiHostFunction(
     funcName: String,
     paramTypes : List<WasmValueType>,
-    moduleName: String = WASI_SNAPSHOT_PREVIEW1,
-    handle: WasiHostFunction,
+    moduleName: String = ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1,
+    handle: ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunction,
 ) : HostFunction = HostFunction(
-    WasiHostFunctionAdapter(handle),
+    ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunctionAdapter(handle),
     moduleName,
     funcName,
     paramTypes.map(WasmValueType::chicory),
@@ -29,7 +29,7 @@ internal fun interface WasiHostFunction {
 }
 
 private class WasiHostFunctionAdapter(
-    private val delegate: WasiHostFunction
+    private val delegate: ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunction
 ) : WasmFunctionHandle {
     override fun apply(instance: Instance, vararg args: Value): Array<Value> {
         val result = delegate.apply(instance, args = args)

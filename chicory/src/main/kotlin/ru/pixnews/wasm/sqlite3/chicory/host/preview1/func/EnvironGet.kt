@@ -1,4 +1,4 @@
-package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func
+package ru.pixnews.wasm.sqlite3.chicory.host.preview1.func
 
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Memory
@@ -8,8 +8,8 @@ import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
 import ru.pixnews.wasm.sqlite3.chicory.ext.writeNullTerminatedString
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WASI_SNAPSHOT_PREVIEW1
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.wasiHostFunction
+import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1
+import ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction
 
 /**
  * Read environment variable data.
@@ -24,8 +24,8 @@ import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.wasiHostFunction
  */
 fun environGet(
     envProvider: () -> Map<String, String> = System::getenv,
-    moduleName: String = WASI_SNAPSHOT_PREVIEW1,
-): HostFunction = wasiHostFunction(
+    moduleName: String = ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1,
+): HostFunction = ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction(
     funcName = "environ_get",
     paramTypes = listOf(
         U8.pointer, // **environ

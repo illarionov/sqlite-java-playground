@@ -1,4 +1,4 @@
-package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func
+package ru.pixnews.wasm.sqlite3.chicory.host.preview1.func
 
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
@@ -21,19 +21,19 @@ import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy.CHANGE_POSITION
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy.DO_NOT_CHANGE_POSITION
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WASI_SNAPSHOT_PREVIEW1
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WasiHostFunction
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.wasiHostFunction
+import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1
+import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunction
+import ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction
 import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
 
 fun fdRead(
     filesystem: FileSystem,
-    moduleName: String = WASI_SNAPSHOT_PREVIEW1,
+    moduleName: String = ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1,
 ): HostFunction = fdRead(filesystem, moduleName, "fd_read", CHANGE_POSITION)
 
 fun fdPread(
     filesystem: FileSystem,
-    moduleName: String = WASI_SNAPSHOT_PREVIEW1,
+    moduleName: String = ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1,
 ): HostFunction = fdRead(filesystem, moduleName, "fd_pread", DO_NOT_CHANGE_POSITION)
 
 private fun fdRead(
@@ -41,13 +41,13 @@ private fun fdRead(
     moduleName: String,
     fieldName: String,
     strategy: ReadWriteStrategy
-): HostFunction = wasiHostFunction(
+): HostFunction = ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction(
     funcName = fieldName,
     paramTypes = listOf(
-            Fd.wasmValueType, // Fd
-            IovecArray.pointer, // iov
-            I32, // iov_cnt
-            I32.pointer, // pNum
+        Fd.wasmValueType, // Fd
+        IovecArray.pointer, // iov
+        I32, // iov_cnt
+        I32.pointer, // pNum
     ),
     moduleName = moduleName,
     handle = FdRead(filesystem, strategy)
@@ -57,7 +57,7 @@ private class FdRead(
     filesystem: FileSystem,
     strategy: ReadWriteStrategy,
     private val logger: Logger = Logger.getLogger(FdRead::class.qualifiedName)
-) : WasiHostFunction {
+) : ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunction {
     private val memoryReader: MemoryReader = UnsafeMemoryReader.create(filesystem, strategy)
         ?: DefaultMemoryReader(filesystem, strategy)
 

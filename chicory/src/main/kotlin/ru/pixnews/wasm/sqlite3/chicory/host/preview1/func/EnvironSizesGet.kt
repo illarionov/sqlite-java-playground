@@ -1,4 +1,4 @@
-package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func
+package ru.pixnews.wasm.sqlite3.chicory.host.preview1.func
 
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
@@ -8,8 +8,8 @@ import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
 import ru.pixnews.wasm.sqlite3.chicory.ext.encodedNullTerminatedStringLength
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WASI_SNAPSHOT_PREVIEW1
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.wasiHostFunction
+import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1
+import ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction
 
 /**
  * Return environment variable data sizes.
@@ -25,8 +25,8 @@ import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.wasiHostFunction
  */
 fun environSizesGet(
     envProvider: () -> Map<String, String> = System::getenv,
-    moduleName: String = WASI_SNAPSHOT_PREVIEW1,
-): HostFunction = wasiHostFunction(
+    moduleName: String = ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1,
+): HostFunction = ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction(
     funcName = "environ_sizes_get",
     paramTypes = listOf(
         Size.pointer, // *environ_count

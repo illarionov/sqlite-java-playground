@@ -1,4 +1,4 @@
-package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func
+package ru.pixnews.wasm.sqlite3.chicory.host.preview1.func
 
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
@@ -8,14 +8,14 @@ import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I32
 import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I64
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WASI_SNAPSHOT_PREVIEW1
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WasiHostFunction
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.wasiHostFunction
+import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1
+import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunction
+import ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction
 
 fun pathOpen(
     filesystem: FileSystem,
-    moduleName: String = WASI_SNAPSHOT_PREVIEW1,
-): HostFunction = wasiHostFunction(
+    moduleName: String = ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1,
+): HostFunction = ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction(
     funcName = "path_open",
     paramTypes = listOf(
         I32,
@@ -35,7 +35,7 @@ fun pathOpen(
 private class PathOpen(
     fileSystem: FileSystem,
     private val logger: Logger = Logger.getLogger(PathOpen::class.qualifiedName),
-) : WasiHostFunction {
+) : ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunction {
     override fun apply(instance: Instance, vararg args: Value): Errno {
         TODO("Not yet implemented")
     }

@@ -1,4 +1,4 @@
-package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func
+package ru.pixnews.wasm.sqlite3.chicory.host.preview1.func
 
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
@@ -22,19 +22,19 @@ import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy.CHANGE_POSITION
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.ReadWriteStrategy.DO_NOT_CHANGE_POSITION
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WASI_SNAPSHOT_PREVIEW1
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WasiHostFunction
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.wasiHostFunction
+import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1
+import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunction
+import ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction
 import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
 
 fun fdWrite(
     filesystem: FileSystem,
-    moduleName: String = WASI_SNAPSHOT_PREVIEW1,
+    moduleName: String = ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1,
 ): HostFunction = fdWrite(filesystem, moduleName, "fd_write", CHANGE_POSITION)
 
 fun fdPwrite(
     filesystem: FileSystem,
-    moduleName: String = WASI_SNAPSHOT_PREVIEW1,
+    moduleName: String = ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1,
 ): HostFunction = fdWrite(filesystem, moduleName, "fd_pwrite", DO_NOT_CHANGE_POSITION)
 
 private fun fdWrite(
@@ -42,7 +42,7 @@ private fun fdWrite(
     moduleName: String,
     fieldName: String,
     strategy: ReadWriteStrategy
-): HostFunction = wasiHostFunction(
+): HostFunction = ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction(
     funcName = fieldName,
     paramTypes = listOf(
         Fd.wasmValueType, // Fd
@@ -58,7 +58,7 @@ private class FdWrite(
     filesystem: FileSystem,
     strategy: ReadWriteStrategy,
     private val logger: Logger = Logger.getLogger(FdWrite::class.qualifiedName)
-) : WasiHostFunction {
+) : ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunction {
     private val memoryWriter: MemoryWriter = UnsafeMemoryWriter.create(filesystem, strategy)
         ?: DefaultMemoryWriter(filesystem, strategy)
 

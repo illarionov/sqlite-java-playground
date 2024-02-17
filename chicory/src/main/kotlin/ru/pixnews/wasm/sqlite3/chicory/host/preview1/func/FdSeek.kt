@@ -1,4 +1,4 @@
-package ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.func
+package ru.pixnews.wasm.sqlite3.chicory.host.preview1.func
 
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
@@ -16,15 +16,15 @@ import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.FileSystem
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.FdChannel
 import ru.pixnews.wasm.sqlite3.chicory.host.filesystem.model.position
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WASI_SNAPSHOT_PREVIEW1
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.WasiHostFunction
-import ru.pixnews.wasm.sqlite3.chicory.wasi.preview1.wasiHostFunction
+import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1
+import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunction
+import ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction
 import ru.pixnews.wasm.sqlite3.host.filesystem.SysException
 
 fun fdSeek(
     filesystem: FileSystem,
-    moduleName: String = WASI_SNAPSHOT_PREVIEW1,
-): HostFunction = wasiHostFunction(
+    moduleName: String = ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1,
+): HostFunction = ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction(
     funcName = "fd_seek",
     paramTypes = listOf(
         Fd.wasmValueType, // fd
@@ -39,7 +39,7 @@ fun fdSeek(
 private class FdSeek(
     private val filesystem: FileSystem,
     private val logger: Logger = Logger.getLogger(FdSeek::class.qualifiedName)
-) : WasiHostFunction {
+) : ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunction {
     override fun apply(instance: Instance, vararg params: Value): Errno {
         val fd = Fd(params[0].asInt())
         val offset = params[1].asLong()
