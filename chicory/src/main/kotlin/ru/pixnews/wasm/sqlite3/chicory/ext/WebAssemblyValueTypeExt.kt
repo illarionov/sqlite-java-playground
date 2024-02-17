@@ -3,7 +3,7 @@ package ru.pixnews.wasm.sqlite3.chicory.ext
 import com.dylibso.chicory.wasm.types.ValueType
 import ru.pixnews.wasm.host.WasmValueType
 
-val WasmValueType.chicory: ValueType
+internal val WasmValueType.chicory: ValueType
     get() = ValueType.byId(
         requireNotNull(opcode) {
             "Can not convert Wasi type without opcode"
