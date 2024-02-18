@@ -10,9 +10,7 @@ import org.graalvm.wasm.WasmLanguage
 import org.graalvm.wasm.predefined.WasmBuiltinRootNode
 
 
-fun notImplementedFunctionNodeFactory(
-    functionName: String
-): NodeFactory = { language, instance, _ -> NotImplementedNode(language, instance, functionName) }
+val notImplementedFunctionNodeFactory: NodeFactory = { language, instance, _, name -> NotImplementedNode(language, instance, name) }
 
 class NotImplementedNode(
     language: WasmLanguage,

@@ -8,7 +8,6 @@ import org.example.app.host.Host
 import org.graalvm.wasm.WasmContext
 import org.graalvm.wasm.WasmInstance
 import org.graalvm.wasm.WasmLanguage
-import org.graalvm.wasm.WasmType.I32_TYPE
 import ru.pixnews.wasm.host.filesystem.FileSystem
 import ru.pixnews.wasm.host.filesystem.SysException
 import ru.pixnews.wasm.host.include.sys.pack
@@ -19,10 +18,11 @@ fun syscallLstat64(
     language: WasmLanguage,
     instance: WasmInstance,
     host: Host,
+    functionName: String = "__syscall_lstat64",
 ): BaseWasmRootNode = SyscallStat64(
     language = language,
     instance = instance,
-    name = "__syscall_lstat64",
+    functionName = functionName,
     followSymlinks = false,
     filesystem = host.fileSystem,
 )
@@ -31,10 +31,11 @@ fun syscallStat64(
     language: WasmLanguage,
     instance: WasmInstance,
     host: Host,
+    functionName: String = "__syscall_stat64",
 ): BaseWasmRootNode = SyscallStat64(
     language = language,
     instance = instance,
-    name = "__syscall_stat64",
+    functionName = functionName,
     followSymlinks = true,
     filesystem = host.fileSystem,
 )
@@ -42,14 +43,14 @@ fun syscallStat64(
 private class SyscallStat64 (
     language: WasmLanguage,
     instance: WasmInstance,
-    private val name: String,
+    functionName: String,
     private val followSymlinks: Boolean = false,
     private val filesystem: FileSystem,
     private val logger: Logger = Logger.getLogger(SyscallStat64::class.qualifiedName)
 ) : BaseWasmRootNode(
     language = language,
     instance = instance,
-    functionName = name,
+    functionName = functionName,
 ) {
 
     override fun executeWithContext(frame: VirtualFrame, context: WasmContext): Int {
@@ -72,11 +73,11 @@ private class SyscallStat64 (
                 path = path,
                 followSymlinks = followSymlinks
             ).also {
-                logger.finest { "$name($path): $it" }
+                logger.finest { "$functionName($path): $it" }
             }.pack()
             memory.write(dst, stat)
         } catch (e: SysException) {
-            logger.finest { "$name(`$path`): error ${e.errNo}" }
+            logger.finest { "$functionName(`$path`): error ${e.errNo}" }
             return -e.errNo.code
         }
 

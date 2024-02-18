@@ -1,17 +1,17 @@
 package org.example.app.host.emscrypten
 
-import org.example.app.host.BaseWasmRootNode
 import org.example.app.host.Host
 import org.example.app.host.HostFunction
 import org.example.app.host.HostFunctionType
-import org.example.app.host.emscrypten.func.NotImplementedNode
+import org.example.app.host.NodeFactory
+import org.example.app.host.emscrypten.func.SyscallOpenat
+import org.example.app.host.emscrypten.func.notImplementedFunctionNodeFactory
 import org.example.app.host.emscrypten.func.syscallLstat64
 import org.example.app.host.emscrypten.func.syscallStat64
 import org.graalvm.wasm.SymbolTable
 import org.graalvm.wasm.WasmContext
 import org.graalvm.wasm.WasmFunction
 import org.graalvm.wasm.WasmInstance
-import org.graalvm.wasm.WasmLanguage
 import org.graalvm.wasm.WasmModule
 import org.graalvm.wasm.WasmType.F64_TYPE
 import org.graalvm.wasm.WasmType.I32_TYPE
@@ -35,7 +35,12 @@ object EmscriptenEnvBindings {
         fn("__syscall_chmod", listOf(I32_TYPE, I32_TYPE))
         fn("__syscall_fchown32", List(3) { I32_TYPE })
         fn("__syscall_fcntl64", List(3) { I32_TYPE })
-        fn("__syscall_openat", List(4) { I32_TYPE })
+        fn(
+            name = "__syscall_openat",
+            paramTypes = List(4) { I32_TYPE },
+            retType = I32_TYPE,
+            nodeFactory = ::SyscallOpenat
+        )
         fn("__syscall_ioctl", List(3) { I32_TYPE })
         fn("__syscall_fstat64", listOf(I32_TYPE, I32_TYPE))
         fn(
@@ -66,22 +71,14 @@ object EmscriptenEnvBindings {
         name: String,
         paramTypes: List<Byte>,
         retType: Byte = I32_TYPE,
-        nodeFactory: (
-            language: WasmLanguage,
-            instance: WasmInstance,
-            host: Host,
-        ) -> BaseWasmRootNode = { language, instance, _ -> NotImplementedNode(language, instance, name) }
+        nodeFactory: NodeFactory = notImplementedFunctionNodeFactory
     ) = add(HostFunction(name, paramTypes, listOf(retType), nodeFactory))
 
     private fun MutableList<HostFunction>.fnVoid(
         name: String,
         paramTypes: List<Byte>,
-        nodeFactory: (
-            language: WasmLanguage,
-            instance: WasmInstance,
-            host: Host,
-        ) -> BaseWasmRootNode = { language, instance, _ -> NotImplementedNode(language, instance, name) }
-    ) = add(HostFunction(name, paramTypes, emptyList(),  nodeFactory))
+        nodeFactory: NodeFactory = notImplementedFunctionNodeFactory
+    ) = add(HostFunction(name, paramTypes, emptyList(), nodeFactory))
 
     fun setupEnvBindings(
         context: WasmContext,
@@ -97,7 +94,7 @@ object EmscriptenEnvBindings {
         val envInstance: WasmInstance = context.readInstance(envModule)
 
         envFunctions.forEach { f: HostFunction ->
-            val node = f.nodeFactory(context.language(), envInstance, host)
+            val node = f.nodeFactory(context.language(), envInstance, host, f.name)
             val exportedIndex = exportedFunctions.getValue(f.name).index()
             envInstance.setTarget(exportedIndex, node.callTarget)
         }
