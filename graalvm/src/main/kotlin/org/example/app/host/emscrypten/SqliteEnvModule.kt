@@ -1,4 +1,4 @@
-package org.example.app
+package org.example.app.host.emscrypten
 
 import org.example.app.env.NotImplementedNode
 import org.example.app.env.SyscallRmdirNode
@@ -9,13 +9,14 @@ import org.graalvm.wasm.WasmModule
 import org.graalvm.wasm.WasmType.F64_TYPE
 import org.graalvm.wasm.WasmType.I32_TYPE
 import org.graalvm.wasm.WasmType.I64_TYPE
-import org.graalvm.wasm.WasmType.VOID_TYPE
 import org.graalvm.wasm.constants.Sizes
 
-val envFunctions = buildList {
+val envFunctions: List<EmscriptenEnvHostFunction> = buildList {
+    fnVoid("abort", listOf())
+    fnVoid("__assert_fail", List(4) { I32_TYPE })
     fn("__syscall_faccessat", List(4) { I32_TYPE })
     fnVoid("_tzset_js", List(3) { I32_TYPE })
-    fnVoid("_localtime_js", listOf(I32_TYPE, I32_TYPE))
+    fnVoid("_localtime_js", listOf(I64_TYPE, I32_TYPE))
     fn("emscripten_date_now", listOf(), F64_TYPE)
     fn("_emscripten_get_now_is_monotonic", listOf())
     fn("emscripten_get_now", listOf(), F64_TYPE)
@@ -33,30 +34,29 @@ val envFunctions = buildList {
     fn("__syscall_ftruncate64", listOf(I32_TYPE, I64_TYPE))
     fn("__syscall_getcwd", listOf(I32_TYPE, I32_TYPE))
     fn("__syscall_mkdirat", List(3) { I32_TYPE })
-    fn("_munmap_js", List(6) { I32_TYPE })
-    fn("_mmap_js", List(7) { I32_TYPE })
+    fn("_munmap_js", listOf(I32_TYPE, I32_TYPE, I32_TYPE, I32_TYPE, I32_TYPE, I64_TYPE))
+    fn("_mmap_js", listOf(I32_TYPE, I32_TYPE, I32_TYPE, I32_TYPE, I64_TYPE, I32_TYPE, I32_TYPE))
     fn("__syscall_readlinkat", List(4) { I32_TYPE })
     fn("__syscall_rmdir", listOf(I32_TYPE))
     fn("__syscall_unlinkat", List(3) { I32_TYPE })
     fn("__syscall_utimensat", List(4) { I32_TYPE })
 }
 
-private fun MutableList<DefinedFunction>.fn(
+private fun MutableList<EmscriptenEnvHostFunction>.fn(
     name: String,
     paramTypes: List<Byte>,
     retType: Byte = I32_TYPE
-) = add(DefinedFunction(name, paramTypes.toByteArray(), byteArrayOf(retType)))
+) = add(EmscriptenEnvHostFunction(name, paramTypes.toByteArray(), byteArrayOf(retType)))
 
-private fun MutableList<DefinedFunction>.fnVoid(
+private fun MutableList<EmscriptenEnvHostFunction>.fnVoid(
     name: String,
     paramTypes: List<Byte>,
-) = add(DefinedFunction(name, paramTypes.toByteArray(), byteArrayOf()))
+) = add(EmscriptenEnvHostFunction(name, paramTypes.toByteArray(), byteArrayOf()))
 
-class DefinedFunction(
+class EmscriptenEnvHostFunction(
     val name: String,
     val paramTypes: ByteArray,
     val retTypes: ByteArray,
-    val isMultiValue: Boolean = false,
 )
 
 fun createSqliteEnvModule(
@@ -64,13 +64,8 @@ fun createSqliteEnvModule(
     name: String = "env",
 ): WasmInstance {
     val envModule = WasmModule.create(name, null)
-    val exportedFunctions: Map<String, Int> = envFunctions.associate {
-        val f = envModule.defineFunction(it)
-        it.name to f.index()
-    }
-
     if (context.contextOptions.supportMemory64()) {
-        envModule.defineMemory(
+        envModule.allocateExportMemory(
             initSize = 256,
             maxSize = Sizes.MAX_MEMORY_64_DECLARATION_SIZE,
             "memory",
@@ -78,13 +73,18 @@ fun createSqliteEnvModule(
             isShared = false,
         )
     } else {
-        envModule.defineMemory(
+        envModule.allocateExportMemory(
             initSize = 256,
             maxSize = 32768,
             "memory",
             is64Bit = false,
             isShared = false,
         )
+    }
+
+    val exportedFunctions: Map<String, Int> = envFunctions.associate {
+        val f = envModule.declareExportedFunction(it)
+        it.name to f.index()
     }
 
     val envInstance = context.readInstance(envModule)
@@ -95,6 +95,8 @@ fun createSqliteEnvModule(
     )
 
     listOf(
+        "abort",
+        "__assert_fail",
         "__syscall_chmod",
         "__syscall_faccessat",
         "__syscall_fchmod",
@@ -131,7 +133,7 @@ fun createSqliteEnvModule(
     return envInstance
 }
 
-fun WasmModule.defineMemory(
+fun WasmModule.allocateExportMemory(
     initSize: Long,
     maxSize: Long,
     memoryName: String = "memory",
@@ -143,11 +145,11 @@ fun WasmModule.defineMemory(
     symbolTable().exportMemory(index, memoryName)
 }
 
-fun WasmModule.defineFunction(params: DefinedFunction): WasmFunction {
+fun WasmModule.declareExportedFunction(params: EmscriptenEnvHostFunction): WasmFunction {
     val typeIdx = symbolTable().allocateFunctionType(
         params.paramTypes,
         params.retTypes,
-        params.isMultiValue
+        false
     )
     return symbolTable().declareExportedFunction(typeIdx, params.name)
 }

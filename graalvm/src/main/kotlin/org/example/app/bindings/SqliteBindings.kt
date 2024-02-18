@@ -9,8 +9,7 @@ class SqliteBindings(
     val envBindings: Value,
     val mainBindings: Value,
 ) {
-    private val memory = envBindings.getMember("memory")
-    val memoryBindings = SqliteMemoryBindings(mainBindings, memory)
+    val memoryBindings = SqliteMemoryBindings(mainBindings)
 
     val _initialize: Value? = mainBindings.getMember("_initialize") // 34
     val __errno_location = mainBindings.getMember("__errno_location") // 2644
@@ -251,6 +250,8 @@ class SqliteBindings(
     val sqlite3_wasm_test_stack_overflow = mainBindings.getMember("sqlite3_wasm_test_stack_overflow") // 688
     val sqlite3_wasm_test_str_hello = mainBindings.getMember("sqlite3_wasm_test_str_hello") // 689
     val sqlite3_wasm_SQLTester_strglob = mainBindings.getMember("sqlite3_wasm_SQLTester_strglob") // 690
+
+    private val memory = envBindings.getMember("memory")
 
     val version: String
         get() {

@@ -3,6 +3,8 @@ package ru.pixnews.wasm.sqlite3.chicory.host.emscrypten
 import com.dylibso.chicory.runtime.HostFunction
 import java.time.Clock
 import ru.pixnews.wasm.host.filesystem.FileSystem
+import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.func.abortFunc
+import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.func.assertFail
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.func.emscriptenDateNow
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.func.emscriptenGetNow
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.func.emscriptenGetNowIsMonotonic
@@ -38,8 +40,8 @@ class EmscriptenEnvBindings(
     moduleName: String = ENV_MODULE_NAME,
 ) {
     val functions: List<HostFunction> = listOf(
-        ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.func.abortFunc(),
-        ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.func.assertFail(),
+        abortFunc(),
+        assertFail(),
         emscriptenDateNow(clock),
         emscriptenGetNow(),
         emscriptenGetNowIsMonotonic(),

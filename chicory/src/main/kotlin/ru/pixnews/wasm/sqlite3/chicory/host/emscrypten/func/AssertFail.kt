@@ -19,7 +19,7 @@ fun assertFail(
         I32, // line
         U8.pointer // func
     ),
-    returnType = WasmValueType.F64,
+    returnType = null,
     moduleName = moduleName,
 ) { instance, params ->
     val memory = instance.memory()

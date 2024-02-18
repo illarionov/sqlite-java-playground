@@ -1,4 +1,4 @@
-package org.example.app
+package org.example.app.sqlite3
 
 import org.example.app.bindings.SqliteBindings
 

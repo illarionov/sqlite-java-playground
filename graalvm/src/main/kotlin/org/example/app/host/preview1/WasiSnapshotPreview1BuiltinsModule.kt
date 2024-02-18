@@ -1,5 +1,6 @@
-package org.example.app
+package org.example.app.host.preview1
 
+import org.example.app.host.preview1.func.WasiUnsupportedFunctionNode
 import org.graalvm.wasm.WasmContext
 import org.graalvm.wasm.WasmInstance
 import org.graalvm.wasm.WasmLanguage
@@ -246,7 +247,8 @@ class WasiSnapshotPreview1BuiltinsModule : BuiltinModule() {
                 WasmType.I32_TYPE,
                 WasmType.I32_TYPE,
                 WasmType.I32_TYPE,
-                WasmType.I32_TYPE),
+                WasmType.I32_TYPE
+            ),
             types(
                 WasmType.I32_TYPE
             ),

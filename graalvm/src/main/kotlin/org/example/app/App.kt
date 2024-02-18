@@ -2,6 +2,8 @@ package org.example.app
 
 import kotlin.time.measureTimedValue
 import org.example.app.bindings.SqliteBindings
+import org.example.app.host.emscrypten.createSqliteEnvModule
+import org.example.app.host.preview1.WasiSnapshotPreview1BuiltinsModule
 import org.graalvm.polyglot.Context
 import org.graalvm.polyglot.Source
 import org.graalvm.wasm.WasmContext
@@ -50,8 +52,7 @@ private fun testSqlite() {
 
         SqliteBindings(
             wasmContext.getBindings("wasm").getMember("env"),
-            wasmContext.getBindings("wasm")
-                .getMember("main")
+            wasmContext.getBindings("wasm").getMember("main")
         )
     }
     println("wasm: binding = ${sqlite3Bindings.sqlite3_initialize}. duration: $evalDuration")

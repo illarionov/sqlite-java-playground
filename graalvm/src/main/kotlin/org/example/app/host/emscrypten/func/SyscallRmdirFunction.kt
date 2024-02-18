@@ -1,8 +1,8 @@
-package org.example.app
+package org.example.app.host.emscrypten.func
 
-import java.util.function.Function as JavaFunction
+import java.util.function.Function
 
-class SyscallRmdirFunction : JavaFunction<Array<Any>, Any> {
+class SyscallRmdirFunction : Function<Array<Any>, Any> {
 
     override fun apply(args: Array<Any>): Int {
         // TODO: errno?

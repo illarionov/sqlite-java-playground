@@ -4,7 +4,7 @@ import org.graalvm.polyglot.Value
 
 class SqliteMemoryBindings(
     private val mainBindings: Value,
-    val memory: Value,
+    //val memory: Value,
 ) {
     val malloc = mainBindings.getMember("malloc") // 2815
     val free = mainBindings.getMember("free") // 2816

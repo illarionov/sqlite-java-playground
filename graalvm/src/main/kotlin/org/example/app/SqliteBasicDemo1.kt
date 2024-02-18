@@ -2,6 +2,8 @@ package org.example.app
 
 import java.util.logging.Logger
 import org.example.app.bindings.SqliteBindings
+import org.example.app.sqlite3.Sqlite3CApi
+import org.example.app.sqlite3.Sqlite3OopApi
 
 class SqliteBasicDemo1(
     private val sqlite: SqliteBindings,
