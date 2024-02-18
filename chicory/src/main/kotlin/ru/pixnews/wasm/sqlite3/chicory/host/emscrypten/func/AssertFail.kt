@@ -3,6 +3,7 @@ package ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.func
 import com.dylibso.chicory.runtime.HostFunction
 import ru.pixnews.wasm.host.WasmValueType
 import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I32
+import ru.pixnews.wasm.host.memory.Memory
 import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U8
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
@@ -10,6 +11,7 @@ import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.ENV_MODULE_NAME
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.emscriptenEnvHostFunction
 
 fun assertFail(
+    memory: Memory,
     moduleName: String = ENV_MODULE_NAME,
 ) : HostFunction = emscriptenEnvHostFunction(
     funcName = "__assert_fail",
@@ -22,7 +24,6 @@ fun assertFail(
     returnType = null,
     moduleName = moduleName,
 ) { instance, params ->
-    val memory = instance.memory()
     throw AssertionFailed(
         condition = memory.readNullTerminatedString(params[0]),
         filename = memory.readNullTerminatedString(params[1]),

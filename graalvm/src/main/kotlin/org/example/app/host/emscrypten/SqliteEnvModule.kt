@@ -1,7 +1,8 @@
 package org.example.app.host.emscrypten
 
-import org.example.app.env.NotImplementedNode
-import org.example.app.env.SyscallRmdirNode
+import org.example.app.host.emscrypten.func.NotImplementedNode
+import org.example.app.host.emscrypten.func.syscallLstat64
+import org.example.app.host.emscrypten.func.syscallStat64
 import org.graalvm.wasm.WasmContext
 import org.graalvm.wasm.WasmFunction
 import org.graalvm.wasm.WasmInstance
@@ -10,6 +11,9 @@ import org.graalvm.wasm.WasmType.F64_TYPE
 import org.graalvm.wasm.WasmType.I32_TYPE
 import org.graalvm.wasm.WasmType.I64_TYPE
 import org.graalvm.wasm.constants.Sizes
+import ru.pixnews.wasm.host.filesystem.FileSystem
+
+internal const val ENV_MODULE_NAME = "env"
 
 val envFunctions: List<EmscriptenEnvHostFunction> = buildList {
     fnVoid("abort", listOf())
@@ -29,8 +33,8 @@ val envFunctions: List<EmscriptenEnvHostFunction> = buildList {
     fn("__syscall_ioctl", List(3) { I32_TYPE })
     fn("__syscall_fstat64", listOf(I32_TYPE, I32_TYPE))
     fn("__syscall_stat64", listOf(I32_TYPE, I32_TYPE))
-    fn("__syscall_newfstatat", List(4) { I32_TYPE })
     fn("__syscall_lstat64", listOf(I32_TYPE, I32_TYPE))
+    fn("__syscall_newfstatat", List(4) { I32_TYPE })
     fn("__syscall_ftruncate64", listOf(I32_TYPE, I64_TYPE))
     fn("__syscall_getcwd", listOf(I32_TYPE, I32_TYPE))
     fn("__syscall_mkdirat", List(3) { I32_TYPE })
@@ -61,7 +65,8 @@ class EmscriptenEnvHostFunction(
 
 fun createSqliteEnvModule(
     context: WasmContext,
-    name: String = "env",
+    name: String = ENV_MODULE_NAME,
+    fileSystem: FileSystem,
 ): WasmInstance {
     val envModule = WasmModule.create(name, null)
     if (context.contextOptions.supportMemory64()) {
@@ -87,32 +92,44 @@ fun createSqliteEnvModule(
         it.name to f.index()
     }
 
-    val envInstance = context.readInstance(envModule)
+    val envInstance: WasmInstance = context.readInstance(envModule)
 
-    envInstance.setTarget(
-        exportedFunctions.getValue("__syscall_rmdir"),
-        SyscallRmdirNode(context.language(), envInstance).callTarget
-    )
+    syscallLstat64(
+        context.language(),
+        envInstance,
+        fileSystem
+    ).let { lStat64 ->
+        envInstance.setTarget(
+            exportedFunctions.getValue(lStat64.functionName),
+            lStat64.callTarget
+        )
+    }
+    syscallStat64(
+        context.language(),
+        envInstance,
+        fileSystem
+    ).let { stat64 ->
+        envInstance.setTarget(exportedFunctions.getValue(stat64.functionName), stat64.callTarget)
+    }
 
     listOf(
         "abort",
         "__assert_fail",
         "__syscall_chmod",
+        "__syscall_fstat64",
         "__syscall_faccessat",
         "__syscall_fchmod",
         "__syscall_fchown32",
         "__syscall_fcntl64",
-        "__syscall_fstat64",
         "__syscall_ftruncate64",
+        "__syscall_rmdir",
         "__syscall_getcwd",
         "__syscall_ioctl",
-        "__syscall_lstat64",
         "__syscall_mkdirat",
         "__syscall_newfstatat",
         "__syscall_openat",
         "__syscall_readlinkat",
         "__syscall_rmdir",
-        "__syscall_stat64",
         "__syscall_unlinkat",
         "__syscall_utimensat",
         "_emscripten_get_now_is_monotonic",

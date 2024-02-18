@@ -55,9 +55,6 @@ private fun testSqlite() {
 
 private fun setupHostImports() : HostImports {
     val filesystem = FileSystem()
-    val fsWasiBuildins = WasiSnapshotPreview1Builtins(filesystem)
-    val emscriptenEnvBindings = EmscriptenEnvBindings(filesystem)
-
     val hostMemory = HostMemory(
         /* moduleName = */ "env",
         /* fieldName = */ "memory",
@@ -68,6 +65,10 @@ private fun setupHostImports() : HostImports {
             )
         )
     )
+    val memory = ChicoryMemoryImpl(hostMemory.memory())
+
+    val fsWasiBuildins = WasiSnapshotPreview1Builtins(memory, filesystem)
+    val emscriptenEnvBindings = EmscriptenEnvBindings(memory, filesystem)
 
     return HostImports(
         (emscriptenEnvBindings.functions

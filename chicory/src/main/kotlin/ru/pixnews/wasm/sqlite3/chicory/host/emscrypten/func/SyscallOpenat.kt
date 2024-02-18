@@ -11,7 +11,6 @@ import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U8
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
-import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.ENV_MODULE_NAME
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.EmscryptenHostFunction
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.emscriptenEnvHostFunction
@@ -21,8 +20,11 @@ import ru.pixnews.wasm.host.filesystem.SysException
 import ru.pixnews.wasm.host.filesystem.resolveAbsolutePath
 import ru.pixnews.wasm.host.include.oMaskToString
 import ru.pixnews.wasm.host.include.sMaskToString
+import ru.pixnews.wasm.host.memory.Memory
+import ru.pixnews.wasm.host.memory.readNullTerminatedString
 
 fun syscallOpenat(
+    memory: Memory,
     filesystem: FileSystem,
     moduleName: String = ENV_MODULE_NAME,
 ): HostFunction = emscriptenEnvHostFunction(
@@ -35,10 +37,11 @@ fun syscallOpenat(
     ),
     returnType = I32,
     moduleName = moduleName,
-    handle = Openat(filesystem)
+    handle = Openat(memory, filesystem)
 )
 
 private class Openat(
+    private val memory: Memory,
     private val filesystem: FileSystem,
     private val logger: Logger = Logger.getLogger(Openat::class.qualifiedName)
 ) : EmscryptenHostFunction {
@@ -66,7 +69,7 @@ private class Openat(
         flags: UInt,
         mode: UInt
     ): Int {
-        val path = instance.memory().readNullTerminatedString(pathnamePtr)
+        val path = memory.readNullTerminatedString(pathnamePtr)
         val absolutePath = filesystem.resolveAbsolutePath(dirfd, path)
 
         return try {

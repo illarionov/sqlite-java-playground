@@ -2,12 +2,12 @@ package ru.pixnews.wasm.sqlite3.chicory.host.preview1.func
 
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
+import ru.pixnews.wasm.host.memory.encodedNullTerminatedStringLength
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.wasi.preview1.type.Size
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
-import ru.pixnews.wasm.sqlite3.chicory.ext.encodedNullTerminatedStringLength
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction
 

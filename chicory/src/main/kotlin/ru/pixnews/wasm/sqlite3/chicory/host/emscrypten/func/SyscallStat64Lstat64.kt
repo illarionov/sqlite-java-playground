@@ -9,18 +9,21 @@ import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U8
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
-import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.ENV_MODULE_NAME
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.EmscryptenHostFunction
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.emscriptenEnvHostFunction
 import ru.pixnews.wasm.host.filesystem.FileSystem
 import ru.pixnews.wasm.host.include.sys.pack
 import ru.pixnews.wasm.host.filesystem.SysException
+import ru.pixnews.wasm.host.memory.readNullTerminatedString
+import ru.pixnews.wasm.sqlite3.chicory.host.ChicoryMemoryImpl
 
 fun syscallLstat64(
+    memory: ChicoryMemoryImpl,
     filesystem: FileSystem,
     moduleName: String = ENV_MODULE_NAME,
 ): HostFunction = stat64Func(
+    memory = memory,
     filesystem = filesystem,
     fieldName = "__syscall_lstat64",
     followSymlinks = false,
@@ -28,9 +31,11 @@ fun syscallLstat64(
 )
 
 fun syscallStat64(
+    memory: ChicoryMemoryImpl,
     filesystem: FileSystem,
     moduleName: String = ENV_MODULE_NAME,
 ): HostFunction = stat64Func(
+    memory = memory,
     filesystem = filesystem,
     fieldName = "__syscall_stat64",
     followSymlinks = true,
@@ -38,6 +43,7 @@ fun syscallStat64(
 )
 
 private fun stat64Func(
+    memory: ChicoryMemoryImpl,
     filesystem: FileSystem,
     fieldName: String,
     followSymlinks: Boolean = true,
@@ -50,10 +56,11 @@ private fun stat64Func(
     ),
     returnType = Errno.wasmValueType,
     moduleName = moduleName,
-    handle = Stat64(filesystem = filesystem, followSymlinks = followSymlinks)
+    handle = Stat64(memory = memory, filesystem = filesystem, followSymlinks = followSymlinks)
 )
 
 private class Stat64(
+    private val memory: ChicoryMemoryImpl,
     private val filesystem: FileSystem,
     private val followSymlinks: Boolean = false,
     private val logger: Logger = Logger.getLogger(Stat64::class.qualifiedName)
@@ -76,7 +83,7 @@ private class Stat64(
     ): Int {
         var path = ""
         try {
-            path = instance.memory().readNullTerminatedString(pathnamePtr)
+            path = memory.readNullTerminatedString(pathnamePtr)
             val stat = filesystem.stat(
                 path = path,
                 followSymlinks = followSymlinks

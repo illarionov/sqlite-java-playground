@@ -12,6 +12,7 @@ fun Memory.readNullableNullTerminatedString(offset: WasmPtr): String? {
 }
 
 fun Memory.readNullTerminatedString(offset: WasmPtr): String {
+    check(offset != 0)
     val mem = ByteArrayOutputStream()
     var l = offset
     do {

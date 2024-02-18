@@ -3,6 +3,7 @@ package ru.pixnews.wasm.sqlite3.chicory.host.preview1
 import com.dylibso.chicory.runtime.HostFunction
 import java.time.Clock
 import ru.pixnews.wasm.host.filesystem.FileSystem
+import ru.pixnews.wasm.sqlite3.chicory.host.ChicoryMemoryImpl
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.func.argsGet
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.func.argsSizesGet
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.func.clockTimeGet
@@ -35,6 +36,7 @@ import ru.pixnews.wasm.sqlite3.chicory.host.preview1.func.schedYield
 
 // https://github.com/WebAssembly/WASI/tree/main
 class WasiSnapshotPreview1Builtins(
+    memory: ChicoryMemoryImpl,
     fileSystem: FileSystem,
     argsProvider: () -> List<String> = ::emptyList,
     envProvider: () -> Map<String, String> = System::getenv,
@@ -45,7 +47,7 @@ class WasiSnapshotPreview1Builtins(
         argsGet(argsProvider),            // Not yet implemented
         argsSizesGet(argsProvider),       // Not yet implemented
         clockTimeGet(clock),
-        environGet(envProvider),
+        environGet(memory, envProvider),
         environSizesGet(envProvider),
         fdClose(fileSystem),
         fdFdstatGet(fileSystem),          // Not yet implemented

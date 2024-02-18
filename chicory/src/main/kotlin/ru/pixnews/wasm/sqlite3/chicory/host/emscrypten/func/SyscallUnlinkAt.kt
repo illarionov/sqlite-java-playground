@@ -6,14 +6,16 @@ import com.dylibso.chicory.wasm.types.Value
 import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I32
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
-import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.ENV_MODULE_NAME
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.EmscryptenHostFunction
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.emscriptenEnvHostFunction
 import ru.pixnews.wasm.host.filesystem.FileSystem
 import ru.pixnews.wasm.host.filesystem.SysException
+import ru.pixnews.wasm.host.memory.Memory
+import ru.pixnews.wasm.host.memory.readNullTerminatedString
 
 fun syscallUnlinkat(
+    memory: Memory,
     filesystem: FileSystem,
     moduleName: String = ENV_MODULE_NAME,
 ): HostFunction = emscriptenEnvHostFunction(
@@ -25,10 +27,11 @@ fun syscallUnlinkat(
     ),
     returnType = I32,
     moduleName = moduleName,
-    handle = Unlinkat(filesystem)
+    handle = Unlinkat(memory, filesystem)
 )
 
 private class Unlinkat(
+    private val memory: Memory,
     private val filesystem: FileSystem,
 ) : EmscryptenHostFunction {
     override fun apply(instance: Instance, vararg args: Value): Value {
@@ -37,7 +40,7 @@ private class Unlinkat(
         val flags = args[2].asInt().toUInt()
 
         val errNo = try {
-            val path = instance.memory().readNullTerminatedString(pathnamePtr)
+            val path = memory.readNullTerminatedString(pathnamePtr)
             filesystem.unlinkAt(dirfd, path, flags)
             Errno.SUCCESS
         } catch (e: SysException) {

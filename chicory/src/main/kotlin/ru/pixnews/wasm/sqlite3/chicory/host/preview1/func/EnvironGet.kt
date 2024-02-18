@@ -1,13 +1,13 @@
 package ru.pixnews.wasm.sqlite3.chicory.host.preview1.func
 
 import com.dylibso.chicory.runtime.HostFunction
-import com.dylibso.chicory.runtime.Memory
+import ru.pixnews.wasm.host.memory.Memory
+import ru.pixnews.wasm.host.memory.writeNullTerminatedString
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U8
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
-import ru.pixnews.wasm.sqlite3.chicory.ext.writeNullTerminatedString
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction
 
@@ -23,6 +23,7 @@ import ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction
  *   )
  */
 fun environGet(
+    memory: Memory,
     envProvider: () -> Map<String, String> = System::getenv,
     moduleName: String = WASI_SNAPSHOT_PREVIEW1,
 ): HostFunction = wasiHostFunction(
@@ -35,7 +36,7 @@ fun environGet(
 ) { instance, params ->
     environGet(
         envProvider,
-        instance.memory(),
+        memory,
         params[0].asWasmAddr(),
         params[1].asWasmAddr()
     )

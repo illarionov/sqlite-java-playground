@@ -1,6 +1,7 @@
-package org.example.app.env
+package org.example.app.host.emscrypten.func
 
 import com.oracle.truffle.api.frame.VirtualFrame
+import org.example.app.host.BaseWasmRootNode
 import org.graalvm.wasm.WasmContext
 import org.graalvm.wasm.WasmInstance
 import org.graalvm.wasm.WasmLanguage
@@ -10,9 +11,7 @@ class NotImplementedNode(
     language: WasmLanguage,
     instance: WasmInstance,
     private val name: String,
-) : WasmBuiltinRootNode(language, instance) {
-    override fun builtinNodeName(): String = name
-
+) : BaseWasmRootNode(language, instance, name) {
     override fun executeWithContext(frame: VirtualFrame, context: WasmContext): Any {
         error("`$name`not implemented")
     }

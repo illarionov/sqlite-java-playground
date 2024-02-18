@@ -1,5 +1,6 @@
 package org.example.app
 
+import java.util.logging.LogManager
 import kotlin.time.measureTimedValue
 import org.example.app.bindings.SqliteBindings
 import org.example.app.host.emscrypten.createSqliteEnvModule
@@ -8,13 +9,17 @@ import org.graalvm.polyglot.Context
 import org.graalvm.polyglot.Source
 import org.graalvm.wasm.WasmContext
 import ru.pixnews.sqlite3.wasm.Sqlite3Wasm
+import ru.pixnews.wasm.host.filesystem.FileSystem
 
 private object App
 
 fun main() {
+    App::class.java.getResource("logging.properties")!!.openStream().use {
+        LogManager.getLogManager().readConfiguration(it)
+    }
+
     testSqlite()
 }
-
 
 private fun testSqlite() {
     val (sqlite3Bindings, evalDuration) = measureTimedValue {
@@ -24,10 +29,15 @@ private fun testSqlite() {
             .build()
         wasmContext.initialize("wasm")
 
+        val fileSystem = FileSystem()
+
         wasmContext.enter()
         try {
             val instanceContext = WasmContext.get(null)
-            createSqliteEnvModule(instanceContext)
+            createSqliteEnvModule(
+                context = instanceContext,
+                fileSystem = fileSystem
+            )
 
             val wasiInstance = WasiSnapshotPreview1BuiltinsModule().createInstance(
                 instanceContext.language(),

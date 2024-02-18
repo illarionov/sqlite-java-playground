@@ -10,11 +10,11 @@ import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U8
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
-import ru.pixnews.wasm.sqlite3.chicory.ext.encodeToNullTerminatedByteArray
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.ENV_MODULE_NAME
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.EmscryptenHostFunction
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.emscriptenEnvHostFunction
 import ru.pixnews.wasm.host.filesystem.FileSystem
+import ru.pixnews.wasm.host.memory.encodeToNullTerminatedByteArray
 
 fun syscallGetcwd(
     filesystem: FileSystem,

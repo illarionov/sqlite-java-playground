@@ -3,6 +3,7 @@ package ru.pixnews.wasm.sqlite3.chicory.host.emscrypten
 import com.dylibso.chicory.runtime.HostFunction
 import java.time.Clock
 import ru.pixnews.wasm.host.filesystem.FileSystem
+import ru.pixnews.wasm.sqlite3.chicory.host.ChicoryMemoryImpl
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.func.abortFunc
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.func.assertFail
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.func.emscriptenDateNow
@@ -35,13 +36,14 @@ import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.func.tzsetJs
 internal const val ENV_MODULE_NAME = "env"
 
 class EmscriptenEnvBindings(
+    memory: ChicoryMemoryImpl,
     filesystem: FileSystem,
     clock: Clock = Clock.systemDefaultZone(),
     moduleName: String = ENV_MODULE_NAME,
 ) {
     val functions: List<HostFunction> = listOf(
         abortFunc(),
-        assertFail(),
+        assertFail(memory),
         emscriptenDateNow(clock),
         emscriptenGetNow(),
         emscriptenGetNowIsMonotonic(),
@@ -58,14 +60,14 @@ class EmscriptenEnvBindings(
         syscallFtruncate64(filesystem), // Not yet implemented
         syscallGetcwd(filesystem),
         syscallIoctl(filesystem),       // Not yet implemented
-        syscallLstat64(filesystem),
+        syscallLstat64(memory, filesystem),
         syscallMkdirat(filesystem),     // Not yet implemented
         syscallNewfstatat(filesystem),  // Not yet implemented
-        syscallOpenat(filesystem),
+        syscallOpenat(memory, filesystem),
         syscallReadlinkat(filesystem),  // Not yet implemented
         syscallRmdir(filesystem),       // Not yet implemented
-        syscallStat64(filesystem),
-        syscallUnlinkat(filesystem),
+        syscallStat64(memory, filesystem),
+        syscallUnlinkat(memory, filesystem),
         syscallUtimensat(filesystem),   // Not yet implemented
         tzsetJs(),                      // Not yet implemented
     )
