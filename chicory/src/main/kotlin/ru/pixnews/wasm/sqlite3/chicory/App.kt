@@ -16,6 +16,7 @@ import ru.pixnews.sqlite3.wasm.Sqlite3Wasm
 import ru.pixnews.wasm.sqlite3.chicory.bindings.SqliteBindings
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.EmscriptenEnvBindings
 import ru.pixnews.wasm.host.filesystem.FileSystem
+import ru.pixnews.wasm.sqlite3.chicory.host.ChicoryMemoryImpl
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiSnapshotPreview1Builtins
 
 object App
@@ -40,10 +41,9 @@ private fun testSqlite() {
         val hostImports = setupHostImports()
         val instance: Instance = sqlite3Module.instantiate(hostImports)
 
-        val bingings = SqliteBindings(
-            hostImports.memory(0).memory(),
-            instance
-        )
+        val memory = ChicoryMemoryImpl(hostImports.memory(0).memory())
+
+        val bingings = SqliteBindings(memory, instance)
 
         bingings
     }

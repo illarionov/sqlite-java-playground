@@ -1,17 +1,18 @@
 package ru.pixnews.wasm.sqlite3.chicory.bindings
 
 import com.dylibso.chicory.runtime.Instance
-import com.dylibso.chicory.runtime.Memory
 import com.dylibso.chicory.wasm.types.Value
 import com.dylibso.chicory.wasm.types.ValueType
+import ru.pixnews.wasm.host.memory.writeNullTerminatedString
+import ru.pixnews.wasm.host.memory.writePtr
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
 import ru.pixnews.wasm.sqlite3.chicory.ext.isNull
 import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
-import ru.pixnews.wasm.sqlite3.chicory.ext.writeNullTerminatedString
+import ru.pixnews.wasm.sqlite3.chicory.host.ChicoryMemoryImpl
 
 class SqliteMemoryBindings(
-    val memory: Memory,
+    val memory: ChicoryMemoryImpl,
     runtimeInstance: Instance,
 ) {
     private val malloc = runtimeInstance.export("malloc") // 2815
@@ -66,11 +67,11 @@ class SqliteMemoryBindings(
         return mem
     }
 
-    fun readAddr(offset: WasmPtr): Value = memory.readI32(offset)
+    fun readAddr(offset: WasmPtr): Value = Value.i32(memory.readI32(offset).toLong())
 
     fun writeAddr(offset: WasmPtr, addr: Value) {
         check(addr.type() == ValueType.I32)
-        memory.write(offset, addr)
+        memory.writePtr(offset, addr.asWasmAddr())
     }
 
     fun readNullTerminatedString(offsetValue: Value): String? = memory.readNullTerminatedString(offsetValue)
@@ -98,8 +99,8 @@ class SqliteMemoryBindings(
 
         if (max == 0) max = 4
 
-        val cookie1 = memory.readI32(max).asInt()
-        val cookie2 = memory.readI32(max + 4).asInt()
+        val cookie1 = memory.readI32(max)
+        val cookie2 = memory.readI32(max + 4)
 
         check (cookie1 == 0x02135467 && cookie2 == 0x89BACDFEU.toInt()) {
             "Stack overflow! Stack cookie has been overwritten at ${max.toString(16)}, expected hex dwords " +

@@ -57,9 +57,9 @@ private fun testSqlite() {
     }
     println("wasm: binding = ${sqlite3Bindings.sqlite3_initialize}. duration: $evalDuration")
 
-
-    SqliteBasicDemo1(sqlite3Bindings).run()
-
+    // SqliteBasicDemo1(sqlite3Bindings).run()
+    val demo0 = SqliteBasicDemo0(sqlite3Bindings)
+    demo0.run()
 }
 
 private fun testFactorial() {

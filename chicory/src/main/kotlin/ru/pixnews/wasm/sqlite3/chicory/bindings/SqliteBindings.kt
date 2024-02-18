@@ -1,13 +1,13 @@
 package ru.pixnews.wasm.sqlite3.chicory.bindings
 
 import com.dylibso.chicory.runtime.Instance
-import com.dylibso.chicory.runtime.Memory
 import ru.pixnews.sqlite3.wasm.Sqlite3Errno
 import ru.pixnews.sqlite3.wasm.Sqlite3Exception
 import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
+import ru.pixnews.wasm.sqlite3.chicory.host.ChicoryMemoryImpl
 
 class SqliteBindings(
-    val memory: Memory,
+    val memory: ChicoryMemoryImpl,
     private val runtimeInstance: Instance,
 ) {
     val memoryBindings = SqliteMemoryBindings(memory, runtimeInstance)
@@ -260,7 +260,7 @@ class SqliteBindings(
 
     val sqlite3SourceId: String
         get() {
-            val resultPtr = sqlite3_sourceid.apply()[0].asInt()
+            val resultPtr = sqlite3_sourceid.apply()[0]
             return checkNotNull(memory.readNullTerminatedString(resultPtr))
         }
 

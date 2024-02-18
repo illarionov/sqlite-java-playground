@@ -16,12 +16,11 @@ class SqliteBasicDemo1(
         val version = cApi.version
         log.info { "Sqlite3 version: $version" }
 
-        val enumJson = sqlite.wasmEnumJson
+        val enumJson = sqlite.sqlite3WasmEnumJson
         log.info { "Internal structures: $enumJson" }
 
-        val dbRes = sqlite.sqlite3_open.execute(
-            "mydb.db",
-            // TODO: p
+        val dbRes = cApi.sqlite3Open("mydb.db"
+            //, TODO: p
         )
 
         val db = oopApi.db("/mydb.sqlite3", "ct")

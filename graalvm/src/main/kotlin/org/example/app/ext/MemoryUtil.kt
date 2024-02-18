@@ -1,24 +1,19 @@
 package org.example.app.ext
 
-import java.io.ByteArrayOutputStream
 import org.graalvm.polyglot.Value
+import ru.pixnews.wasm.host.memory.Memory
+import ru.pixnews.wasm.host.memory.readNullTerminatedString
+import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 
-fun Value.readNullTerminatedString(offsetValue: Value): String? {
+internal fun Value.asWasmAddr(): WasmPtr = asInt()
+
+// TODO: ???
+fun WasmPtr.isNull(): Boolean = this == 0
+
+fun Memory.readNullTerminatedString(offsetValue: Value): String? {
     return if (!offsetValue.isNull) {
-        this.readNullTerminatedString(offsetValue.asInt().toLong())
+        this.readNullTerminatedString(offsetValue.asWasmAddr())
     } else {
         null
     }
-}
-
-fun Value.readNullTerminatedString(offset: Long): String {
-    val mem = ByteArrayOutputStream()
-    var l = offset
-    do {
-        val b = this.readBufferByte(l++)
-        if (b == 0.toByte()) break
-        mem.write(b.toInt())
-    } while (true)
-
-    return mem.toString()
 }

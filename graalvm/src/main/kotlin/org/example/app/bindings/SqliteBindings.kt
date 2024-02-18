@@ -1,6 +1,7 @@
 package org.example.app.bindings
 
 import org.example.app.ext.readNullTerminatedString
+import org.example.app.host.GraalHostMemoryImpl
 import org.graalvm.polyglot.Value
 import ru.pixnews.sqlite3.wasm.Sqlite3Errno
 import ru.pixnews.sqlite3.wasm.Sqlite3Exception
@@ -9,7 +10,9 @@ class SqliteBindings(
     val envBindings: Value,
     val mainBindings: Value,
 ) {
-    val memoryBindings = SqliteMemoryBindings(mainBindings)
+    private val memory = GraalHostMemoryImpl(envBindings.getMember("memory"))
+
+    val memoryBindings = SqliteMemoryBindings(mainBindings, memory)
 
     val _initialize: Value? = mainBindings.getMember("_initialize") // 34
     val __errno_location = mainBindings.getMember("__errno_location") // 2644
@@ -251,24 +254,22 @@ class SqliteBindings(
     val sqlite3_wasm_test_str_hello = mainBindings.getMember("sqlite3_wasm_test_str_hello") // 689
     val sqlite3_wasm_SQLTester_strglob = mainBindings.getMember("sqlite3_wasm_SQLTester_strglob") // 690
 
-    private val memory = envBindings.getMember("memory")
-
-    val version: String
+    val sqlite3Version: String
         get() {
             val resultPtr = sqlite3_libversion.execute()
             return checkNotNull(memory.readNullTerminatedString(resultPtr))
         }
 
-    val sourceId: String
+    val sqlite3SourceId: String
         get() {
             val resultPtr = sqlite3_sourceid.execute()
             return checkNotNull(memory.readNullTerminatedString(resultPtr))
         }
 
-    val versionNumber: Int
+    val sqlite3VersionNumber: Int
         get() = sqlite3_libversion_number.execute().asInt()
 
-    val wasmEnumJson: String?
+    val sqlite3WasmEnumJson: String?
         get() {
             val resultPtr = sqlite3_wasm_enum_json.execute()
             return memory.readNullTerminatedString(resultPtr)
