@@ -3,7 +3,8 @@ package org.example.app
 import java.util.logging.LogManager
 import kotlin.time.measureTimedValue
 import org.example.app.bindings.SqliteBindings
-import org.example.app.host.emscrypten.createSqliteEnvModule
+import org.example.app.host.Host
+import org.example.app.host.emscrypten.EmscriptenEnvBindings
 import org.example.app.host.preview1.WasiSnapshotPreview1BuiltinsModule
 import org.graalvm.polyglot.Context
 import org.graalvm.polyglot.Source
@@ -29,15 +30,15 @@ private fun testSqlite() {
             .build()
         wasmContext.initialize("wasm")
 
-        val fileSystem = FileSystem()
+        val host = Host(
+            fileSystem = FileSystem()
+        )
 
         wasmContext.enter()
         try {
             val instanceContext = WasmContext.get(null)
-            createSqliteEnvModule(
-                context = instanceContext,
-                fileSystem = fileSystem
-            )
+
+            EmscriptenEnvBindings.setupEnvBindings(instanceContext, host)
 
             val wasiInstance = WasiSnapshotPreview1BuiltinsModule().createInstance(
                 instanceContext.language(),

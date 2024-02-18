@@ -1,4 +1,4 @@
-package org.example.app.host
+package org.example.app.host.memory
 
 import java.nio.ByteOrder
 import org.graalvm.polyglot.Value

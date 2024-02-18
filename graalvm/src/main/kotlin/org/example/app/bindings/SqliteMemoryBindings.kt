@@ -1,14 +1,12 @@
 package org.example.app.bindings
 
-import org.example.app.ext.SQLITE3_NULL
 import org.example.app.ext.asWasmAddr
-import org.example.app.host.GraalHostMemoryImpl
+import org.example.app.host.memory.GraalHostMemoryImpl
 import org.graalvm.polyglot.Value
 import ru.pixnews.wasm.host.memory.readNullTerminatedString
 import ru.pixnews.wasm.host.memory.readNullableNullTerminatedString
 import ru.pixnews.wasm.host.memory.writeNullTerminatedString
 import ru.pixnews.wasm.host.memory.writePtr
-import ru.pixnews.wasm.host.wasi.preview1.type.Size
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 
 class SqliteMemoryBindings(

@@ -1,4 +1,4 @@
-package org.example.app.host
+package org.example.app.host.memory
 
 import com.oracle.truffle.api.nodes.Node
 import java.io.ByteArrayInputStream

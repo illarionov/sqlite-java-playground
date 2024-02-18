@@ -1,7 +1,7 @@
 package org.example.app.bindings
 
 import org.example.app.ext.readNullTerminatedString
-import org.example.app.host.GraalHostMemoryImpl
+import org.example.app.host.memory.GraalHostMemoryImpl
 import org.graalvm.polyglot.Value
 import ru.pixnews.sqlite3.wasm.Sqlite3Errno
 import ru.pixnews.sqlite3.wasm.Sqlite3Exception
