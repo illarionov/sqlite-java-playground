@@ -1,8 +1,8 @@
 package ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.func
 
 import com.dylibso.chicory.runtime.HostFunction
-import ru.pixnews.wasm.host.WasmValueType
 import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I32
+import ru.pixnews.wasm.host.emscrypten.AssertionFailed
 import ru.pixnews.wasm.host.memory.Memory
 import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U8
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
@@ -30,36 +30,4 @@ fun assertFail(
         line = params[2].asInt(),
         func = memory.readNullTerminatedString(params[3])
     )
-}
-
-class AssertionFailed(
-    val condition: String?,
-    val filename: String?,
-    val line: Int,
-    val func: String?,
-) : RuntimeException(
-    formatErrMsg(
-        condition,
-        filename,
-        line,
-        func
-    )
-) {
-    private companion object {
-        fun formatErrMsg(
-            condition: String?,
-            filename: String?,
-            line: Int,
-            func: String?,
-        ): String = buildString {
-            append("Assertion failed: ")
-            append(condition ?: "``")
-            append(",  at ")
-            listOf(
-                filename ?: "unknown filename",
-                line.toString(),
-                func ?: "unknown function"
-            ).joinTo(this, ", ", prefix = "[", postfix = "]")
-        }
-    }
 }

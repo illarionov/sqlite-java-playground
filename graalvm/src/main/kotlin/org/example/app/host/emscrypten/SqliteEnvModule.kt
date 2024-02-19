@@ -4,6 +4,12 @@ import org.example.app.host.Host
 import org.example.app.host.HostFunction
 import org.example.app.host.HostFunctionType
 import org.example.app.host.NodeFactory
+import org.example.app.host.emscrypten.func.Abort
+import org.example.app.host.emscrypten.func.AssertFail
+import org.example.app.host.emscrypten.func.EmscriptenDateNow
+import org.example.app.host.emscrypten.func.EmscriptenGetNow
+import org.example.app.host.emscrypten.func.EmscriptenGetNowIsMonotonic
+import org.example.app.host.emscrypten.func.EmscriptenResizeHeap
 import org.example.app.host.emscrypten.func.SyscallOpenat
 import org.example.app.host.emscrypten.func.notImplementedFunctionNodeFactory
 import org.example.app.host.emscrypten.func.syscallLstat64
@@ -18,19 +24,48 @@ import org.graalvm.wasm.WasmType.I32_TYPE
 import org.graalvm.wasm.WasmType.I64_TYPE
 import org.graalvm.wasm.constants.Sizes
 
-internal const val ENV_MODULE_NAME = "env"
-
 object EmscriptenEnvBindings {
-    val envFunctions: List<HostFunction> = buildList {
-        fnVoid("abort", listOf())
-        fnVoid("__assert_fail", List(4) { I32_TYPE })
+    private const val ENV_MODULE_NAME = "env"
+
+    private val envFunctions: List<HostFunction> = buildList {
+        fnVoid(
+            name = "abort",
+            paramTypes = listOf(),
+            nodeFactory = { language, instance, _, functionName -> Abort(language, instance, functionName) }
+        )
+        fnVoid(
+            name = "__assert_fail",
+            paramTypes = List(4) { I32_TYPE },
+            nodeFactory = ::AssertFail
+        )
+        fn(
+            name = "emscripten_date_now",
+            paramTypes = listOf(),
+            retType = F64_TYPE,
+            nodeFactory = ::EmscriptenDateNow
+        )
+        fn(
+            name = "emscripten_get_now",
+            paramTypes = listOf(),
+            retType = F64_TYPE,
+            nodeFactory = ::EmscriptenGetNow
+        )
+        fn(
+            name = "_emscripten_get_now_is_monotonic",
+            paramTypes = listOf(),
+            retType = I32_TYPE,
+            nodeFactory = ::EmscriptenGetNowIsMonotonic
+        )
+        fn(
+            name = "emscripten_resize_heap",
+            paramTypes = listOf(I32_TYPE),
+            retType = I32_TYPE,
+            nodeFactory = ::EmscriptenResizeHeap
+        )
+
         fn("__syscall_faccessat", List(4) { I32_TYPE })
         fnVoid("_tzset_js", List(3) { I32_TYPE })
         fnVoid("_localtime_js", listOf(I64_TYPE, I32_TYPE))
-        fn("emscripten_date_now", listOf(), F64_TYPE)
-        fn("_emscripten_get_now_is_monotonic", listOf())
-        fn("emscripten_get_now", listOf(), F64_TYPE)
-        fn("emscripten_resize_heap", listOf(I32_TYPE))
         fn("__syscall_fchmod", listOf(I32_TYPE, I32_TYPE))
         fn("__syscall_chmod", listOf(I32_TYPE, I32_TYPE))
         fn("__syscall_fchown32", List(3) { I32_TYPE })

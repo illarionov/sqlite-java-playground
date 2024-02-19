@@ -1,5 +1,6 @@
 package org.example.app
 
+import java.time.Clock
 import java.util.logging.LogManager
 import kotlin.time.measureTimedValue
 import org.example.app.bindings.SqliteBindings
@@ -31,7 +32,8 @@ private fun testSqlite() {
         wasmContext.initialize("wasm")
 
         val host = Host(
-            fileSystem = FileSystem()
+            fileSystem = FileSystem(),
+            clock = Clock.systemDefaultZone(),
         )
 
         wasmContext.enter()
