@@ -6,7 +6,7 @@ import org.graalvm.wasm.WasmInstance
 import org.graalvm.wasm.WasmLanguage
 import org.graalvm.wasm.nodes.WasmRootNode
 
-open class BaseWasmRootNode(
+open class BaseWasmNode(
     language: WasmLanguage,
     val instance: WasmInstance,
     val functionName: String,

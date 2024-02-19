@@ -3,7 +3,7 @@ package org.example.app.host.emscrypten.func
 import com.oracle.truffle.api.CompilerDirectives
 import com.oracle.truffle.api.frame.VirtualFrame
 import java.util.logging.Logger
-import org.example.app.host.BaseWasmRootNode
+import org.example.app.host.BaseWasmNode
 import org.example.app.host.Host
 import org.graalvm.wasm.WasmContext
 import org.graalvm.wasm.WasmInstance
@@ -17,7 +17,7 @@ class EmscriptenResizeHeap(
     private val host: Host,
     functionName: String = "emscripten_resize_heap",
     private val logger: Logger = Logger.getLogger(EmscriptenResizeHeap::class.qualifiedName)
-): BaseWasmRootNode(language, instance, functionName) {
+): BaseWasmNode(language, instance, functionName) {
     override fun executeWithContext(frame: VirtualFrame, context: WasmContext): Int {
         return emscriptenResizeheap((frame.arguments[0] as Int).toLong())
     }

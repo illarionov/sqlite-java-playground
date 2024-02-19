@@ -3,7 +3,7 @@ package org.example.app.host.emscrypten.func
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
 import com.oracle.truffle.api.frame.VirtualFrame
 import java.util.logging.Logger
-import org.example.app.host.BaseWasmRootNode
+import org.example.app.host.BaseWasmNode
 import org.example.app.host.Host
 import org.graalvm.wasm.WasmContext
 import org.graalvm.wasm.WasmInstance
@@ -19,7 +19,7 @@ fun syscallLstat64(
     instance: WasmInstance,
     host: Host,
     functionName: String = "__syscall_lstat64",
-): BaseWasmRootNode = SyscallStat64(
+): BaseWasmNode = SyscallStat64(
     language = language,
     instance = instance,
     functionName = functionName,
@@ -32,7 +32,7 @@ fun syscallStat64(
     instance: WasmInstance,
     host: Host,
     functionName: String = "__syscall_stat64",
-): BaseWasmRootNode = SyscallStat64(
+): BaseWasmNode = SyscallStat64(
     language = language,
     instance = instance,
     functionName = functionName,
@@ -47,7 +47,7 @@ private class SyscallStat64 (
     private val followSymlinks: Boolean = false,
     private val filesystem: FileSystem,
     private val logger: Logger = Logger.getLogger(SyscallStat64::class.qualifiedName)
-) : BaseWasmRootNode(
+) : BaseWasmNode(
     language = language,
     instance = instance,
     functionName = functionName,

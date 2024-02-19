@@ -10,7 +10,11 @@ import org.example.app.host.emscrypten.func.EmscriptenDateNow
 import org.example.app.host.emscrypten.func.EmscriptenGetNow
 import org.example.app.host.emscrypten.func.EmscriptenGetNowIsMonotonic
 import org.example.app.host.emscrypten.func.EmscriptenResizeHeap
+import org.example.app.host.emscrypten.func.SyscallFchown32
+import org.example.app.host.emscrypten.func.SyscallFstat64
+import org.example.app.host.emscrypten.func.SyscallGetcwd
 import org.example.app.host.emscrypten.func.SyscallOpenat
+import org.example.app.host.emscrypten.func.SyscallUnlinkat
 import org.example.app.host.emscrypten.func.notImplementedFunctionNodeFactory
 import org.example.app.host.emscrypten.func.syscallLstat64
 import org.example.app.host.emscrypten.func.syscallStat64
@@ -62,22 +66,38 @@ object EmscriptenEnvBindings {
             retType = I32_TYPE,
             nodeFactory = ::EmscriptenResizeHeap
         )
-
-        fn("__syscall_faccessat", List(4) { I32_TYPE })
-        fnVoid("_tzset_js", List(3) { I32_TYPE })
         fnVoid("_localtime_js", listOf(I64_TYPE, I32_TYPE))
-        fn("__syscall_fchmod", listOf(I32_TYPE, I32_TYPE))
+        fn("_mmap_js", listOf(I32_TYPE, I32_TYPE, I32_TYPE, I32_TYPE, I64_TYPE, I32_TYPE, I32_TYPE))
+        fn("_munmap_js", listOf(I32_TYPE, I32_TYPE, I32_TYPE, I32_TYPE, I32_TYPE, I64_TYPE))
         fn("__syscall_chmod", listOf(I32_TYPE, I32_TYPE))
-        fn("__syscall_fchown32", List(3) { I32_TYPE })
+        fn("__syscall_faccessat", List(4) { I32_TYPE })
+        fn("__syscall_fchmod", listOf(I32_TYPE, I32_TYPE))
+        fn(
+            name = "__syscall_fchown32",
+            paramTypes = List(3) { I32_TYPE },
+            retType = I32_TYPE,
+            nodeFactory = ::SyscallFchown32
+        )
         fn("__syscall_fcntl64", List(3) { I32_TYPE })
+        fn("__syscall_fstat64", listOf(I32_TYPE, I32_TYPE), I32_TYPE, ::SyscallFstat64)
+        fn("__syscall_ftruncate64", listOf(I32_TYPE, I64_TYPE))
+        fn(
+            name = "__syscall_getcwd",
+            paramTypes = listOf(I32_TYPE, I32_TYPE),
+            retType = I32_TYPE,
+            nodeFactory = ::SyscallGetcwd
+        )
+        fn("__syscall_ioctl", List(3) { I32_TYPE })
+        fn("__syscall_mkdirat", List(3) { I32_TYPE })
+        fn("__syscall_newfstatat", List(4) { I32_TYPE })
         fn(
             name = "__syscall_openat",
             paramTypes = List(4) { I32_TYPE },
             retType = I32_TYPE,
             nodeFactory = ::SyscallOpenat
         )
-        fn("__syscall_ioctl", List(3) { I32_TYPE })
-        fn("__syscall_fstat64", listOf(I32_TYPE, I32_TYPE))
+        fn("__syscall_readlinkat", List(4) { I32_TYPE })
+        fn("__syscall_rmdir", listOf(I32_TYPE))
         fn(
             name = "__syscall_stat64",
             paramTypes = listOf(I32_TYPE, I32_TYPE),
@@ -90,16 +110,14 @@ object EmscriptenEnvBindings {
             retType = I32_TYPE,
             nodeFactory = ::syscallLstat64
         )
-        fn("__syscall_newfstatat", List(4) { I32_TYPE })
-        fn("__syscall_ftruncate64", listOf(I32_TYPE, I64_TYPE))
-        fn("__syscall_getcwd", listOf(I32_TYPE, I32_TYPE))
-        fn("__syscall_mkdirat", List(3) { I32_TYPE })
-        fn("_munmap_js", listOf(I32_TYPE, I32_TYPE, I32_TYPE, I32_TYPE, I32_TYPE, I64_TYPE))
-        fn("_mmap_js", listOf(I32_TYPE, I32_TYPE, I32_TYPE, I32_TYPE, I64_TYPE, I32_TYPE, I32_TYPE))
-        fn("__syscall_readlinkat", List(4) { I32_TYPE })
-        fn("__syscall_rmdir", listOf(I32_TYPE))
-        fn("__syscall_unlinkat", List(3) { I32_TYPE })
+        fn(
+            name = "__syscall_unlinkat",
+            paramTypes = List(3) { I32_TYPE },
+            retType = I32_TYPE,
+            nodeFactory = ::SyscallUnlinkat
+        )
         fn("__syscall_utimensat", List(4) { I32_TYPE })
+        fnVoid("_tzset_js", List(3) { I32_TYPE })
     }
 
     private fun MutableList<HostFunction>.fn(

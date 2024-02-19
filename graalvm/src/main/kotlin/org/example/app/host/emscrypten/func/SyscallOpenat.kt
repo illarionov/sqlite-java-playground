@@ -4,7 +4,7 @@ import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
 import com.oracle.truffle.api.frame.VirtualFrame
 import java.nio.file.Path
 import java.util.logging.Logger
-import org.example.app.host.BaseWasmRootNode
+import org.example.app.host.BaseWasmNode
 import org.example.app.host.Host
 import org.graalvm.wasm.WasmContext
 import org.graalvm.wasm.WasmInstance
@@ -23,7 +23,7 @@ class SyscallOpenat(
     private val host: Host,
     functionName: String = "__syscall_openat",
     private val logger: Logger = Logger.getLogger(SyscallOpenat::class.qualifiedName)
-): BaseWasmRootNode(language, instance, functionName) {
+): BaseWasmNode(language, instance, functionName) {
     override fun executeWithContext(frame: VirtualFrame, context: WasmContext): Int {
         val args = frame.arguments
         val mode = if (args.lastIndex == 3) {

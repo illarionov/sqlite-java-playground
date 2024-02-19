@@ -9,7 +9,7 @@ typealias NodeFactory = (
     instance: WasmInstance,
     host: Host,
     functionName: String,
-) -> BaseWasmRootNode
+) -> BaseWasmNode
 
 class HostFunction(
     val name: String,

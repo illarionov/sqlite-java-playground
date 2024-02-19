@@ -2,7 +2,7 @@ package org.example.app.host.emscrypten.func
 
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
 import com.oracle.truffle.api.frame.VirtualFrame
-import org.example.app.host.BaseWasmRootNode
+import org.example.app.host.BaseWasmNode
 import org.example.app.host.Host
 import org.graalvm.wasm.WasmContext
 import org.graalvm.wasm.WasmInstance
@@ -15,7 +15,7 @@ class AssertFail(
     instance: WasmInstance,
     host: Host,
     functionName: String = "__assert_fail",
-): BaseWasmRootNode(language, instance, functionName) {
+): BaseWasmNode(language, instance, functionName) {
     override fun executeWithContext(frame: VirtualFrame, context: WasmContext): Nothing {
         val args = frame.arguments
         assertFail(
