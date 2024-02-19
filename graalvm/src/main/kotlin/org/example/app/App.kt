@@ -6,6 +6,9 @@ import kotlin.time.measureTimedValue
 import org.example.app.bindings.SqliteBindings
 import org.example.app.host.Host
 import org.example.app.host.emscrypten.EmscriptenEnvBindings
+import org.example.app.host.emscrypten.EmscriptenEnvBindings.setupEnvBindings
+import org.example.app.host.preview1.WasiSnapshotPreview1Bindngs
+import org.example.app.host.preview1.WasiSnapshotPreview1Bindngs.setupWasiSnapshotPreview1Bindngs
 import org.example.app.host.preview1.WasiSnapshotPreview1BuiltinsModule
 import org.graalvm.polyglot.Context
 import org.graalvm.polyglot.Source
@@ -38,17 +41,9 @@ private fun testSqlite() {
 
         wasmContext.enter()
         try {
-            val instanceContext = WasmContext.get(null)
-
-            EmscriptenEnvBindings.setupEnvBindings(instanceContext, host)
-
-            val wasiInstance = WasiSnapshotPreview1BuiltinsModule().createInstance(
-                instanceContext.language(),
-                instanceContext,
-                "wasi_snapshot_preview1"
-            )
-            instanceContext.register(wasiInstance)
-
+            val instanceContext: WasmContext = WasmContext.get(null)
+            setupEnvBindings(instanceContext, host)
+            setupWasiSnapshotPreview1Bindngs(instanceContext, host)
         } finally {
             wasmContext.leave()
         }

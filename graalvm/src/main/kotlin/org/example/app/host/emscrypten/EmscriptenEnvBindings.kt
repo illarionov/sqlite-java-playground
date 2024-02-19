@@ -1,9 +1,10 @@
 package org.example.app.host.emscrypten
 
+import org.example.app.ext.allocateFunctionTypes
+import org.example.app.ext.declareExportedFunctions
 import org.example.app.host.Host
 import org.example.app.host.HostFunction
 import org.example.app.host.HostFunctionType
-import org.example.app.host.NodeFactory
 import org.example.app.host.emscrypten.func.Abort
 import org.example.app.host.emscrypten.func.AssertFail
 import org.example.app.host.emscrypten.func.EmscriptenDateNow
@@ -15,18 +16,18 @@ import org.example.app.host.emscrypten.func.SyscallFstat64
 import org.example.app.host.emscrypten.func.SyscallGetcwd
 import org.example.app.host.emscrypten.func.SyscallOpenat
 import org.example.app.host.emscrypten.func.SyscallUnlinkat
-import org.example.app.host.emscrypten.func.notImplementedFunctionNodeFactory
 import org.example.app.host.emscrypten.func.syscallLstat64
 import org.example.app.host.emscrypten.func.syscallStat64
-import org.graalvm.wasm.SymbolTable
+import org.example.app.host.fn
+import org.example.app.host.fnVoid
 import org.graalvm.wasm.WasmContext
 import org.graalvm.wasm.WasmFunction
 import org.graalvm.wasm.WasmInstance
 import org.graalvm.wasm.WasmModule
-import org.graalvm.wasm.WasmType.F64_TYPE
-import org.graalvm.wasm.WasmType.I32_TYPE
-import org.graalvm.wasm.WasmType.I64_TYPE
 import org.graalvm.wasm.constants.Sizes
+import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.F64
+import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I32
+import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I64
 
 object EmscriptenEnvBindings {
     private const val ENV_MODULE_NAME = "env"
@@ -39,99 +40,86 @@ object EmscriptenEnvBindings {
         )
         fnVoid(
             name = "__assert_fail",
-            paramTypes = List(4) { I32_TYPE },
+            paramTypes = List(4) { I32 },
             nodeFactory = ::AssertFail
         )
         fn(
             name = "emscripten_date_now",
             paramTypes = listOf(),
-            retType = F64_TYPE,
+            retType = F64,
             nodeFactory = ::EmscriptenDateNow
         )
         fn(
             name = "emscripten_get_now",
             paramTypes = listOf(),
-            retType = F64_TYPE,
+            retType = F64,
             nodeFactory = ::EmscriptenGetNow
         )
         fn(
             name = "_emscripten_get_now_is_monotonic",
             paramTypes = listOf(),
-            retType = I32_TYPE,
+            retType = I32,
             nodeFactory = ::EmscriptenGetNowIsMonotonic
         )
         fn(
             name = "emscripten_resize_heap",
-            paramTypes = listOf(I32_TYPE),
-            retType = I32_TYPE,
+            paramTypes = listOf(I32),
+            retType = I32,
             nodeFactory = ::EmscriptenResizeHeap
         )
-        fnVoid("_localtime_js", listOf(I64_TYPE, I32_TYPE))
-        fn("_mmap_js", listOf(I32_TYPE, I32_TYPE, I32_TYPE, I32_TYPE, I64_TYPE, I32_TYPE, I32_TYPE))
-        fn("_munmap_js", listOf(I32_TYPE, I32_TYPE, I32_TYPE, I32_TYPE, I32_TYPE, I64_TYPE))
-        fn("__syscall_chmod", listOf(I32_TYPE, I32_TYPE))
-        fn("__syscall_faccessat", List(4) { I32_TYPE })
-        fn("__syscall_fchmod", listOf(I32_TYPE, I32_TYPE))
+        fnVoid("_localtime_js", listOf(I64, I32))
+        fn("_mmap_js", listOf(I32, I32, I32, I32, I64, I32, I32))
+        fn("_munmap_js", listOf(I32, I32, I32, I32, I32, I64))
+        fn("__syscall_chmod", listOf(I32, I32))
+        fn("__syscall_faccessat", List(4) { I32 })
+        fn("__syscall_fchmod", listOf(I32, I32))
         fn(
             name = "__syscall_fchown32",
-            paramTypes = List(3) { I32_TYPE },
-            retType = I32_TYPE,
+            paramTypes = List(3) { I32 },
+            retType = I32,
             nodeFactory = ::SyscallFchown32
         )
-        fn("__syscall_fcntl64", List(3) { I32_TYPE })
-        fn("__syscall_fstat64", listOf(I32_TYPE, I32_TYPE), I32_TYPE, ::SyscallFstat64)
-        fn("__syscall_ftruncate64", listOf(I32_TYPE, I64_TYPE))
+        fn("__syscall_fcntl64", List(3) { I32 })
+        fn("__syscall_fstat64", listOf(I32, I32), I32, ::SyscallFstat64)
+        fn("__syscall_ftruncate64", listOf(I32, I64))
         fn(
             name = "__syscall_getcwd",
-            paramTypes = listOf(I32_TYPE, I32_TYPE),
-            retType = I32_TYPE,
+            paramTypes = listOf(I32, I32),
+            retType = I32,
             nodeFactory = ::SyscallGetcwd
         )
-        fn("__syscall_ioctl", List(3) { I32_TYPE })
-        fn("__syscall_mkdirat", List(3) { I32_TYPE })
-        fn("__syscall_newfstatat", List(4) { I32_TYPE })
+        fn("__syscall_ioctl", List(3) { I32 })
+        fn("__syscall_mkdirat", List(3) { I32 })
+        fn("__syscall_newfstatat", List(4) { I32 })
         fn(
             name = "__syscall_openat",
-            paramTypes = List(4) { I32_TYPE },
-            retType = I32_TYPE,
+            paramTypes = List(4) { I32 },
+            retType = I32,
             nodeFactory = ::SyscallOpenat
         )
-        fn("__syscall_readlinkat", List(4) { I32_TYPE })
-        fn("__syscall_rmdir", listOf(I32_TYPE))
+        fn("__syscall_readlinkat", List(4) { I32 })
+        fn("__syscall_rmdir", listOf(I32))
         fn(
             name = "__syscall_stat64",
-            paramTypes = listOf(I32_TYPE, I32_TYPE),
-            retType = I32_TYPE,
+            paramTypes = listOf(I32, I32),
+            retType = I32,
             nodeFactory = ::syscallStat64
         )
         fn(
             name = "__syscall_lstat64",
-            paramTypes = listOf(I32_TYPE, I32_TYPE),
-            retType = I32_TYPE,
+            paramTypes = listOf(I32, I32),
+            retType = I32,
             nodeFactory = ::syscallLstat64
         )
         fn(
             name = "__syscall_unlinkat",
-            paramTypes = List(3) { I32_TYPE },
-            retType = I32_TYPE,
+            paramTypes = List(3) { I32 },
+            retType = I32,
             nodeFactory = ::SyscallUnlinkat
         )
-        fn("__syscall_utimensat", List(4) { I32_TYPE })
-        fnVoid("_tzset_js", List(3) { I32_TYPE })
+        fn("__syscall_utimensat", List(4) { I32 })
+        fnVoid("_tzset_js", List(3) { I32 })
     }
-
-    private fun MutableList<HostFunction>.fn(
-        name: String,
-        paramTypes: List<Byte>,
-        retType: Byte = I32_TYPE,
-        nodeFactory: NodeFactory = notImplementedFunctionNodeFactory
-    ) = add(HostFunction(name, paramTypes, listOf(retType), nodeFactory))
-
-    private fun MutableList<HostFunction>.fnVoid(
-        name: String,
-        paramTypes: List<Byte>,
-        nodeFactory: NodeFactory = notImplementedFunctionNodeFactory
-    ) = add(HostFunction(name, paramTypes, emptyList(), nodeFactory))
 
     fun setupEnvBindings(
         context: WasmContext,
@@ -142,8 +130,12 @@ object EmscriptenEnvBindings {
 
         setupMemory(context, envModule)
 
-        val functionTypes: Map<HostFunctionType, Int> = allocateFunctionTypes(envModule)
-        val exportedFunctions: Map<String, WasmFunction> = declareExportedFunctions(envModule, functionTypes)
+        val functionTypes: Map<HostFunctionType, Int> = allocateFunctionTypes(envModule, envFunctions)
+        val exportedFunctions: Map<String, WasmFunction> = declareExportedFunctions(
+            envModule,
+            functionTypes,
+            envFunctions
+        )
         val envInstance: WasmInstance = context.readInstance(envModule)
 
         envFunctions.forEach { f: HostFunction ->
@@ -174,37 +166,6 @@ object EmscriptenEnvBindings {
             val memoryIndex = memoryCount()
             allocateMemory(memoryIndex, minSize, maxSize, is64Bit, false, false)
             exportMemory(memoryIndex, "memory")
-        }
-    }
-
-    private fun allocateFunctionTypes(
-        symbolTable: SymbolTable,
-        functions: List<HostFunction> = envFunctions
-    ): Map<HostFunctionType, Int> {
-        val functionTypeMap: MutableMap<HostFunctionType, Int> = mutableMapOf()
-        functions.forEach { f ->
-            val type: HostFunctionType = f.type
-            functionTypeMap.getOrPut(type) {
-                val typeIdx = symbolTable.allocateFunctionType(
-                    type.params.toByteArray(),
-                    type.returnTypes.toByteArray(),
-                    false
-                )
-                typeIdx
-            }
-        }
-        return functionTypeMap
-    }
-
-    private fun declareExportedFunctions(
-        symbolTable: SymbolTable,
-        functionTypes: Map<HostFunctionType, Int>,
-        functions: List<HostFunction> = envFunctions,
-    ): Map<String, WasmFunction> {
-        return functions.associate { f ->
-            val typeIdx = functionTypes.getValue(f.type)
-            val functionIdx = symbolTable.declareExportedFunction(typeIdx, f.name)
-            f.name to functionIdx
         }
     }
 }

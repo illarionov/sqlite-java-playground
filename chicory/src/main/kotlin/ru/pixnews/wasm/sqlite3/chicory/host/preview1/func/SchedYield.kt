@@ -12,7 +12,7 @@ import ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction
 fun schedYield(
     moduleName: String = WASI_SNAPSHOT_PREVIEW1,
 ): HostFunction = wasiHostFunction(
-    funcName = "random_get",
+    funcName = "sched_yield",
     paramTypes = listOf(),
     moduleName = moduleName,
     handle = SchedYield()
