@@ -1,11 +1,9 @@
 package ru.pixnews.wasm.sqlite3.chicory.host.preview1.func
 
 import com.dylibso.chicory.runtime.HostFunction
-import com.dylibso.chicory.runtime.Instance
-import ru.pixnews.wasm.host.memory.encodedNullTerminatedStringLength
-import ru.pixnews.wasm.host.wasi.preview1.type.Errno
+import ru.pixnews.wasm.host.memory.Memory
+import ru.pixnews.wasm.host.wasi.preview1.ext.WasiEnvironmentFunc
 import ru.pixnews.wasm.host.wasi.preview1.type.Size
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1
@@ -24,6 +22,7 @@ import ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction
  *
  */
 fun environSizesGet(
+    memory: Memory,
     envProvider: () -> Map<String, String> = System::getenv,
     moduleName: String = WASI_SNAPSHOT_PREVIEW1,
 ): HostFunction = wasiHostFunction(
@@ -34,28 +33,10 @@ fun environSizesGet(
     ),
     moduleName = moduleName,
 ) { instance, params ->
-    environSizesGet(
+    WasiEnvironmentFunc.environSizesGet(
         envProvider,
-        instance,
+        memory = memory,
         params[0].asWasmAddr(),
         params[1].asWasmAddr()
     )
 }
-
-private fun environSizesGet(
-    envProvider: () -> Map<String, String>,
-    instance: Instance,
-    environCountAddr: WasmPtr,
-    environSizeAddr: WasmPtr,
-): Errno {
-    val env = envProvider()
-    val count = env.size
-    val dataLength = env.entries.sumOf { it.encodeEnvToWasi().encodedNullTerminatedStringLength() }
-
-    instance.memory().writeI32(environCountAddr, count)
-    instance.memory().writeI32(environSizeAddr, dataLength)
-    return Errno.SUCCESS
-}
-
-// TODO: sanitize `=`?
-internal fun Map.Entry<String, String>.encodeEnvToWasi() = "${key}=${value}"

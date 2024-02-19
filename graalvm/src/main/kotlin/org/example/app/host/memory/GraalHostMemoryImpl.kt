@@ -1,5 +1,6 @@
 package org.example.app.host.memory
 
+import java.io.ByteArrayOutputStream
 import java.nio.ByteOrder
 import org.graalvm.polyglot.Value
 import ru.pixnews.wasm.host.memory.Memory
@@ -16,12 +17,20 @@ class GraalHostMemoryImpl(
         return memory.readBufferInt(ByteOrder.LITTLE_ENDIAN, addr.toLong())
     }
 
+    override fun readBytes(addr: WasmPtr, length: Int): ByteArray = ByteArray(length) { offset ->
+        memory.readBufferByte(addr + offset.toLong())
+    }
+
     override fun writeByte(addr: WasmPtr, data: Byte) {
         memory.writeBufferByte(addr.toLong(), data)
     }
 
     override fun writeI32(addr: WasmPtr, data: Int) {
         memory.writeBufferInt(ByteOrder.LITTLE_ENDIAN, addr.toLong(), data)
+    }
+
+    override fun writeI64(addr: WasmPtr, data: Long) {
+        memory.writeBufferLong(ByteOrder.LITTLE_ENDIAN, addr.toLong(), data)
     }
 
     override fun write(addr: WasmPtr, data: ByteArray, offset: Int, size: Int) {

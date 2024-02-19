@@ -22,6 +22,7 @@ private class SchedYield(
     private val logger: Logger = Logger.getLogger(SchedYield::class.qualifiedName),
 ) : WasiHostFunction {
     override fun apply(instance: Instance, vararg args: Value): Errno {
-        TODO("Not yet implemented")
+        Thread.yield()
+        return Errno.SUCCESS
     }
 }

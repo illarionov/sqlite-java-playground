@@ -6,12 +6,21 @@ import org.example.app.host.Host
 import org.example.app.host.HostFunction
 import org.example.app.host.HostFunctionType
 import org.example.app.host.fn
+import org.example.app.host.preview1.func.EnvironGet
+import org.example.app.host.preview1.func.EnvironSizesGet
+import org.example.app.host.preview1.func.FdClose
+import org.example.app.host.preview1.func.FdSeek
+import org.example.app.host.preview1.func.FdSync
+import org.example.app.host.preview1.func.SchedYield
+import org.example.app.host.preview1.func.fdPread
+import org.example.app.host.preview1.func.fdPwrite
+import org.example.app.host.preview1.func.fdRead
+import org.example.app.host.preview1.func.fdWrite
 import org.graalvm.wasm.SymbolTable
 import org.graalvm.wasm.WasmContext
 import org.graalvm.wasm.WasmFunction
 import org.graalvm.wasm.WasmInstance
 import org.graalvm.wasm.WasmModule
-import org.graalvm.wasm.WasmType.I64_TYPE
 import org.graalvm.wasm.constants.Sizes
 import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I32
 import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I64
@@ -38,17 +47,17 @@ object WasiSnapshotPreview1Bindngs {
         fn(
             name = "environ_get",
             paramTypes = listOf(I32, I32),
-            // nodeFactory =
+            nodeFactory = ::EnvironGet
         )
         fn(
             name = "environ_sizes_get",
             paramTypes = listOf(I32, I32),
-            // nodeFactory =
+            nodeFactory = ::EnvironSizesGet
         )
         fn(
             name = "fd_close",
             paramTypes = listOf(I32),
-            // nodeFactory =
+            nodeFactory = ::FdClose
         )
         fn(
             name = "fd_fdstat_get",
@@ -78,32 +87,32 @@ object WasiSnapshotPreview1Bindngs {
         fn(
             name = "fd_read",
             paramTypes = List(4) { I32 },
-            // nodeFactory =
+            nodeFactory = ::fdRead
         )
         fn(
             name = "fd_pread",
             paramTypes = List(4) { I32 },
-            // nodeFactory =
+            nodeFactory = ::fdPread
         )
         fn(
             name = "fd_seek",
             paramTypes = listOf(I32, I64, I32, I32),
-            // nodeFactory =
+            nodeFactory = ::FdSeek
         )
         fn(
             name = "fd_sync",
             paramTypes = listOf(I32),
-            // nodeFactory =
+            nodeFactory = ::FdSync
         )
         fn(
             name = "fd_write",
             paramTypes = List(4) { I32 },
-            // nodeFactory =
+            nodeFactory = ::fdWrite
         )
         fn(
             name = "fd_pwrite",
             paramTypes = List(4) { I32 },
-            // nodeFactory =
+            nodeFactory = ::fdPwrite
         )
         fn(
             name = "path_create_directory",
@@ -173,7 +182,7 @@ object WasiSnapshotPreview1Bindngs {
         fn(
             name = "sched_yield",
             paramTypes = listOf(),
-            // nodeFactory =
+            nodeFactory = ::SchedYield
         )
     }
 

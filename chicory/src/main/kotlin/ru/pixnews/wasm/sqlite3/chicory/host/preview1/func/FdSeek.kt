@@ -20,8 +20,10 @@ import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunction
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction
 import ru.pixnews.wasm.host.filesystem.SysException
+import ru.pixnews.wasm.host.memory.Memory
 
 fun fdSeek(
+    memory: Memory,
     filesystem: FileSystem,
     moduleName: String = WASI_SNAPSHOT_PREVIEW1,
 ): HostFunction = wasiHostFunction(
@@ -33,23 +35,23 @@ fun fdSeek(
         I64.pointer // *newOffset
     ),
     moduleName = moduleName,
-    handle = FdSeek(filesystem)
+    handle = FdSeek(memory, filesystem)
 )
 
 private class FdSeek(
+    private val memory: Memory,
     private val filesystem: FileSystem,
     private val logger: Logger = Logger.getLogger(FdSeek::class.qualifiedName)
 ) : WasiHostFunction {
-    override fun apply(instance: Instance, vararg params: Value): Errno {
-        val fd = Fd(params[0].asInt())
-        val offset = params[1].asLong()
-        val whence = Whence.fromIdOrNull(params[2].asInt()) ?: return Errno.INVAL
-        val pNewOffset = params[3].asWasmAddr()
-        return fdSeek(instance, fd, offset, whence, pNewOffset)
+    override fun apply(instance: Instance, vararg args: Value): Errno {
+        val fd = Fd(args[0].asInt())
+        val offset = args[1].asLong()
+        val whence = Whence.fromIdOrNull(args[2].asInt()) ?: return Errno.INVAL
+        val pNewOffset = args[3].asWasmAddr()
+        return fdSeek(fd, offset, whence, pNewOffset)
     }
 
     private fun fdSeek(
-        instance: Instance,
         fd: Fd,
         offset: Long,
         whence: Whence,
@@ -61,7 +63,7 @@ private class FdSeek(
 
             val newPosition = channel.position
 
-            instance.memory().writeLong(pNewOffset, newPosition)
+            memory.writeI64(pNewOffset, newPosition)
 
             Errno.SUCCESS
         } catch (sysException: SysException) {

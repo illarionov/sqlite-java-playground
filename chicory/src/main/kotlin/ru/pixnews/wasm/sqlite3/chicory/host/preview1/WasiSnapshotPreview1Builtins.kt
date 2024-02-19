@@ -46,21 +46,21 @@ class WasiSnapshotPreview1Builtins(
     val functions: List<HostFunction> = listOf(
         argsGet(argsProvider),            // Not yet implemented
         argsSizesGet(argsProvider),       // Not yet implemented
-        clockTimeGet(clock),
+        clockTimeGet(clock),              // Not yet implemented
         environGet(memory, envProvider),
-        environSizesGet(envProvider),
+        environSizesGet(memory, envProvider),
         fdClose(fileSystem),
         fdFdstatGet(fileSystem),          // Not yet implemented
         fdFdstatSetFlags(fileSystem),     // Not yet implemented
         fdFilestatGet(fileSystem),        // Not yet implemented
-        fdPread(fileSystem),
+        fdPread(memory, fileSystem),
         fdPrestatDirName(fileSystem),     // Not yet implemented
         fdPrestatGet(fileSystem),         // Not yet implemented
-        fdPwrite(fileSystem),
-        fdRead(fileSystem),
-        fdSeek(fileSystem),
+        fdPwrite(memory, fileSystem),
+        fdRead(memory, fileSystem),
+        fdSeek(memory, fileSystem),
         fdSync(fileSystem),
-        fdWrite(fileSystem),
+        fdWrite(memory, fileSystem),
         pathCreateDirectory(fileSystem),  // Not yet implemented
         pathFilestatGet(fileSystem),      // Not yet implemented
         pathFilestatSetTimes(fileSystem), // Not yet implemented

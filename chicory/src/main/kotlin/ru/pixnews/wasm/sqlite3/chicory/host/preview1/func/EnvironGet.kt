@@ -2,10 +2,8 @@ package ru.pixnews.wasm.sqlite3.chicory.host.preview1.func
 
 import com.dylibso.chicory.runtime.HostFunction
 import ru.pixnews.wasm.host.memory.Memory
-import ru.pixnews.wasm.host.memory.writeNullTerminatedString
-import ru.pixnews.wasm.host.wasi.preview1.type.Errno
+import ru.pixnews.wasm.host.wasi.preview1.ext.WasiEnvironmentFunc
 import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U8
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WASI_SNAPSHOT_PREVIEW1
@@ -34,31 +32,10 @@ fun environGet(
     ),
     moduleName = moduleName,
 ) { instance, params ->
-    environGet(
-        envProvider,
-        memory,
-        params[0].asWasmAddr(),
-        params[1].asWasmAddr()
+    WasiEnvironmentFunc.environGet(
+        envProvider = envProvider,
+        memory = memory,
+        environPAddr = params[0].asWasmAddr(),
+        environBufAddr = params[1].asWasmAddr(),
     )
-}
-
-private fun environGet(
-    envProvider: () -> Map<String, String>,
-    memory: Memory,
-    environPAddr: WasmPtr,
-    environBufAddr: WasmPtr,
-): Errno {
-    var pp = environPAddr
-    var bufP = environBufAddr
-
-    envProvider()
-        .entries
-        .map(Map.Entry<String, String>::encodeEnvToWasi)
-        .forEach { envString ->
-            memory.writeI32(pp, bufP)
-            pp += 4
-            bufP += memory.writeNullTerminatedString(bufP, envString)
-        }
-
-    return Errno.SUCCESS
 }

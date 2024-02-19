@@ -20,8 +20,8 @@ class SqliteBasicDemo0(
         // testDbSqliteVersion()
 
         val t = measureTime {
-            testDbTable()
-            // testLargeSqliteDatabase()
+            //testDbTable()
+            testLargeSqliteDatabase()
         }
         log.info { "time: $t" }
     }

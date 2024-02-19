@@ -35,6 +35,8 @@ private fun testSqlite() {
         wasmContext.initialize("wasm")
 
         val host = Host(
+            systemEnvProvider = System::getenv,
+            commandArgsProvider = ::emptyList,
             fileSystem = FileSystem(),
             clock = Clock.systemDefaultZone(),
         )

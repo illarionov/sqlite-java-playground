@@ -1,13 +1,16 @@
 package ru.pixnews.wasm.host.memory
 
+import java.nio.ByteBuffer
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 
 interface Memory {
     fun readI8(addr: WasmPtr): Byte
     fun readI32(addr: WasmPtr): Int
+    fun readBytes(addr: WasmPtr, length: Int): ByteArray
 
     fun writeByte(addr: WasmPtr, data: Byte)
     fun writeI32(addr: WasmPtr, data: Int)
+    fun writeI64(addr: WasmPtr, data: Long)
     fun write(addr: WasmPtr, data: ByteArray, offset: Int, size: Int)
 }
 
