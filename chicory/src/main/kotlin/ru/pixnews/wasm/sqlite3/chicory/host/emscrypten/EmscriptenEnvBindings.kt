@@ -3,7 +3,7 @@ package ru.pixnews.wasm.sqlite3.chicory.host.emscrypten
 import com.dylibso.chicory.runtime.HostFunction
 import java.time.Clock
 import ru.pixnews.wasm.host.filesystem.FileSystem
-import ru.pixnews.wasm.sqlite3.chicory.host.ChicoryMemoryImpl
+import ru.pixnews.wasm.sqlite3.chicory.host.memory.ChicoryMemoryImpl
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.func.abortFunc
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.func.assertFail
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.func.emscriptenDateNow

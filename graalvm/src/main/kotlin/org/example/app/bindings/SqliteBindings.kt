@@ -10,10 +10,6 @@ class SqliteBindings(
     val envBindings: Value,
     val mainBindings: Value,
 ) {
-    private val memory = GraalHostMemoryImpl(envBindings.getMember("memory"))
-
-    val memoryBindings = SqliteMemoryBindings(mainBindings, memory)
-
     val _initialize: Value? = mainBindings.getMember("_initialize") // 34
     val __errno_location = mainBindings.getMember("__errno_location") // 2644
     val __wasm_call_ctors: Value? = mainBindings.getMember("__wasm_call_ctors") // 34
@@ -226,6 +222,7 @@ class SqliteBindings(
     val sqlite3_wasm_db_error = mainBindings.getMember("sqlite3_wasm_db_error") // 659
     val sqlite3_wasm_test_struct = mainBindings.getMember("sqlite3_wasm_test_struct") // 660
     val sqlite3_wasm_enum_json = mainBindings.getMember("sqlite3__wasm_enum_json") // 661
+        ?: mainBindings.getMember("sqlite3_wasm_enum_json") // 661
     val sqlite3_wasm_vfs_unlink = mainBindings.getMember("sqlite3__wasm_vfs_unlink") // 662
     val sqlite3_wasm_db_vfs = mainBindings.getMember("sqlite3_wasm_db_vfs") // 663
     val sqlite3_wasm_db_reset = mainBindings.getMember("sqlite3_wasm_db_reset") // 664
@@ -253,6 +250,10 @@ class SqliteBindings(
     val sqlite3_wasm_test_stack_overflow = mainBindings.getMember("sqlite3_wasm_test_stack_overflow") // 688
     val sqlite3_wasm_test_str_hello = mainBindings.getMember("sqlite3_wasm_test_str_hello") // 689
     val sqlite3_wasm_SQLTester_strglob = mainBindings.getMember("sqlite3_wasm_SQLTester_strglob") // 690
+
+    private val memory = GraalHostMemoryImpl(envBindings.getMember("memory"))
+
+    val memoryBindings = SqliteMemoryBindings(mainBindings, memory)
 
     val sqlite3Version: String
         get() {

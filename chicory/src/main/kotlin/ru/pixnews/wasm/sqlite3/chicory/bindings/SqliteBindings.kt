@@ -4,7 +4,7 @@ import com.dylibso.chicory.runtime.Instance
 import ru.pixnews.sqlite3.wasm.Sqlite3Errno
 import ru.pixnews.sqlite3.wasm.Sqlite3Exception
 import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
-import ru.pixnews.wasm.sqlite3.chicory.host.ChicoryMemoryImpl
+import ru.pixnews.wasm.sqlite3.chicory.host.memory.ChicoryMemoryImpl
 
 class SqliteBindings(
     val memory: ChicoryMemoryImpl,

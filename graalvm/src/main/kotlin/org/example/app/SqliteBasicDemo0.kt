@@ -19,11 +19,13 @@ class SqliteBasicDemo0(
         pringWasmEnumJson()
         // testDbSqliteVersion()
 
-        val t = measureTime {
-            //testDbTable()
-            testLargeSqliteDatabase()
+        repeat(3) { iteration ->
+            val t = measureTime {
+                //testDbTable()
+                testLargeSqliteDatabase()
+            }
+            log.info { "Iteration $iteration time: $t" }
         }
-        log.info { "time: $t" }
     }
 
     private fun printVersion() {
@@ -75,7 +77,6 @@ class SqliteBasicDemo0(
 
     private fun testLargeSqliteDatabase() {
         val dbPointer: WasmPtr = api.sqlite3Open("/home/work/comments_dataset.db")
-        //val dbPointer: Value = api.sqlite3Open(":memory:")
 
         try {
             val requests = listOf(

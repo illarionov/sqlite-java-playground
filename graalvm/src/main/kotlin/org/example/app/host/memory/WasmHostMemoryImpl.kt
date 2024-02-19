@@ -6,13 +6,24 @@ import java.io.ByteArrayOutputStream
 import org.graalvm.wasm.WasmContext
 import org.graalvm.wasm.WasmInstance
 import org.graalvm.wasm.memory.WasmMemory
+import ru.pixnews.wasm.host.filesystem.ReadWriteStrategy
+import ru.pixnews.wasm.host.filesystem.fd.FdChannel
+import ru.pixnews.wasm.host.memory.DefaultWasiMemoryReader
+import ru.pixnews.wasm.host.memory.DefaultWasiMemoryWriter
 import ru.pixnews.wasm.host.memory.Memory
+import ru.pixnews.wasm.host.memory.WasiMemoryReader
+import ru.pixnews.wasm.host.memory.WasiMemoryWriter
+import ru.pixnews.wasm.host.wasi.preview1.type.CiovecArray
+import ru.pixnews.wasm.host.wasi.preview1.type.IovecArray
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 
 class WasmHostMemoryImpl(
     val memory: WasmMemory,
-    private val node: Node?
+    internal val node: Node?
 ) : Memory {
+    private val memoryReader: WasiMemoryReader = GraalIInputStreamWasiMemoryReader(this)
+    private val memoryWriter: WasiMemoryWriter = GraalOutputStreamWasiMemoryWriter(this)
+
     override fun readI8(addr: WasmPtr): Byte {
         return memory.load_i32_8u(node, addr.toLong()).toByte()
     }
@@ -42,6 +53,18 @@ class WasmHostMemoryImpl(
     override fun write(addr: WasmPtr, data: ByteArray, offset: Int, size: Int) {
         memory.initialize(data, offset, addr.toLong(), size)
     }
+
+    override fun readFromChannel(
+        channel: FdChannel,
+        strategy: ReadWriteStrategy,
+        iovecs: IovecArray
+    ): ULong = memoryReader.read(channel, strategy, iovecs)
+
+    override fun writeToChannel(
+        channel: FdChannel,
+        strategy: ReadWriteStrategy,
+        cioVecs: CiovecArray
+    ): ULong = memoryWriter.write(channel, strategy, cioVecs)
 
     fun readNullTerminatedString(
         offset: WasmPtr

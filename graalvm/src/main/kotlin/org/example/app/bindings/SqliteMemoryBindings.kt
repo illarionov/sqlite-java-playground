@@ -84,9 +84,11 @@ class SqliteMemoryBindings(
     ): String? = memory.readNullableNullTerminatedString(offsetValue)
 
     private fun initEmscriptenStack() {
-        emscripten_stack_init.execute()
-        writeStackCookie()
-        checkStackCookie()
+        if (emscripten_stack_init != null) {
+            emscripten_stack_init.execute()
+            writeStackCookie()
+            checkStackCookie()
+        }
     }
 
     private fun writeStackCookie() {

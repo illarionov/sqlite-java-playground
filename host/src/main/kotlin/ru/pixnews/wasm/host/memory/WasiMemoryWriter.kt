@@ -1,23 +1,26 @@
-package ru.pixnews.wasm.host.wasi.preview1.ext
+package ru.pixnews.wasm.host.memory
 
 import java.nio.ByteBuffer
 import ru.pixnews.wasm.host.filesystem.FileSystem
 import ru.pixnews.wasm.host.filesystem.ReadWriteStrategy
-import ru.pixnews.wasm.host.memory.Memory
+import ru.pixnews.wasm.host.filesystem.fd.FdChannel
 import ru.pixnews.wasm.host.wasi.preview1.type.CiovecArray
 import ru.pixnews.wasm.host.wasi.preview1.type.Fd
+import ru.pixnews.wasm.host.wasi.preview1.type.IovecArray
 
 fun interface WasiMemoryWriter {
-    fun write(memory: Memory, fd: Fd, cioVecs: CiovecArray): ULong
+    fun write(
+        channel: FdChannel,
+        strategy: ReadWriteStrategy,
+        cioVecs: CiovecArray): ULong
 }
 
 class DefaultWasiMemoryWriter(
-    private val filesystem: FileSystem,
-    private val strategy: ReadWriteStrategy,
+    private val memory: Memory,
 ) : WasiMemoryWriter {
-    override fun write(memory: Memory, fd: Fd, cioVecs: CiovecArray): ULong {
+    override fun write(channel: FdChannel, strategy: ReadWriteStrategy, cioVecs: CiovecArray): ULong {
         val bufs = cioVecs.toByteBuffers(memory)
-        return filesystem.write(fd, bufs, strategy)
+        return channel.fileSystem.write(channel, bufs, strategy)
     }
 
     private fun CiovecArray.toByteBuffers(
@@ -30,4 +33,6 @@ class DefaultWasiMemoryWriter(
         )
         ByteBuffer.wrap(bytes)
     }
+
+
 }

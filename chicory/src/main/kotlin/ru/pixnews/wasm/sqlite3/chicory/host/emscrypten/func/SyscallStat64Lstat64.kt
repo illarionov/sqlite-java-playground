@@ -16,7 +16,7 @@ import ru.pixnews.wasm.host.filesystem.FileSystem
 import ru.pixnews.wasm.host.include.sys.pack
 import ru.pixnews.wasm.host.filesystem.SysException
 import ru.pixnews.wasm.host.memory.readNullTerminatedString
-import ru.pixnews.wasm.sqlite3.chicory.host.ChicoryMemoryImpl
+import ru.pixnews.wasm.sqlite3.chicory.host.memory.ChicoryMemoryImpl
 
 fun syscallLstat64(
     memory: ChicoryMemoryImpl,

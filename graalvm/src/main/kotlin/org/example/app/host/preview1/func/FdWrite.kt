@@ -2,7 +2,6 @@ package org.example.app.host.preview1.func
 
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
 import com.oracle.truffle.api.frame.VirtualFrame
-import java.nio.channels.Channels
 import java.util.logging.Level
 import java.util.logging.Logger
 import org.example.app.host.BaseWasmNode
@@ -14,9 +13,9 @@ import ru.pixnews.wasm.host.filesystem.ReadWriteStrategy
 import ru.pixnews.wasm.host.filesystem.ReadWriteStrategy.CHANGE_POSITION
 import ru.pixnews.wasm.host.filesystem.ReadWriteStrategy.DO_NOT_CHANGE_POSITION
 import ru.pixnews.wasm.host.filesystem.SysException
-import ru.pixnews.wasm.host.wasi.preview1.ext.DefaultWasiMemoryWriter
+import ru.pixnews.wasm.host.memory.DefaultWasiMemoryWriter
 import ru.pixnews.wasm.host.wasi.preview1.ext.FdWriteExt
-import ru.pixnews.wasm.host.wasi.preview1.ext.WasiMemoryWriter
+import ru.pixnews.wasm.host.memory.WasiMemoryWriter
 import ru.pixnews.wasm.host.wasi.preview1.type.CiovecArray
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.wasi.preview1.type.Fd
@@ -39,13 +38,11 @@ fun fdPwrite(
 private class FdWrite(
     language: WasmLanguage,
     instance: WasmInstance,
-    host: Host,
-    strategy: ReadWriteStrategy,
+    private val host: Host,
+    private val strategy: ReadWriteStrategy,
     functionName: String = "fd_write",
     private val logger: Logger = Logger.getLogger(FdWrite::class.qualifiedName)
 ): BaseWasmNode(language, instance, functionName) {
-    private val memoryWriter: WasiMemoryWriter = DefaultWasiMemoryWriter(host.fileSystem, strategy)
-
     override fun executeWithContext(frame: VirtualFrame, context: WasmContext): Int {
         val args = frame.arguments
         return fdWrite(
@@ -65,7 +62,8 @@ private class FdWrite(
     ): Int {
         val cioVecs: CiovecArray = FdWriteExt.readCiovecs(memory, pCiov, cIovCnt)
         return try {
-            val writtenBytes = memoryWriter.write(memory, fd, cioVecs)
+            val channel = host.fileSystem.getStreamByFd(fd)
+            val writtenBytes = memory.writeToChannel(channel, strategy, cioVecs)
             memory.writeI32(pNum, writtenBytes.toInt())
             Errno.SUCCESS
         } catch (e: SysException) {

@@ -1,14 +1,24 @@
 package org.example.app.host.memory
 
-import java.io.ByteArrayOutputStream
 import java.nio.ByteOrder
 import org.graalvm.polyglot.Value
+import ru.pixnews.wasm.host.filesystem.ReadWriteStrategy
+import ru.pixnews.wasm.host.filesystem.fd.FdChannel
+import ru.pixnews.wasm.host.memory.DefaultWasiMemoryReader
+import ru.pixnews.wasm.host.memory.DefaultWasiMemoryWriter
 import ru.pixnews.wasm.host.memory.Memory
+import ru.pixnews.wasm.host.memory.WasiMemoryReader
+import ru.pixnews.wasm.host.memory.WasiMemoryWriter
+import ru.pixnews.wasm.host.wasi.preview1.type.CiovecArray
+import ru.pixnews.wasm.host.wasi.preview1.type.IovecArray
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 
 class GraalHostMemoryImpl(
     val memory: Value
 ) : Memory {
+    private val memoryReader: WasiMemoryReader = DefaultWasiMemoryReader(this)
+    private val memoryWriter: WasiMemoryWriter = DefaultWasiMemoryWriter(this)
+
     override fun readI8(addr: WasmPtr): Byte {
         return memory.readBufferByte(addr.toLong())
     }
@@ -39,4 +49,16 @@ class GraalHostMemoryImpl(
             memory.writeBufferByte(addr + index.toLong(), byte)
         }
     }
+
+    override fun readFromChannel(
+        channel: FdChannel,
+        strategy: ReadWriteStrategy,
+        iovecs: IovecArray
+    ): ULong = memoryReader.read(channel, strategy, iovecs)
+
+    override fun writeToChannel(
+        channel: FdChannel,
+        strategy: ReadWriteStrategy,
+        cioVecs: CiovecArray
+    ): ULong = memoryWriter.write(channel, strategy, cioVecs)
 }

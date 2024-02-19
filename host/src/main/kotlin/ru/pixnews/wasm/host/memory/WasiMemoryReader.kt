@@ -1,24 +1,25 @@
-package ru.pixnews.wasm.host.wasi.preview1.ext
+package ru.pixnews.wasm.host.memory
 
 import java.nio.ByteBuffer
-import ru.pixnews.wasm.host.filesystem.FileSystem
 import ru.pixnews.wasm.host.filesystem.ReadWriteStrategy
-import ru.pixnews.wasm.host.memory.Memory
-import ru.pixnews.wasm.host.wasi.preview1.type.Fd
+import ru.pixnews.wasm.host.filesystem.fd.FdChannel
 import ru.pixnews.wasm.host.wasi.preview1.type.IovecArray
 
 fun interface WasiMemoryReader {
-    fun read(memory: Memory, fd: Fd, ioVecs: IovecArray): ULong
+    fun read(
+        channel: FdChannel,
+        strategy: ReadWriteStrategy,
+        iovecs: IovecArray
+    ): ULong
 }
 
 class DefaultWasiMemoryReader(
-    private val filesystem: FileSystem,
-    private val strategy: ReadWriteStrategy,
+    private val memory: Memory,
 ) : WasiMemoryReader {
-    override fun read(memory: Memory, fd: Fd, ioVecs: IovecArray): ULong {
-        val bbufs = ioVecs.toByteBuffers()
-        val readBytes = filesystem.read(fd, bbufs, strategy)
-        ioVecs.iovecList.forEachIndexed { idx, vec ->
+    override fun read(channel: FdChannel, strategy: ReadWriteStrategy, iovecs: IovecArray): ULong {
+        val bbufs = iovecs.toByteBuffers()
+        val readBytes = channel.fileSystem.read(channel, bbufs, strategy)
+        iovecs.iovecList.forEachIndexed { idx, vec ->
             val bbuf: ByteBuffer = bbufs[idx]
             bbuf.flip()
             if (bbuf.limit() != 0) {

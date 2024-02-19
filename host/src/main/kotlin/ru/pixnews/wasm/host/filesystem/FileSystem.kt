@@ -241,12 +241,11 @@ class FileSystem(
     }
 
     fun read(
-        fd: Fd,
+        channel: FdChannel,
         iovecs: Array<ByteBuffer>,
         strategy: ReadWriteStrategy = CHANGE_POSITION,
     ): ULong {
-        logger.finest { "read($fd, ${iovecs.contentToString()}, $strategy)" }
-        val channel = getStreamByFd(fd)
+        logger.finest { "read(${channel.fd}, ${iovecs.contentToString()}, $strategy)" }
 
         try {
             var totalBytesRead: ULong = 0U
@@ -285,13 +284,11 @@ class FileSystem(
     }
 
     fun write(
-        fd: Fd,
+        channel: FdChannel,
         cIovecs: Array<ByteBuffer>,
         strategy: ReadWriteStrategy = CHANGE_POSITION,
     ): ULong {
-        logger.finest { "write($fd, ${cIovecs.contentToString()}, $strategy)" }
-        val channel = getStreamByFd(fd)
-
+        logger.finest { "write(${channel.fd}, ${cIovecs.contentToString()}, $strategy)" }
         try {
             var totalBytesWritten = 0UL
             when (strategy) {

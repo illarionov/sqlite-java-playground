@@ -9,7 +9,7 @@ import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
 import ru.pixnews.wasm.sqlite3.chicory.ext.isNull
 import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
-import ru.pixnews.wasm.sqlite3.chicory.host.ChicoryMemoryImpl
+import ru.pixnews.wasm.sqlite3.chicory.host.memory.ChicoryMemoryImpl
 
 class SqliteMemoryBindings(
     val memory: ChicoryMemoryImpl,
