@@ -3,12 +3,14 @@ package org.example.app.host.emscrypten.func
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
 import com.oracle.truffle.api.frame.VirtualFrame
 import java.util.logging.Logger
+import org.example.app.ext.asWasmPtr
 import org.example.app.host.BaseWasmNode
 import org.example.app.host.Host
 import org.graalvm.wasm.WasmContext
 import org.graalvm.wasm.WasmInstance
 import org.graalvm.wasm.WasmLanguage
 import ru.pixnews.wasm.host.filesystem.SysException
+import ru.pixnews.wasm.host.include.sys.StructStat
 import ru.pixnews.wasm.host.include.sys.pack
 import ru.pixnews.wasm.host.memory.write
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
@@ -26,14 +28,14 @@ class SyscallFstat64(
         val args = frame.arguments
         return syscallFstat64(
             Fd(args[0] as Int),
-            args[1] as WasmPtr,
+            args.asWasmPtr(1)
         )
     }
 
     @TruffleBoundary
     private fun syscallFstat64(
         fd: Fd,
-        dst: WasmPtr,
+        dst: WasmPtr<StructStat>,
     ): Int = try {
         val stat = host.fileSystem.stat(fd).also {
             logger.finest { "fStat64($fd): OK $it" }

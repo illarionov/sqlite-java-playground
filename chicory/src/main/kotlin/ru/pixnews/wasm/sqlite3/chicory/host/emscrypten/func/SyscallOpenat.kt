@@ -47,7 +47,7 @@ private class Openat(
 ) : EmscryptenHostFunction {
     override fun apply(instance: Instance, vararg args: Value): Value {
         val mode = if (args.lastIndex == 3) {
-            instance.memory().readI32(args[3].asWasmAddr()).asInt().toUInt()
+            instance.memory().readI32(args[3].asInt()).asInt().toUInt()
         } else {
             0U
         }
@@ -65,7 +65,7 @@ private class Openat(
     private fun openAt(
         instance: Instance,
         dirfd: Int,
-        pathnamePtr: WasmPtr,
+        pathnamePtr: WasmPtr<Byte>,
         flags: UInt,
         mode: UInt
     ): Int {

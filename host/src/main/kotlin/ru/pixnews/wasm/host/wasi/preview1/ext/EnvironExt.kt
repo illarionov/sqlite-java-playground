@@ -5,13 +5,14 @@ import ru.pixnews.wasm.host.memory.encodedNullTerminatedStringLength
 import ru.pixnews.wasm.host.memory.writeNullTerminatedString
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
+import ru.pixnews.wasm.host.wasi.preview1.type.plus
 
 object WasiEnvironmentFunc {
     fun environSizesGet(
         envProvider: () -> Map<String, String>,
         memory: Memory,
-        environCountAddr: WasmPtr,
-        environSizeAddr: WasmPtr,
+        environCountAddr: WasmPtr<Int>,
+        environSizeAddr: WasmPtr<Int>,
     ): Errno {
         val env = envProvider()
         val count = env.size
@@ -25,8 +26,8 @@ object WasiEnvironmentFunc {
     fun environGet(
         envProvider: () -> Map<String, String>,
         memory: Memory,
-        environPAddr: WasmPtr,
-        environBufAddr: WasmPtr,
+        environPAddr: WasmPtr<Int>,
+        environBufAddr: WasmPtr<Int>,
     ): Errno {
         var pp = environPAddr
         var bufP = environBufAddr
@@ -35,7 +36,7 @@ object WasiEnvironmentFunc {
             .entries
             .map { it.encodeEnvToWasi() }
             .forEach { envString ->
-                memory.writeI32(pp, bufP)
+                memory.writeI32(pp, bufP.addr)
                 pp += 4
                 bufP += memory.writeNullTerminatedString(bufP, envString)
             }
@@ -46,3 +47,4 @@ object WasiEnvironmentFunc {
     // TODO: sanitize `=`?
     fun Map.Entry<String, String>.encodeEnvToWasi() = "${key}=${value}"
 }
+

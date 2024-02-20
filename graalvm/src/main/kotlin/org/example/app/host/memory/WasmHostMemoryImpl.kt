@@ -24,34 +24,34 @@ class WasmHostMemoryImpl(
     private val memoryReader: WasiMemoryReader = GraalIInputStreamWasiMemoryReader(this)
     private val memoryWriter: WasiMemoryWriter = GraalOutputStreamWasiMemoryWriter(this)
 
-    override fun readI8(addr: WasmPtr): Byte {
-        return memory.load_i32_8u(node, addr.toLong()).toByte()
+    override fun readI8(addr: WasmPtr<*>): Byte {
+        return memory.load_i32_8u(node, addr.addr.toLong()).toByte()
     }
 
-    override fun readI32(addr: WasmPtr): Int {
-        return memory.load_i32(node, addr.toLong())
+    override fun readI32(addr: WasmPtr<*>): Int {
+        return memory.load_i32(node, addr.addr.toLong())
     }
 
-    override fun readBytes(addr: WasmPtr, length: Int): ByteArray {
+    override fun readBytes(addr: WasmPtr<*>, length: Int): ByteArray {
         val bous = ByteArrayOutputStream(length)
-        memory.copyToStream(node, bous, addr, length)
+        memory.copyToStream(node, bous, addr.addr, length)
         return bous.toByteArray()
     }
 
-    override fun writeByte(addr: WasmPtr, data: Byte) {
-        memory.store_i32_8(node, addr.toLong(), data)
+    override fun writeByte(addr: WasmPtr<*>, data: Byte) {
+        memory.store_i32_8(node, addr.addr.toLong(), data)
     }
 
-    override fun writeI32(addr: WasmPtr, data: Int) {
-        memory.store_i32(node, addr.toLong(), data)
+    override fun writeI32(addr: WasmPtr<*>, data: Int) {
+        memory.store_i32(node, addr.addr.toLong(), data)
     }
 
-    override fun writeI64(addr: WasmPtr, data: Long) {
-        memory.store_i64(node, addr.toLong(), data)
+    override fun writeI64(addr: WasmPtr<*>, data: Long) {
+        memory.store_i64(node, addr.addr.toLong(), data)
     }
 
-    override fun write(addr: WasmPtr, data: ByteArray, offset: Int, size: Int) {
-        memory.initialize(data, offset, addr.toLong(), size)
+    override fun write(addr: WasmPtr<*>, data: ByteArray, offset: Int, size: Int) {
+        memory.initialize(data, offset, addr.addr.toLong(), size)
     }
 
     override fun readFromChannel(
@@ -67,6 +67,6 @@ class WasmHostMemoryImpl(
     ): ULong = memoryWriter.write(channel, strategy, cioVecs)
 
     fun readNullTerminatedString(
-        offset: WasmPtr
-    ): String = memory.readString(offset, null)
+        offset: WasmPtr<Byte>
+    ): String = memory.readString(offset.addr, null)
 }

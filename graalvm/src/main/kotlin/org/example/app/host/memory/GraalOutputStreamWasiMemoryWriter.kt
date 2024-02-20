@@ -34,7 +34,7 @@ class GraalOutputStreamWasiMemoryWriter(
             for (vec in cioVecs.ciovecList) {
                 val outputStream = Channels.newOutputStream(channel.channel)
                 val limit = vec.bufLen.value.toInt()
-                wasmMemory.copyToStream(memory.node, outputStream, vec.buf, limit)
+                wasmMemory.copyToStream(memory.node, outputStream, vec.buf.addr, limit)
                 totalBytesWritten += limit.toUInt()
             }
         } catch (cce: ClosedChannelException) {

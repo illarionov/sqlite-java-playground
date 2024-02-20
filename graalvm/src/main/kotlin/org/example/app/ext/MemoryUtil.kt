@@ -5,10 +5,9 @@ import ru.pixnews.wasm.host.memory.Memory
 import ru.pixnews.wasm.host.memory.readNullTerminatedString
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 
-internal fun Value.asWasmAddr(): WasmPtr = asInt()
+internal fun <P: Any?> Value.asWasmAddr(): WasmPtr<P> = WasmPtr(asInt())
 
-// TODO: ???
-fun WasmPtr.isNull(): Boolean = this == 0
+internal fun <P: Any?> Array<Any>.asWasmPtr(idx: Int): WasmPtr<P> = WasmPtr(this[idx] as Int)
 
 fun Memory.readNullTerminatedString(offsetValue: Value): String? {
     return if (!offsetValue.isNull) {

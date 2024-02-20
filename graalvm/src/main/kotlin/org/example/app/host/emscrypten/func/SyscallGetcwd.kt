@@ -3,6 +3,7 @@ package org.example.app.host.emscrypten.func
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
 import com.oracle.truffle.api.frame.VirtualFrame
 import java.util.logging.Logger
+import org.example.app.ext.asWasmPtr
 import org.example.app.host.BaseWasmNode
 import org.example.app.host.Host
 import org.graalvm.wasm.WasmContext
@@ -23,17 +24,17 @@ class SyscallGetcwd(
     override fun executeWithContext(frame: VirtualFrame, context: WasmContext): Int {
         val args = frame.arguments
         return syscallGetcwd(
-            args[0] as WasmPtr,
+            args.asWasmPtr(0),
             args[1] as Int,
         )
     }
 
     @TruffleBoundary
     private fun syscallGetcwd(
-        dst: WasmPtr,
+        dst: WasmPtr<Byte>,
         size: Int
     ): Int {
-        logger.finest { "getCwd(dst: 0x${dst.toString(16)} size: $size)" }
+        logger.finest { "getCwd(dst: $dst size: $size)" }
         if (size == 0) return -Errno.INVAL.code
 
         val path = host.fileSystem.getCwd()

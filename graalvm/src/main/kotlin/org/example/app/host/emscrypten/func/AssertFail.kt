@@ -2,6 +2,7 @@ package org.example.app.host.emscrypten.func
 
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
 import com.oracle.truffle.api.frame.VirtualFrame
+import org.example.app.ext.asWasmPtr
 import org.example.app.host.BaseWasmNode
 import org.example.app.host.Host
 import org.graalvm.wasm.WasmContext
@@ -19,19 +20,19 @@ class AssertFail(
     override fun executeWithContext(frame: VirtualFrame, context: WasmContext): Nothing {
         val args = frame.arguments
         assertFail(
-            args[0] as WasmPtr,
-            args[1] as WasmPtr,
+            args.asWasmPtr(0),
+            args.asWasmPtr(1),
             args[2] as Int,
-            args[3] as WasmPtr
+            args.asWasmPtr(3),
         )
     }
 
     @TruffleBoundary
     private fun assertFail(
-        condition: WasmPtr,
-        filename: WasmPtr,
+        condition: WasmPtr<Byte>,
+        filename: WasmPtr<Byte>,
         line: Int,
-        func: WasmPtr
+        func: WasmPtr<Byte>
     ) : Nothing {
         throw AssertionFailed(
             condition = memory.readNullTerminatedString(condition),

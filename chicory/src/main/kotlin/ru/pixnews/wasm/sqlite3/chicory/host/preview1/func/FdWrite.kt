@@ -15,6 +15,7 @@ import ru.pixnews.wasm.host.memory.Memory
 import ru.pixnews.wasm.host.memory.DefaultWasiMemoryWriter
 import ru.pixnews.wasm.host.wasi.preview1.ext.FdWriteExt.readCiovecs
 import ru.pixnews.wasm.host.memory.WasiMemoryWriter
+import ru.pixnews.wasm.host.wasi.preview1.type.CioVec
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.wasi.preview1.type.Fd
 import ru.pixnews.wasm.host.wasi.preview1.type.IovecArray
@@ -63,9 +64,9 @@ private class FdWrite(
 ) : WasiHostFunction {
     override fun apply(instance: Instance, vararg args: Value): Errno {
         val fd = Fd(args[0].asInt())
-        val pCiov = args[1].asWasmAddr()
+        val pCiov = args[1].asWasmAddr<CioVec>()
         val cIovCnt = args[2].asInt()
-        val pNum = args[3].asWasmAddr()
+        val pNum = args[3].asWasmAddr<Long>()
 
         val cioVecs = readCiovecs(memory, pCiov, cIovCnt)
         return try {

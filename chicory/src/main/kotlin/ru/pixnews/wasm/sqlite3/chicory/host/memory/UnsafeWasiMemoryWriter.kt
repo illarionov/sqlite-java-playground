@@ -25,7 +25,7 @@ internal class UnsafeWasiMemoryWriter private constructor(
     ): Array<ByteBuffer> = Array(ciovecList.size) {
         val ioVec = ciovecList[it]
         memoryBuffer.slice(
-            ioVec.buf,
+            ioVec.buf.addr,
             ioVec.bufLen.value.toInt()
         )
     }

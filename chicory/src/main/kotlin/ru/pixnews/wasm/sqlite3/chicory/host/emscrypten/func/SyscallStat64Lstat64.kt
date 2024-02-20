@@ -15,6 +15,7 @@ import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.emscriptenEnvHostFunction
 import ru.pixnews.wasm.host.filesystem.FileSystem
 import ru.pixnews.wasm.host.include.sys.pack
 import ru.pixnews.wasm.host.filesystem.SysException
+import ru.pixnews.wasm.host.include.sys.StructStat
 import ru.pixnews.wasm.host.memory.readNullTerminatedString
 import ru.pixnews.wasm.sqlite3.chicory.host.memory.ChicoryMemoryImpl
 
@@ -78,8 +79,8 @@ private class Stat64(
 
     private fun stat64(
         instance: Instance,
-        pathnamePtr: WasmPtr,
-        dst: WasmPtr,
+        pathnamePtr: WasmPtr<Byte>,
+        dst: WasmPtr<StructStat>,
     ): Int {
         var path = ""
         try {
@@ -90,7 +91,7 @@ private class Stat64(
             ).also {
                 logger.finest { "$syscallName($path): $it" }
             }.pack()
-            instance.memory().write(dst, stat)
+            instance.memory().write(dst.addr, stat)
         } catch (e: SysException) {
             logger.finest { "$syscallName(`$path`): error ${e.errNo}" }
             return -e.errNo.code

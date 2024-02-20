@@ -2,21 +2,23 @@ package ru.pixnews.wasm.host.memory
 
 import java.io.ByteArrayOutputStream
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
+import ru.pixnews.wasm.host.wasi.preview1.type.isSqlite3Null
 
-fun Memory.readNullableNullTerminatedString(offset: WasmPtr): String? {
-    return if (offset != 0) {
+fun Memory.readNullableNullTerminatedString(offset: WasmPtr<Byte>): String? {
+    return if (!offset.isSqlite3Null()) {
         readNullTerminatedString(offset)
     } else {
         null
     }
 }
 
-fun Memory.readNullTerminatedString(offset: WasmPtr): String {
-    check(offset != 0)
+fun Memory.readNullTerminatedString(offset: WasmPtr<Byte>): String {
+    check(offset.addr != 0)
     val mem = ByteArrayOutputStream()
-    var l = offset
+    var l = offset.addr
     do {
-        val b = this.readI8(l++)
+        val b = this.readI8(WasmPtr<Unit>(l))
+        l += 1
         if (b == 0.toByte()) break
         mem.write(b.toInt())
     } while (true)
@@ -25,12 +27,12 @@ fun Memory.readNullTerminatedString(offset: WasmPtr): String {
 }
 
 fun Memory.writeNullTerminatedString(
-    offset: WasmPtr,
+    offset: WasmPtr<*>,
     value: String,
 ): Int {
     val encoded = value.encodeToByteArray()
     write(offset, encoded)
-    writeByte(offset + encoded.size, 0)
+    writeByte(WasmPtr<Unit>(offset.addr + encoded.size), 0)
     return encoded.size + 1
 }
 

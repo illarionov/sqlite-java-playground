@@ -20,23 +20,23 @@ public class ChicoryMemoryImpl(
     private val memoryWriter: WasiMemoryWriter = UnsafeWasiMemoryWriter.create(memory)
         ?: DefaultWasiMemoryWriter(this)
 
-    override fun readI8(addr: WasmPtr): Byte = memory.read(addr)
+    override fun readI8(addr: WasmPtr<*>): Byte = memory.read(addr.addr)
 
-    override fun readI32(addr: WasmPtr): Int = memory.readI32(addr).asInt()
-    override fun readBytes(addr: WasmPtr, length: Int): ByteArray = memory.readBytes(addr, length)
+    override fun readI32(addr: WasmPtr<*>): Int = memory.readI32(addr.addr).asInt()
+    override fun readBytes(addr: WasmPtr<*>, length: Int): ByteArray = memory.readBytes(addr.addr, length)
 
-    override fun writeByte(addr: WasmPtr, data: Byte) = memory.writeByte(addr, data)
+    override fun writeByte(addr: WasmPtr<*>, data: Byte) = memory.writeByte(addr.addr, data)
 
-    override fun writeI32(addr: WasmPtr, data: Int) = memory.writeI32(addr, data)
+    override fun writeI32(addr: WasmPtr<*>, data: Int) = memory.writeI32(addr.addr, data)
 
-    override fun writeI64(addr: WasmPtr, data: Long) = memory.writeLong(addr, data)
+    override fun writeI64(addr: WasmPtr<*>, data: Long) = memory.writeLong(addr.addr, data)
 
     override fun write(
-        addr: WasmPtr,
+        addr: WasmPtr<*>,
         data: ByteArray,
         offset: Int,
         size: Int
-    ) = memory.write(addr, data, offset, size)
+    ) = memory.write(addr.addr, data, offset, size)
 
     override fun readFromChannel(
         channel: FdChannel,

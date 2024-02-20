@@ -45,10 +45,10 @@ private class Getcwd(
 
     private fun getCwd(
         instance: Instance,
-        dst: WasmPtr,
+        dst: WasmPtr<WasmPtr<Byte>>,
         size: Int
     ): Int {
-        logger.finest { "getCwd(dst: 0x${dst.toString(16)} size: $size)" }
+        logger.finest { "getCwd(dst: 0x${dst.addr.toString(16)} size: $size)" }
         if (size == 0) return -Errno.INVAL.code
 
         val path = filesystem.getCwd()
@@ -57,7 +57,7 @@ private class Getcwd(
         if (size < pathBytes.size) {
             return -Errno.RANGE.code
         }
-        instance.memory().write(dst, pathBytes)
+        instance.memory().write(dst.addr, pathBytes)
 
         return pathBytes.size
     }

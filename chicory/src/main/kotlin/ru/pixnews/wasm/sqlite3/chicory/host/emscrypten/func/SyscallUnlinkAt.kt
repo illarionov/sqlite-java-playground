@@ -36,7 +36,7 @@ private class Unlinkat(
 ) : EmscryptenHostFunction {
     override fun apply(instance: Instance, vararg args: Value): Value {
         val dirfd = args[0].asInt()
-        val pathnamePtr = args[1].asWasmAddr()
+        val pathnamePtr = args[1].asWasmAddr<Byte>()
         val flags = args[2].asInt().toUInt()
 
         val errNo = try {

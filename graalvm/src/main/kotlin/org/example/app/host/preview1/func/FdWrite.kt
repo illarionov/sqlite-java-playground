@@ -4,6 +4,7 @@ import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
 import com.oracle.truffle.api.frame.VirtualFrame
 import java.util.logging.Level
 import java.util.logging.Logger
+import org.example.app.ext.asWasmPtr
 import org.example.app.host.BaseWasmNode
 import org.example.app.host.Host
 import org.graalvm.wasm.WasmContext
@@ -16,6 +17,7 @@ import ru.pixnews.wasm.host.filesystem.SysException
 import ru.pixnews.wasm.host.memory.DefaultWasiMemoryWriter
 import ru.pixnews.wasm.host.wasi.preview1.ext.FdWriteExt
 import ru.pixnews.wasm.host.memory.WasiMemoryWriter
+import ru.pixnews.wasm.host.wasi.preview1.type.CioVec
 import ru.pixnews.wasm.host.wasi.preview1.type.CiovecArray
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.wasi.preview1.type.Fd
@@ -47,18 +49,18 @@ private class FdWrite(
         val args = frame.arguments
         return fdWrite(
             Fd(args[0] as Int),
-            args[1] as WasmPtr,
+            args.asWasmPtr(1),
             args[2] as Int,
-            args[3] as WasmPtr
+            args.asWasmPtr(3),
         )
     }
 
     @TruffleBoundary
     private fun fdWrite(
         fd: Fd,
-        pCiov: WasmPtr,
+        pCiov: WasmPtr<CioVec>,
         cIovCnt: Int,
-        pNum: WasmPtr
+        pNum: WasmPtr<Int>
     ): Int {
         val cioVecs: CiovecArray = FdWriteExt.readCiovecs(memory, pCiov, cIovCnt)
         return try {

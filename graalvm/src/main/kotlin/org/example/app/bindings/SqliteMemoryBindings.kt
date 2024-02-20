@@ -39,7 +39,7 @@ class SqliteMemoryBindings(
         initEmscriptenStack()
     }
 
-    public fun allocOrThrow(len: UInt): WasmPtr {
+    public fun <P: Any?> allocOrThrow(len: UInt): WasmPtr<P> {
         check (len > 0U)
         val mem = sqlite3_malloc.execute(len.toInt())
 
@@ -49,26 +49,27 @@ class SqliteMemoryBindings(
         return mem.asWasmAddr()
     }
 
-    public fun free(ptr: WasmPtr) {
+    public fun free(ptr: WasmPtr<*>) {
         sqlite3_free.execute(ptr)
     }
 
-    public fun freeSilent(value: WasmPtr): Result<Unit> = kotlin.runCatching {
+    public fun freeSilent(value: WasmPtr<*>): Result<Unit> = kotlin.runCatching {
         free(value)
     }
 
-    public fun allocNullTerminatedString(string: String): WasmPtr {
+    public fun allocNullTerminatedString(string: String): WasmPtr<Byte> {
         val bytes = string.encodeToByteArray()
-        val mem = allocOrThrow(bytes.size.toUInt() + 1U)
+        val mem = allocOrThrow<Byte>(bytes.size.toUInt() + 1U)
         memory.writeNullTerminatedString(mem, string)
         return mem
     }
 
-    fun readAddr(offset: WasmPtr): WasmPtr= memory.readI32(offset)
+    @Suppress("UNCHECKED_CAST")
+    fun <P: WasmPtr<*>> readAddr(offset: WasmPtr<P>): P = WasmPtr<Unit>(memory.readI32(offset)) as P
 
-    fun writeAddr(offset: WasmPtr, addr: Value) {
+    fun writeAddr(offset: WasmPtr<*>, addr: Value) {
         // TODO: check if null
-        memory.writePtr(offset, if (!addr.isNull) addr.asWasmAddr() else 0 )
+        memory.writePtr(offset, if (!addr.isNull) addr.asWasmAddr<Unit>() else WasmPtr.SQLITE3_NULL )
     }
 
     fun readNullTerminatedString(
@@ -80,7 +81,7 @@ class SqliteMemoryBindings(
     }
 
     fun readNullTerminatedString(
-        offsetValue: WasmPtr
+        offsetValue: WasmPtr<Byte>
     ): String? = memory.readNullableNullTerminatedString(offsetValue)
 
     private fun initEmscriptenStack() {
@@ -97,9 +98,9 @@ class SqliteMemoryBindings(
 
         if (max == 0) max = 4
 
-        memory.writeI32(max, 0x02135467)
-        memory.writeI32(max + 4, 0x89BACDFEU.toInt())
-        memory.writeI32(0, 1668509029)
+        memory.writeI32(WasmPtr<Unit>(max), 0x02135467)
+        memory.writeI32(WasmPtr<Unit>(max + 4), 0x89BACDFEU.toInt())
+        memory.writeI32(WasmPtr<Unit>(0), 1668509029)
     }
 
     private fun checkStackCookie() {
@@ -108,8 +109,8 @@ class SqliteMemoryBindings(
 
         if (max == 0) max = 4
 
-        val cookie1 = memory.readI32(max)
-        val cookie2 = memory.readI32(max + 4)
+        val cookie1 = memory.readI32(WasmPtr<Unit>(max))
+        val cookie2 = memory.readI32(WasmPtr<Unit>(max + 4))
 
         check (cookie1 == 0x02135467 && cookie2 == 0x89BACDFEU.toInt()) {
             "Stack overflow! Stack cookie has been overwritten at ${max.toString(16)}, expected hex dwords " +

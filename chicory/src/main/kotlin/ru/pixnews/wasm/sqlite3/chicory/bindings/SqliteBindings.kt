@@ -3,14 +3,22 @@ package ru.pixnews.wasm.sqlite3.chicory.bindings
 import com.dylibso.chicory.runtime.Instance
 import ru.pixnews.sqlite3.wasm.Sqlite3Errno
 import ru.pixnews.sqlite3.wasm.Sqlite3Exception
-import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
+import ru.pixnews.wasm.host.memory.readNullableNullTerminatedString
+import ru.pixnews.wasm.host.sqlite3.Sqlite3Db
+import ru.pixnews.wasm.host.sqlite3.Sqlite3ExecCallback
+import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
+import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr.Companion.sqlite3Null
+import ru.pixnews.wasm.sqlite3.chicory.ext.asValue
+import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
 import ru.pixnews.wasm.sqlite3.chicory.host.memory.ChicoryMemoryImpl
+import ru.pixnews.wasm.sqlite3.chicory.sqlite3.Sqlite3CallbackManager
 
 class SqliteBindings(
     val memory: ChicoryMemoryImpl,
     private val runtimeInstance: Instance,
 ) {
     val memoryBindings = SqliteMemoryBindings(memory, runtimeInstance)
+    val callbackManager: Sqlite3CallbackManager = Sqlite3CallbackManager(memory, runtimeInstance, this)
 
     //val _initialize = runtimeInstance.export("_initialize") // 34
     // val __errno_location = runtimeInstance.export("__errno_location") // 2644
@@ -254,14 +262,14 @@ class SqliteBindings(
 
     val sqlite3Version: String
         get() {
-            val resultPtr = sqlite3_libversion.apply()[0]
-            return checkNotNull(memory.readNullTerminatedString(resultPtr))
+            val resultPtr = sqlite3_libversion.apply()[0].asWasmAddr<Byte>()
+            return checkNotNull(memory.readNullableNullTerminatedString(resultPtr))
         }
 
     val sqlite3SourceId: String
         get() {
-            val resultPtr = sqlite3_sourceid.apply()[0]
-            return checkNotNull(memory.readNullTerminatedString(resultPtr))
+            val resultPtr = sqlite3_sourceid.apply()[0].asWasmAddr<Byte>()
+            return checkNotNull(memory.readNullableNullTerminatedString(resultPtr))
         }
 
     val sqlite3VersionNumber: Int
@@ -269,13 +277,30 @@ class SqliteBindings(
 
     val sqlite3WasmEnumJson: String?
         get() {
-            val resultPtr = sqlite3_wasm_enum_json.apply()[0]
-            return memory.readNullTerminatedString(resultPtr)
+            val resultPtr = sqlite3_wasm_enum_json.apply()[0].asWasmAddr<Byte>()
+            return memory.readNullableNullTerminatedString(resultPtr)
         }
 
     init {
         initSqlite()
     }
+
+    fun sqlite3Exec(
+        sqliteDb: WasmPtr<Sqlite3Db>,
+        pSql: WasmPtr<Byte>,
+        callback: WasmPtr<Sqlite3ExecCallback> = sqlite3Null(),
+        callbackFirstArg: WasmPtr<*> = sqlite3Null<Unit>(),
+        pzErrMsg: WasmPtr<WasmPtr<Byte>> = sqlite3Null(),
+    ): Int {
+        return sqlite3_exec.apply(
+            sqliteDb.asValue(),
+            pSql.asValue(),
+            callback.asValue(),
+            callbackFirstArg.asValue(),
+            pzErrMsg.asValue()
+        )[0].asInt()
+    }
+
 
     // globalThis.sqlite3InitModule
     private fun initSqlite() {

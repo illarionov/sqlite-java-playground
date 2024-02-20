@@ -4,6 +4,7 @@ import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
 import com.oracle.truffle.api.frame.VirtualFrame
 import java.util.logging.Level
 import java.util.logging.Logger
+import org.example.app.ext.asWasmPtr
 import org.example.app.host.BaseWasmNode
 import org.example.app.host.Host
 import org.graalvm.wasm.WasmContext
@@ -30,7 +31,7 @@ class FdSeek(
             Fd(args[0] as Int),
             args[1] as Long,
             args[2] as Int,
-            args[3] as WasmPtr
+            args.asWasmPtr(3),
         )
     }
 
@@ -39,7 +40,7 @@ class FdSeek(
         fd: Fd,
         offset: Long,
         whenceInt: Int,
-        pNewOffset: WasmPtr,
+        pNewOffset: WasmPtr<Long>,
     ): Int {
         val whence = Whence.fromIdOrNull(whenceInt) ?: return Errno.INVAL.code
         return try {

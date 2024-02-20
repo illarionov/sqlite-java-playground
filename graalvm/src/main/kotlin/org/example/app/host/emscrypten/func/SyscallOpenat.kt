@@ -4,6 +4,7 @@ import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
 import com.oracle.truffle.api.frame.VirtualFrame
 import java.nio.file.Path
 import java.util.logging.Logger
+import org.example.app.ext.asWasmPtr
 import org.example.app.host.BaseWasmNode
 import org.example.app.host.Host
 import org.graalvm.wasm.WasmContext
@@ -27,14 +28,14 @@ class SyscallOpenat(
     override fun executeWithContext(frame: VirtualFrame, context: WasmContext): Int {
         val args = frame.arguments
         val mode = if (args.lastIndex == 3) {
-            memory.readI32(args[3] as WasmPtr).toUInt()
+            memory.readI32(args.asWasmPtr<UInt>(3)).toUInt()
         } else {
             0U
         }
 
         val fdOrErrno = openAt(
             dirfd = args[0] as Int,
-            pathnamePtr = args[1] as WasmPtr,
+            pathnamePtr = args.asWasmPtr(1),
             flags = (args[2] as Int).toUInt(),
             mode = mode,
         )
@@ -45,7 +46,7 @@ class SyscallOpenat(
     @TruffleBoundary
     private fun openAt(
         dirfd: Int,
-        pathnamePtr: WasmPtr,
+        pathnamePtr: WasmPtr<Byte>,
         flags: UInt,
         mode: UInt
     ): Int {

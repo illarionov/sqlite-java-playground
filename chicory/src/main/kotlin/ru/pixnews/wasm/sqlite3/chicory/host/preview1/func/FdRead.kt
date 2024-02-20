@@ -15,6 +15,7 @@ import ru.pixnews.wasm.host.memory.Memory
 import ru.pixnews.wasm.host.wasi.preview1.ext.FdReadExt.readIovecs
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.wasi.preview1.type.Fd
+import ru.pixnews.wasm.host.wasi.preview1.type.Iovec
 import ru.pixnews.wasm.host.wasi.preview1.type.IovecArray
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
@@ -61,9 +62,9 @@ private class FdRead(
 
     override fun apply(instance: Instance, vararg args: Value): Errno {
         val fd = Fd(args[0].asInt())
-        val pIov = args[1].asWasmAddr()
+        val pIov = args[1].asWasmAddr<Iovec>()
         val iovCnt = args[2].asInt()
-        val pNum = args[3].asWasmAddr()
+        val pNum = args[3].asWasmAddr<Int>()
 
         val ioVecs = readIovecs(memory, pIov, iovCnt)
         return try {

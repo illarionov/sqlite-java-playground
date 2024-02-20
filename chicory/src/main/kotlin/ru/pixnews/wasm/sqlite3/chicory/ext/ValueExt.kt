@@ -5,7 +5,9 @@ import com.dylibso.chicory.wasm.types.Value.REF_NULL_VALUE
 import com.dylibso.chicory.wasm.types.ValueType
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 
-internal fun Value.asWasmAddr(): WasmPtr = asInt()
+internal fun <P: Any?> Value.asWasmAddr(): WasmPtr<P> = WasmPtr(asInt())
+
+internal fun WasmPtr<*>.asValue(): Value = Value.i32(this.addr.toLong())
 
 internal fun Value?.isNull(): Boolean {
     return when (this?.type()) {
@@ -21,4 +23,4 @@ internal fun Value?.isNull(): Boolean {
     }
 }
 
-internal val SQLITE3_NULL = Value.i32(0)
+internal val SQLITE3_NULLVAL = Value.i32(0)

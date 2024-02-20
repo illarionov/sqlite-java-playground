@@ -3,8 +3,10 @@ package ru.pixnews.wasm.sqlite3.chicory.host.preview1.func
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.wasm.types.Value
+import com.dylibso.chicory.wasm.types.ValueType
 import java.util.logging.Level
 import java.util.logging.Logger
+import ru.pixnews.wasm.host.WasmValueType
 import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I32
 import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I64
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
@@ -47,7 +49,7 @@ private class FdSeek(
         val fd = Fd(args[0].asInt())
         val offset = args[1].asLong()
         val whence = Whence.fromIdOrNull(args[2].asInt()) ?: return Errno.INVAL
-        val pNewOffset = args[3].asWasmAddr()
+        val pNewOffset = args[3].asWasmAddr<Long>()
         return fdSeek(fd, offset, whence, pNewOffset)
     }
 
@@ -55,7 +57,7 @@ private class FdSeek(
         fd: Fd,
         offset: Long,
         whence: Whence,
-        pNewOffset: WasmPtr,
+        pNewOffset: WasmPtr<Long>,
     ): Errno {
         return try {
             val channel: FdChannel = filesystem.getStreamByFd(fd)

@@ -3,6 +3,7 @@ package org.example.app.host.emscrypten.func
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
 import com.oracle.truffle.api.frame.VirtualFrame
 import java.util.logging.Logger
+import org.example.app.ext.asWasmPtr
 import org.example.app.host.BaseWasmNode
 import org.example.app.host.Host
 import org.graalvm.wasm.WasmContext
@@ -23,7 +24,7 @@ class SyscallUnlinkat(
         val args = frame.arguments
         return syscallUnlinkat(
             args[0] as Int,
-            args[1] as WasmPtr,
+            args.asWasmPtr(1),
             (args[2] as Int).toUInt(),
         )
     }
@@ -31,7 +32,7 @@ class SyscallUnlinkat(
     @TruffleBoundary
     private fun syscallUnlinkat(
         dirfd: Int,
-        pathnamePtr: WasmPtr,
+        pathnamePtr: WasmPtr<Byte>,
         flags: UInt,
     ): Int {
         val errNo = try {

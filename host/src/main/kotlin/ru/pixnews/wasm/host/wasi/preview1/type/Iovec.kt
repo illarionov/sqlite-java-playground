@@ -9,7 +9,7 @@ import ru.pixnews.wasm.host.WasmValueType
  * @param bufLen The length of the buffer to be filled.
  */
 data class Iovec(
-    val buf: WasmPtr, // (@witx const_pointer u8))
+    val buf: WasmPtr<Byte>, // (@witx const_pointer u8))
     val bufLen: Size // (field $buf_len $size)
 ) {
     public companion object : WasiTypename {

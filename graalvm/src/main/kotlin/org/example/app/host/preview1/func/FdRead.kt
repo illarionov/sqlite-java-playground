@@ -4,6 +4,7 @@ import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
 import com.oracle.truffle.api.frame.VirtualFrame
 import java.util.logging.Level
 import java.util.logging.Logger
+import org.example.app.ext.asWasmPtr
 import org.example.app.host.BaseWasmNode
 import org.example.app.host.Host
 import org.graalvm.wasm.WasmContext
@@ -16,6 +17,7 @@ import ru.pixnews.wasm.host.filesystem.SysException
 import ru.pixnews.wasm.host.wasi.preview1.ext.FdReadExt.readIovecs
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.wasi.preview1.type.Fd
+import ru.pixnews.wasm.host.wasi.preview1.type.Iovec
 import ru.pixnews.wasm.host.wasi.preview1.type.IovecArray
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 
@@ -45,18 +47,18 @@ private class FdRead(
         val args = frame.arguments
         return fdRead(
             Fd(args[0] as Int),
-            args[1] as WasmPtr,
+            args.asWasmPtr(1),
             args[2] as Int,
-            args[3] as WasmPtr
+            args.asWasmPtr(3),
         )
     }
 
     @TruffleBoundary
     private fun fdRead(
         fd: Fd,
-        pIov: WasmPtr,
+        pIov: WasmPtr<Iovec>,
         iovCnt: Int,
-        pNum: WasmPtr
+        pNum: WasmPtr<Int>
     ): Int {
         val ioVecs: IovecArray = readIovecs(memory, pIov, iovCnt)
         return try {

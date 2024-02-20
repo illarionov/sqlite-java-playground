@@ -10,7 +10,7 @@ import ru.pixnews.wasm.host.WasmValueType
  * @param bufLen The length of the buffer to be written.
  */
 data class CioVec(
-    val buf: WasmPtr, // (@witx const_pointer u8))
+    val buf: WasmPtr<Byte>, // (@witx const_pointer u8))
     val bufLen: Size // (field $buf_len $size)
 ) {
     companion object : WasiTypename {

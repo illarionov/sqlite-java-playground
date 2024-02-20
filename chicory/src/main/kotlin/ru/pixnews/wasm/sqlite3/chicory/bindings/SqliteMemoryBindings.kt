@@ -3,12 +3,13 @@ package ru.pixnews.wasm.sqlite3.chicory.bindings
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.wasm.types.Value
 import com.dylibso.chicory.wasm.types.ValueType
+import ru.pixnews.wasm.host.memory.readNullableNullTerminatedString
 import ru.pixnews.wasm.host.memory.writeNullTerminatedString
 import ru.pixnews.wasm.host.memory.writePtr
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
+import ru.pixnews.wasm.sqlite3.chicory.ext.asValue
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
 import ru.pixnews.wasm.sqlite3.chicory.ext.isNull
-import ru.pixnews.wasm.sqlite3.chicory.ext.readNullTerminatedString
 import ru.pixnews.wasm.sqlite3.chicory.host.memory.ChicoryMemoryImpl
 
 class SqliteMemoryBindings(
@@ -41,7 +42,7 @@ class SqliteMemoryBindings(
         initEmscriptenStack()
     }
 
-    fun allocOrThrow(len: UInt): Value {
+    fun <P: Any?> allocOrThrow(len: UInt): WasmPtr<P> {
         check (len > 0U)
         val mem = sqlite3_malloc.apply(
             Value.i32(len.toLong())
@@ -49,32 +50,33 @@ class SqliteMemoryBindings(
 
         if (mem.isNull()) throw OutOfMemoryError()
 
-        return mem!!
+        return mem!!.asWasmAddr()
     }
 
-    fun free(value: Value) {
-        sqlite3_free.apply(value)
+    fun free(pointer: WasmPtr<*>) {
+        sqlite3_free.apply(pointer.asValue())
     }
 
-    fun freeSilent(value: Value): Result<Unit> = kotlin.runCatching {
+    fun freeSilent(value: WasmPtr<*>): Result<Unit> = kotlin.runCatching {
         free(value)
     }
 
-    fun allocNullTerminatedString(string: String): Value {
+    fun allocNullTerminatedString(string: String): WasmPtr<Byte> {
         val bytes = string.encodeToByteArray()
-        val mem = allocOrThrow(bytes.size.toUInt() + 1U)
-        memory.writeNullTerminatedString(mem.asWasmAddr(), string)
+        val mem = allocOrThrow<Byte>(bytes.size.toUInt() + 1U)
+        memory.writeNullTerminatedString(mem, string)
         return mem
     }
 
-    fun readAddr(offset: WasmPtr): Value = Value.i32(memory.readI32(offset).toLong())
+    @Suppress("UNCHECKED_CAST")
+    fun <T: Any, P: WasmPtr<T>> readAddr(offset: WasmPtr<P>): P = WasmPtr<T>(memory.readI32(offset)) as P
 
-    fun writeAddr(offset: WasmPtr, addr: Value) {
+    fun writeAddr(offset: WasmPtr<*>, addr: Value) {
         check(addr.type() == ValueType.I32)
-        memory.writePtr(offset, addr.asWasmAddr())
+        memory.writePtr(offset, addr.asWasmAddr<Unit>())
     }
 
-    fun readNullTerminatedString(offsetValue: Value): String? = memory.readNullTerminatedString(offsetValue)
+    fun readNullTerminatedString(offsetValue: WasmPtr<Byte>): String? = memory.readNullableNullTerminatedString(offsetValue)
 
     private fun initEmscriptenStack() {
         emscripten_stack_init.apply()
@@ -88,9 +90,9 @@ class SqliteMemoryBindings(
 
         if (max == 0) max = 4
 
-        memory.writeI32(max, 0x02135467)
-        memory.writeI32(max + 4, 0x89BACDFEU.toInt())
-        memory.writeI32(0, 1668509029)
+        memory.writeI32(WasmPtr<Int>(max), 0x02135467)
+        memory.writeI32(WasmPtr<Int>(max + 4), 0x89BACDFEU.toInt())
+        memory.writeI32(WasmPtr<Int>(0), 1668509029)
     }
 
     private fun checkStackCookie() {
@@ -99,8 +101,8 @@ class SqliteMemoryBindings(
 
         if (max == 0) max = 4
 
-        val cookie1 = memory.readI32(max)
-        val cookie2 = memory.readI32(max + 4)
+        val cookie1 = memory.readI32(WasmPtr<Int>(max))
+        val cookie2 = memory.readI32(WasmPtr<Int>(max + 4))
 
         check (cookie1 == 0x02135467 && cookie2 == 0x89BACDFEU.toInt()) {
             "Stack overflow! Stack cookie has been overwritten at ${max.toString(16)}, expected hex dwords " +

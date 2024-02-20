@@ -25,7 +25,7 @@ internal class UnsafeWasiMemoryReader(
     ): Array<ByteBuffer> = Array(iovecList.size) {
         val ioVec = iovecList[it]
         memoryBuffer.slice(
-            ioVec.buf,
+            ioVec.buf.addr,
             ioVec.bufLen.value.toInt()
         )
     }

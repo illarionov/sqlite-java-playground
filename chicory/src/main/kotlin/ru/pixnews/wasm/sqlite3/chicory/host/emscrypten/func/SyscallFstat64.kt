@@ -16,6 +16,7 @@ import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.emscriptenEnvHostFunction
 import ru.pixnews.wasm.host.filesystem.FileSystem
 import ru.pixnews.wasm.host.include.sys.pack
 import ru.pixnews.wasm.host.filesystem.SysException
+import ru.pixnews.wasm.host.include.sys.StructStat
 
 fun syscallFstat64(
     filesystem: FileSystem,
@@ -48,13 +49,13 @@ private class Fstat64(
     private fun fstat64(
         instance: Instance,
         fd: Fd,
-        dst: WasmPtr,
+        dst: WasmPtr<StructStat>,
     ): Int {
         try {
             val stat = filesystem.stat(fd).also {
                 logger.finest { "fStat64($fd): OK $it" }
             }.pack()
-            instance.memory().write(dst, stat)
+            instance.memory().write(dst.addr, stat)
         } catch (e: SysException) {
             logger.finest { "fStat64(${fd}): Error ${e.errNo}" }
             return -e.errNo.code

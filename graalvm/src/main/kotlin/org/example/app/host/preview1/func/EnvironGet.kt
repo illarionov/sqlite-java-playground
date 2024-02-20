@@ -2,6 +2,7 @@ package org.example.app.host.preview1.func
 
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
 import com.oracle.truffle.api.frame.VirtualFrame
+import org.example.app.ext.asWasmPtr
 import org.example.app.host.BaseWasmNode
 import org.example.app.host.Host
 import org.graalvm.wasm.WasmContext
@@ -18,13 +19,16 @@ class EnvironGet(
 ): BaseWasmNode(language, instance, functionName) {
     override fun executeWithContext(frame: VirtualFrame, context: WasmContext): Int {
         val args = frame.arguments
-        return environGet(args[0] as WasmPtr, args[1] as WasmPtr)
+        return environGet(
+            args.asWasmPtr(0),
+            args.asWasmPtr(1),
+            )
     }
 
     @TruffleBoundary
     private fun environGet(
-        environPAddr: WasmPtr,
-        environBufAddr: WasmPtr,
+        environPAddr: WasmPtr<Int>,
+        environBufAddr: WasmPtr<Int>,
     ): Int {
         return WasiEnvironmentFunc.environGet(
             envProvider = host.systemEnvProvider,

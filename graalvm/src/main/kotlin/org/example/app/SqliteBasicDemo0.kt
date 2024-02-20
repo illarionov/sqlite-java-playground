@@ -6,6 +6,7 @@ import kotlin.time.measureTimedValue
 import org.example.app.bindings.SqliteBindings
 import org.example.app.sqlite3.Sqlite3CApi
 import ru.pixnews.sqlite3.wasm.Sqlite3Result
+import ru.pixnews.wasm.host.sqlite3.Sqlite3Db
 import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
 
 class SqliteBasicDemo0(
@@ -42,7 +43,7 @@ class SqliteBasicDemo0(
     }
 
     private fun testDbSqliteVersion() {
-        val dbPointer: WasmPtr = api.sqlite3Open("/home/work/test.db")
+        val dbPointer: WasmPtr<Sqlite3Db> = api.sqlite3Open("/home/work/test.db")
         // val dbPointer: Value = api.sqlite3Open(":memory:")
 
         try {
@@ -54,7 +55,7 @@ class SqliteBasicDemo0(
     }
 
     private fun testDbTable() {
-        val dbPointer: WasmPtr = api.sqlite3Open("/home/work/test7.db")
+        val dbPointer: WasmPtr<Sqlite3Db> = api.sqlite3Open("/home/work/test7.db")
         //val dbPointer: Value = api.sqlite3Open(":memory:")
 
         try {
@@ -76,7 +77,7 @@ class SqliteBasicDemo0(
     }
 
     private fun testLargeSqliteDatabase() {
-        val dbPointer: WasmPtr = api.sqlite3Open("/home/work/comments_dataset.db")
+        val dbPointer: WasmPtr<Sqlite3Db> = api.sqlite3Open("/home/work/comments_dataset.db")
 
         try {
             val requests = listOf(
