@@ -15,7 +15,7 @@ import ru.pixnews.wasm.host.include.sys.pack
 import ru.pixnews.wasm.host.memory.write
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.wasi.preview1.type.Fd
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
+import ru.pixnews.wasm.host.WasmPtr
 
 class SyscallFstat64(
     language: WasmLanguage,

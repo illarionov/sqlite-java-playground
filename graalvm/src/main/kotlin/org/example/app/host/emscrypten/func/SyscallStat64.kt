@@ -14,7 +14,7 @@ import ru.pixnews.wasm.host.filesystem.SysException
 import ru.pixnews.wasm.host.include.sys.StructStat
 import ru.pixnews.wasm.host.include.sys.pack
 import ru.pixnews.wasm.host.memory.write
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
+import ru.pixnews.wasm.host.WasmPtr
 
 fun syscallLstat64(
     language: WasmLanguage,

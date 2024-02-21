@@ -3,15 +3,13 @@ package ru.pixnews.wasm.sqlite3.chicory.host.preview1.func
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.wasm.types.Value
-import com.dylibso.chicory.wasm.types.ValueType
 import java.util.logging.Level
 import java.util.logging.Logger
-import ru.pixnews.wasm.host.WasmValueType
 import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I32
 import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I64
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.wasi.preview1.type.Fd
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
+import ru.pixnews.wasm.host.WasmPtr
 import ru.pixnews.wasm.host.wasi.preview1.type.Whence
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr

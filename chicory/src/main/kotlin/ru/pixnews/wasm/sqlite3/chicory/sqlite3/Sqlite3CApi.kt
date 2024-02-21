@@ -7,10 +7,10 @@ import ru.pixnews.sqlite3.wasm.Sqlite3Version
 import ru.pixnews.wasm.host.sqlite3.Sqlite3Db
 import ru.pixnews.wasm.host.sqlite3.Sqlite3ExecCallback
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr.Companion.SQLITE3_NULL
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr.Companion.WASM_SIZEOF_PTR
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr.Companion.sqlite3Null
+import ru.pixnews.wasm.host.WasmPtr
+import ru.pixnews.wasm.host.WasmPtr.Companion.SQLITE3_NULL
+import ru.pixnews.wasm.host.WasmPtr.Companion.WASM_SIZEOF_PTR
+import ru.pixnews.wasm.host.WasmPtr.Companion.sqlite3Null
 import ru.pixnews.wasm.sqlite3.chicory.bindings.SqliteBindings
 import ru.pixnews.wasm.sqlite3.chicory.ext.asValue
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
@@ -113,6 +113,7 @@ class Sqlite3CApi(
                 return Sqlite3Result.Error(errNo, errNo, errMsg,)
             }
         } finally {
+            callbackManager.unregisterCallback(pCallback)
             memory.freeSilent(pSql)
             memory.freeSilent(pzErrMsg)
         }

@@ -3,7 +3,7 @@ package ru.pixnews.wasm.sqlite3.chicory.ext
 import com.dylibso.chicory.wasm.types.Value
 import com.dylibso.chicory.wasm.types.Value.REF_NULL_VALUE
 import com.dylibso.chicory.wasm.types.ValueType
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
+import ru.pixnews.wasm.host.WasmPtr
 
 internal fun <P: Any?> Value.asWasmAddr(): WasmPtr<P> = WasmPtr(asInt())
 

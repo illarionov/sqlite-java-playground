@@ -1,8 +1,8 @@
 package ru.pixnews.wasm.host.memory
 
 import java.io.ByteArrayOutputStream
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
-import ru.pixnews.wasm.host.wasi.preview1.type.isSqlite3Null
+import ru.pixnews.wasm.host.WasmPtr
+import ru.pixnews.wasm.host.isSqlite3Null
 
 fun Memory.readNullableNullTerminatedString(offset: WasmPtr<Byte>): String? {
     return if (!offset.isSqlite3Null()) {

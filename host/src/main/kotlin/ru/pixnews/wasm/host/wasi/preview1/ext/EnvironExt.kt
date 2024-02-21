@@ -4,8 +4,8 @@ import ru.pixnews.wasm.host.memory.Memory
 import ru.pixnews.wasm.host.memory.encodedNullTerminatedStringLength
 import ru.pixnews.wasm.host.memory.writeNullTerminatedString
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
-import ru.pixnews.wasm.host.wasi.preview1.type.plus
+import ru.pixnews.wasm.host.WasmPtr
+import ru.pixnews.wasm.host.plus
 
 object WasiEnvironmentFunc {
     fun environSizesGet(

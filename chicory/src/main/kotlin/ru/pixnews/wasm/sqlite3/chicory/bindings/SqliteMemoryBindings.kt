@@ -6,7 +6,7 @@ import com.dylibso.chicory.wasm.types.ValueType
 import ru.pixnews.wasm.host.memory.readNullableNullTerminatedString
 import ru.pixnews.wasm.host.memory.writeNullTerminatedString
 import ru.pixnews.wasm.host.memory.writePtr
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
+import ru.pixnews.wasm.host.WasmPtr
 import ru.pixnews.wasm.sqlite3.chicory.ext.asValue
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
 import ru.pixnews.wasm.sqlite3.chicory.ext.isNull

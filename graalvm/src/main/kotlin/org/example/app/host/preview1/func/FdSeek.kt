@@ -15,7 +15,7 @@ import ru.pixnews.wasm.host.filesystem.fd.FdChannel
 import ru.pixnews.wasm.host.filesystem.fd.position
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.wasi.preview1.type.Fd
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
+import ru.pixnews.wasm.host.WasmPtr
 import ru.pixnews.wasm.host.wasi.preview1.type.Whence
 
 class FdSeek(

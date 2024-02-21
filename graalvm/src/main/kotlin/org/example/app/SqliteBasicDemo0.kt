@@ -7,7 +7,7 @@ import org.example.app.bindings.SqliteBindings
 import org.example.app.sqlite3.Sqlite3CApi
 import ru.pixnews.sqlite3.wasm.Sqlite3Result
 import ru.pixnews.wasm.host.sqlite3.Sqlite3Db
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
+import ru.pixnews.wasm.host.WasmPtr
 
 class SqliteBasicDemo0(
     private val sqliteBindings: SqliteBindings,

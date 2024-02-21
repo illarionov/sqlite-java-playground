@@ -16,7 +16,7 @@ import ru.pixnews.wasm.host.include.Fcntl
 import ru.pixnews.wasm.host.include.oMaskToString
 import ru.pixnews.wasm.host.include.sMaskToString
 import ru.pixnews.wasm.host.wasi.preview1.type.Fd
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
+import ru.pixnews.wasm.host.WasmPtr
 
 class SyscallOpenat(
     language: WasmLanguage,

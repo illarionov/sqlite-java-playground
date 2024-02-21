@@ -1,6 +1,4 @@
-package ru.pixnews.wasm.host.wasi.preview1.type
-
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr.Companion.SQLITE3_NULL
+package ru.pixnews.wasm.host
 
 @JvmInline
 public value class WasmPtr<P: Any?>(
@@ -16,6 +14,6 @@ public value class WasmPtr<P: Any?>(
     }
 }
 
-public fun WasmPtr<*>.isSqlite3Null(): Boolean = this == SQLITE3_NULL
+public fun WasmPtr<*>.isSqlite3Null(): Boolean = this == WasmPtr.SQLITE3_NULL
 
 operator fun <P> WasmPtr<P>.plus(bytes: Int): WasmPtr<P> = WasmPtr(addr + bytes)

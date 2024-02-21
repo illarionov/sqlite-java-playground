@@ -7,11 +7,11 @@ import ru.pixnews.sqlite3.wasm.Sqlite3Exception
 import ru.pixnews.sqlite3.wasm.Sqlite3Result
 import ru.pixnews.wasm.host.sqlite3.Sqlite3Db
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr.Companion.SQLITE3_NULL
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr.Companion.WASM_SIZEOF_PTR
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr.Companion.sqlite3Null
-import ru.pixnews.wasm.host.wasi.preview1.type.isSqlite3Null
+import ru.pixnews.wasm.host.WasmPtr
+import ru.pixnews.wasm.host.WasmPtr.Companion.SQLITE3_NULL
+import ru.pixnews.wasm.host.WasmPtr.Companion.WASM_SIZEOF_PTR
+import ru.pixnews.wasm.host.WasmPtr.Companion.sqlite3Null
+import ru.pixnews.wasm.host.isSqlite3Null
 
 class Sqlite3CApi(
     private val bindings: SqliteBindings

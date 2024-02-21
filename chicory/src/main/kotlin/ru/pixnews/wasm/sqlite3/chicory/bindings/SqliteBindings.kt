@@ -6,8 +6,8 @@ import ru.pixnews.sqlite3.wasm.Sqlite3Exception
 import ru.pixnews.wasm.host.memory.readNullableNullTerminatedString
 import ru.pixnews.wasm.host.sqlite3.Sqlite3Db
 import ru.pixnews.wasm.host.sqlite3.Sqlite3ExecCallback
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr.Companion.sqlite3Null
+import ru.pixnews.wasm.host.WasmPtr
+import ru.pixnews.wasm.host.WasmPtr.Companion.sqlite3Null
 import ru.pixnews.wasm.sqlite3.chicory.ext.asValue
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
 import ru.pixnews.wasm.sqlite3.chicory.host.memory.ChicoryMemoryImpl
@@ -23,7 +23,6 @@ class SqliteBindings(
     //val _initialize = runtimeInstance.export("_initialize") // 34
     // val __errno_location = runtimeInstance.export("__errno_location") // 2644
     val __wasm_call_ctors = runtimeInstance.export("__wasm_call_ctors") // 34
-    val __indirect_function_table = runtimeInstance.export("__indirect_function_table") // 0
 
     val sqlite3_status64 = runtimeInstance.export("sqlite3_status64") // 35
     val sqlite3_status = runtimeInstance.export("sqlite3_status") // 38

@@ -14,14 +14,12 @@ import ru.pixnews.wasm.host.filesystem.ReadWriteStrategy
 import ru.pixnews.wasm.host.filesystem.ReadWriteStrategy.CHANGE_POSITION
 import ru.pixnews.wasm.host.filesystem.ReadWriteStrategy.DO_NOT_CHANGE_POSITION
 import ru.pixnews.wasm.host.filesystem.SysException
-import ru.pixnews.wasm.host.memory.DefaultWasiMemoryWriter
 import ru.pixnews.wasm.host.wasi.preview1.ext.FdWriteExt
-import ru.pixnews.wasm.host.memory.WasiMemoryWriter
 import ru.pixnews.wasm.host.wasi.preview1.type.CioVec
 import ru.pixnews.wasm.host.wasi.preview1.type.CiovecArray
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.wasi.preview1.type.Fd
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
+import ru.pixnews.wasm.host.WasmPtr
 
 fun fdWrite(
     language: WasmLanguage,

@@ -7,7 +7,7 @@ import ru.pixnews.wasm.host.memory.readNullTerminatedString
 import ru.pixnews.wasm.host.memory.readNullableNullTerminatedString
 import ru.pixnews.wasm.host.memory.writeNullTerminatedString
 import ru.pixnews.wasm.host.memory.writePtr
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
+import ru.pixnews.wasm.host.WasmPtr
 
 class SqliteMemoryBindings(
     mainBindings: Value,

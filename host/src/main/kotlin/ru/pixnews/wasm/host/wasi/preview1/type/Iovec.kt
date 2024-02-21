@@ -1,5 +1,6 @@
 package ru.pixnews.wasm.host.wasi.preview1.type
 
+import ru.pixnews.wasm.host.WasmPtr
 import ru.pixnews.wasm.host.WasmValueType
 
 /**

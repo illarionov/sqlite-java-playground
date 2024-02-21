@@ -11,7 +11,7 @@ import org.graalvm.wasm.WasmInstance
 import org.graalvm.wasm.WasmLanguage
 import ru.pixnews.wasm.host.filesystem.SysException
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
+import ru.pixnews.wasm.host.WasmPtr
 
 class SyscallUnlinkat(
     language: WasmLanguage,

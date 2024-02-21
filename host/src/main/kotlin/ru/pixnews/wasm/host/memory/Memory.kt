@@ -4,7 +4,7 @@ import ru.pixnews.wasm.host.filesystem.ReadWriteStrategy
 import ru.pixnews.wasm.host.filesystem.fd.FdChannel
 import ru.pixnews.wasm.host.wasi.preview1.type.CiovecArray
 import ru.pixnews.wasm.host.wasi.preview1.type.IovecArray
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
+import ru.pixnews.wasm.host.WasmPtr
 
 interface Memory {
     fun readI8(addr: WasmPtr<*>): Byte

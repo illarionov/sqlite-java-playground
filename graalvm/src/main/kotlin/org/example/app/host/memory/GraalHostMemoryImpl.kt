@@ -11,8 +11,7 @@ import ru.pixnews.wasm.host.memory.WasiMemoryReader
 import ru.pixnews.wasm.host.memory.WasiMemoryWriter
 import ru.pixnews.wasm.host.wasi.preview1.type.CiovecArray
 import ru.pixnews.wasm.host.wasi.preview1.type.IovecArray
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
-import ru.pixnews.wasm.host.wasi.preview1.type.plus
+import ru.pixnews.wasm.host.WasmPtr
 
 class GraalHostMemoryImpl(
     val memory: Value

@@ -19,7 +19,7 @@ import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.wasi.preview1.type.Fd
 import ru.pixnews.wasm.host.wasi.preview1.type.Iovec
 import ru.pixnews.wasm.host.wasi.preview1.type.IovecArray
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
+import ru.pixnews.wasm.host.WasmPtr
 
 fun fdRead(
     language: WasmLanguage,

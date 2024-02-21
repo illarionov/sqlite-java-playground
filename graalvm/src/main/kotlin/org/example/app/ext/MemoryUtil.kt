@@ -3,7 +3,7 @@ package org.example.app.ext
 import org.graalvm.polyglot.Value
 import ru.pixnews.wasm.host.memory.Memory
 import ru.pixnews.wasm.host.memory.readNullTerminatedString
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
+import ru.pixnews.wasm.host.WasmPtr
 
 internal fun <P: Any?> Value.asWasmAddr(): WasmPtr<P> = WasmPtr(asInt())
 

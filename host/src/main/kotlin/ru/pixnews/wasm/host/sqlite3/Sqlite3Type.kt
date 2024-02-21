@@ -1,6 +1,6 @@
 package ru.pixnews.wasm.host.sqlite3
 
-import ru.pixnews.wasm.host.wasi.preview1.type.WasmPtr
+import ru.pixnews.wasm.host.WasmPtr
 
 typealias Sqlite3Db = Void
 

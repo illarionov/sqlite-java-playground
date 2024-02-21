@@ -1,10 +1,12 @@
-import com.dylibso.chicory.wasm.types.Value
 import java.util.logging.Logger
 import kotlin.time.measureTime
 import kotlin.time.measureTimedValue
 import ru.pixnews.wasm.sqlite3.chicory.bindings.SqliteBindings
 import ru.pixnews.wasm.sqlite3.chicory.sqlite3.Sqlite3CApi
 import ru.pixnews.sqlite3.wasm.Sqlite3Result
+import ru.pixnews.wasm.host.sqlite3.Sqlite3Db
+import ru.pixnews.wasm.host.sqlite3.Sqlite3ExecCallback
+import ru.pixnews.wasm.host.WasmPtr
 
 class SqliteBasicDemo1(
     private val sqliteBindings: SqliteBindings,
@@ -55,14 +57,26 @@ class SqliteBasicDemo1(
         val dbPointer = api.sqlite3Open("/home/work/test7.db")
         //val dbPointer: Value = api.sqlite3Open(":memory:")
 
+        val cb: Sqlite3ExecCallback = object: Sqlite3ExecCallback {
+            override fun invoke(
+                sqliteDb: WasmPtr<Sqlite3Db>,
+                columns: Int,
+                pColumnNames: WasmPtr<WasmPtr<Byte>>,
+                pResults: WasmPtr<WasmPtr<Byte>>
+            ): Int {
+                log.info { "cb() db: $sqliteDb columns: $columns names: $pColumnNames results: $pResults" }
+                return 1
+            }
+        }
+
         try {
             val requests = listOf(
-                "CREATE TABLE User(id INTEGER PRIMARY KEY, name TEXT);",
-                """INSERT INTO User(`id`, `name`) VALUES (1, 'user 1'), (2, 'user 2'), (3, 'user 3');""",
+                //"CREATE TABLE User(id INTEGER PRIMARY KEY, name TEXT);",
+                //"""INSERT INTO User(`id`, `name`) VALUES (1, 'user 1'), (2, 'user 2'), (3, 'user 3');""",
                 """SELECT * FROM User;"""
             )
             for ((requestNo, sql) in requests.withIndex()) {
-                val result = api.sqlite3Exec(dbPointer, sql)
+                val result = api.sqlite3Exec(dbPointer, sql, cb)
                 log.info { "REQ $requestNo (`${sql}`): result: $result" }
                 if (result is Sqlite3Result.Error) {
                     break
