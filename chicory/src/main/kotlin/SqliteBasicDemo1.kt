@@ -57,17 +57,18 @@ class SqliteBasicDemo1(
         val dbPointer = api.sqlite3Open("/home/work/test7.db")
         //val dbPointer: Value = api.sqlite3Open(":memory:")
 
-        val cb: Sqlite3ExecCallback = object: Sqlite3ExecCallback {
-            override fun invoke(
-                sqliteDb: WasmPtr<Sqlite3Db>,
-                columns: Int,
-                pColumnNames: WasmPtr<WasmPtr<Byte>>,
-                pResults: WasmPtr<WasmPtr<Byte>>
-            ): Int {
-                log.info { "cb() db: $sqliteDb columns: $columns names: $pColumnNames results: $pResults" }
-                return 1
-            }
-        }
+        val cb: Sqlite3ExecCallback? = null
+//        val cb: Sqlite3ExecCallback = object: Sqlite3ExecCallback {
+//            override fun invoke(
+//                sqliteDb: WasmPtr<Sqlite3Db>,
+//                columns: Int,
+//                pColumnNames: WasmPtr<WasmPtr<Byte>>,
+//                pResults: WasmPtr<WasmPtr<Byte>>
+//            ): Int {
+//                log.info { "cb() db: $sqliteDb columns: $columns names: $pColumnNames results: $pResults" }
+//                return 1
+//            }
+//        }
 
         try {
             val requests = listOf(
