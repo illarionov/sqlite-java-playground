@@ -2,13 +2,13 @@ package org.example.app.sqlite3
 
 import org.example.app.bindings.SqliteBindings
 import org.example.app.bindings.SqliteMemoryBindings
+import org.example.app.sqlite3.callback.Sqlite3CallbackManager
 import org.graalvm.polyglot.Value
 import ru.pixnews.sqlite3.wasm.Sqlite3Exception
 import ru.pixnews.sqlite3.wasm.Sqlite3Result
 import ru.pixnews.wasm.host.sqlite3.Sqlite3Db
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.WasmPtr
-import ru.pixnews.wasm.host.WasmPtr.Companion.SQLITE3_NULL
 import ru.pixnews.wasm.host.WasmPtr.Companion.WASM_SIZEOF_PTR
 import ru.pixnews.wasm.host.WasmPtr.Companion.sqlite3Null
 import ru.pixnews.wasm.host.isSqlite3Null

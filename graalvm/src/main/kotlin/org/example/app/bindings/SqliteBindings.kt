@@ -2,7 +2,7 @@ package org.example.app.bindings
 
 import org.example.app.ext.readNullTerminatedString
 import org.example.app.host.memory.GraalHostMemoryImpl
-import org.example.app.sqlite3.Sqlite3CallbackManager
+import org.example.app.sqlite3.callback.Sqlite3CallbackManager
 import org.graalvm.polyglot.Context
 import org.graalvm.polyglot.Value
 import ru.pixnews.sqlite3.wasm.Sqlite3Errno
