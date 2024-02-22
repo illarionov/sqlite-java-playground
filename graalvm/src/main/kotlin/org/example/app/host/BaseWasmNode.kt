@@ -12,7 +12,10 @@ open class BaseWasmNode(
     val functionName: String,
 ) : WasmRootNode(language, null, null){
     val memory: WasmHostMemoryImpl by lazy(LazyThreadSafetyMode.PUBLICATION) {
-        WasmHostMemoryImpl(instance.memory(0), this)
+        WasmHostMemoryImpl(
+            instance.context().memories().memory(0),
+            this
+        )
     }
 
     override fun tryInitialize(context: WasmContext) {

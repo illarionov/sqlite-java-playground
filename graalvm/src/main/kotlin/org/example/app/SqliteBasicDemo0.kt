@@ -64,23 +64,10 @@ class SqliteBasicDemo0(
         val cb: Sqlite3ExecCallback = object: Sqlite3ExecCallback {
             override fun invoke(
                 sqliteDb: WasmPtr<Sqlite3Db>,
-                columns: Int,
-                pResults: WasmPtr<WasmPtr<Byte>>,
-                pColumnNames: WasmPtr<WasmPtr<Byte>>
+                results: List<String>,
+                columnNames: List<String>,
             ): Int {
-                log.info { "cb() db: $sqliteDb columns: $columns names: $pColumnNames results: $pResults" }
-                val columnNames = (0 until columns).map { columnNo ->
-                    val ptr = memory.readAddr(pColumnNames + (columnNo * WasmPtr.WASM_SIZEOF_PTR.toInt()))
-                    memory.readNullTerminatedString(ptr)
-                }
-
-                val results =  (0 until columns).map { columnNo ->
-                    val ptr = memory.readAddr(pResults + (columnNo * WasmPtr.WASM_SIZEOF_PTR.toInt()))
-                    memory.readNullTerminatedString(ptr)
-                }
-
-                log.info { ": names: $columnNames results: $results" }
-
+                log.info { "cb() db: $sqliteDb columns: $columnNames, results: $results" }
                 return 0
             }
         }

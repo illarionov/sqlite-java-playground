@@ -6,7 +6,6 @@ typealias Sqlite3Db = Void
 
 typealias Sqlite3ExecCallback = (
     sqliteDb: WasmPtr<Sqlite3Db>,    // *void
-    columns: Int,
-    pResults: WasmPtr<WasmPtr<Byte>>, // **char
-    pColumnNames: WasmPtr<WasmPtr<Byte>> //**char
+    results: List<String>, // **char
+    columnNames: List<String> //**char
 ) -> Int
