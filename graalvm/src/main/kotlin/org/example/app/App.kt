@@ -4,6 +4,7 @@ import java.time.Clock
 import java.util.logging.LogManager
 import kotlin.time.measureTimedValue
 import org.example.app.bindings.SqliteBindings
+import org.example.app.ext.withWasmContext
 import org.example.app.host.Host
 import org.example.app.host.emscrypten.EmscriptenEnvBindings
 import org.example.app.host.emscrypten.EmscriptenEnvBindings.setupEnvBindings
@@ -41,13 +42,9 @@ private fun testSqlite() {
             clock = Clock.systemDefaultZone(),
         )
 
-        wasmContext.enter()
-        try {
-            val instanceContext: WasmContext = WasmContext.get(null)
+        wasmContext.withWasmContext { instanceContext ->
             setupEnvBindings(instanceContext, host)
             setupWasiSnapshotPreview1Bindngs(instanceContext, host)
-        } finally {
-            wasmContext.leave()
         }
 
         val sqliteSource: Source = run {
@@ -56,14 +53,7 @@ private fun testSqlite() {
         }
         wasmContext.eval(sqliteSource)
 
-        val wasmMainBindings = wasmContext.getBindings("wasm")
-
-        println("keys: ${wasmMainBindings.memberKeys}")
-
-        SqliteBindings(
-            wasmContext.getBindings("wasm").getMember("env"),
-            wasmContext.getBindings("wasm").getMember("main")
-        )
+        SqliteBindings(wasmContext)
     }
     println("wasm: binding = ${sqlite3Bindings.sqlite3_initialize}. duration: $evalDuration")
 

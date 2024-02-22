@@ -2,18 +2,25 @@ package org.example.app.bindings
 
 import org.example.app.ext.readNullTerminatedString
 import org.example.app.host.memory.GraalHostMemoryImpl
+import org.example.app.sqlite3.Sqlite3CallbackManager
+import org.graalvm.polyglot.Context
 import org.graalvm.polyglot.Value
 import ru.pixnews.sqlite3.wasm.Sqlite3Errno
 import ru.pixnews.sqlite3.wasm.Sqlite3Exception
+import ru.pixnews.wasm.host.WasmPtr
+import ru.pixnews.wasm.host.sqlite3.Sqlite3Db
+import ru.pixnews.wasm.host.sqlite3.Sqlite3ExecCallback
+
+
 
 class SqliteBindings(
-    val envBindings: Value,
-    val mainBindings: Value,
+    val context: Context,
+    val envBindings: Value = context.getBindings("wasm").getMember("env"),
+    val mainBindings: Value = context.getBindings("wasm").getMember("main"),
 ) {
     val _initialize: Value? = mainBindings.getMember("_initialize") // 34
     val __errno_location = mainBindings.getMember("__errno_location") // 2644
     val __wasm_call_ctors: Value? = mainBindings.getMember("__wasm_call_ctors") // 34
-    val __indirect_function_table = mainBindings.getMember("__indirect_function_table") // 0
 
     val sqlite3_status64 = mainBindings.getMember("sqlite3_status64") // 35
     val sqlite3_status = mainBindings.getMember("sqlite3_status") // 38
@@ -108,7 +115,7 @@ class SqliteBindings(
     val sqlite3_set_authorizer = mainBindings.getMember("sqlite3_set_authorizer") // 409
     val sqlite3_strglob = mainBindings.getMember("sqlite3_strglob") // 411
     val sqlite3_strlike = mainBindings.getMember("sqlite3_strlike") // 414
-    val sqlite3_exec = mainBindings.getMember("sqlite3_exec") // 415
+    private val sqlite3_exec = mainBindings.getMember("sqlite3_exec") // 415
     val sqlite3_auto_extension = mainBindings.getMember("sqlite3_auto_extension") // 416
     val sqlite3_cancel_auto_extension = mainBindings.getMember("sqlite3_cancel_auto_extension") // 417
     val sqlite3_reset_auto_extension = mainBindings.getMember("sqlite3_reset_auto_extension") // 418
@@ -254,6 +261,7 @@ class SqliteBindings(
     private val memory = GraalHostMemoryImpl(envBindings.getMember("memory"))
 
     val memoryBindings = SqliteMemoryBindings(mainBindings, memory)
+    val callbackManager = Sqlite3CallbackManager(context, memory, this)
 
     val sqlite3Version: String
         get() {
@@ -279,6 +287,21 @@ class SqliteBindings(
     init {
         initSqlite()
     }
+
+    fun sqlite3Exec(
+        sqliteDb: WasmPtr<Sqlite3Db>,
+        pSql: WasmPtr<Byte>,
+        callback: WasmPtr<Sqlite3ExecCallback> = WasmPtr.sqlite3Null(),
+        callbackFirstArg: WasmPtr<*> = WasmPtr.sqlite3Null<Unit>(),
+        pzErrMsg: WasmPtr<WasmPtr<Byte>> = WasmPtr.sqlite3Null(),
+    ): Int = sqlite3_exec.execute(
+        sqliteDb.addr,
+        pSql.addr,
+        callback.addr,
+        callbackFirstArg.addr,
+        pzErrMsg.addr
+    ).asInt()
+
 
     // globalThis.sqlite3InitModule
     private fun initSqlite() {

@@ -25,7 +25,7 @@ internal fun allocateFunctionTypes(
     return functionTypeMap
 }
 
-private fun List<WasmValueType>.toTypesByteArray(): ByteArray = ByteArray(this.size) {
+internal fun List<WasmValueType>.toTypesByteArray(): ByteArray = ByteArray(this.size) {
     requireNotNull(this[it].opcode).toByte()
 }
 

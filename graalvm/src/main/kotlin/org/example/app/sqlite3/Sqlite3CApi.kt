@@ -12,11 +12,13 @@ import ru.pixnews.wasm.host.WasmPtr.Companion.SQLITE3_NULL
 import ru.pixnews.wasm.host.WasmPtr.Companion.WASM_SIZEOF_PTR
 import ru.pixnews.wasm.host.WasmPtr.Companion.sqlite3Null
 import ru.pixnews.wasm.host.isSqlite3Null
+import ru.pixnews.wasm.host.sqlite3.Sqlite3ExecCallback
 
 class Sqlite3CApi(
     private val bindings: SqliteBindings
 ) {
     private val memory: SqliteMemoryBindings = bindings.memoryBindings
+    private val callbackManager: Sqlite3CallbackManager = bindings.callbackManager
 
     val version: Sqlite3Version
         get() = Sqlite3Version(
@@ -86,20 +88,24 @@ class Sqlite3CApi(
     fun sqlite3Exec(
         sqliteDb: WasmPtr<Sqlite3Db>,
         sql: String,
+        callback: Sqlite3ExecCallback? = null,
     ) : Sqlite3Result<Unit> {
         var pSql: WasmPtr<Byte> = sqlite3Null()
         var pzErrMsg: WasmPtr<WasmPtr<Byte>> = sqlite3Null()
+        var pCallback: WasmPtr<Sqlite3ExecCallback> = sqlite3Null()
         try {
             pSql = memory.allocNullTerminatedString(sql)
             pzErrMsg = memory.allocOrThrow(WASM_SIZEOF_PTR)
+            if (callback != null) {
+                pCallback = callbackManager.registerExecCallback(callback)
+            }
 
-            val errNo = bindings.sqlite3_exec.execute(
-                /* sqlite3* */ sqliteDb.addr,
-                /* const char *sql */ pSql.addr,
-                /* int (*callback)(void*,int,char**,char**) */ SQLITE3_NULL.addr,
-                /* void * */ SQLITE3_NULL.addr,
-                /* char **errmsg */ pzErrMsg.addr,
-            ).asInt()
+            val errNo = bindings.sqlite3Exec(
+                sqliteDb = sqliteDb,
+                pSql = pSql,
+                callback = pCallback,
+                pzErrMsg = pzErrMsg
+            )
 
             if (errNo == Errno.SUCCESS.code) {
                 return Sqlite3Result.Success(Unit)
@@ -114,6 +120,7 @@ class Sqlite3CApi(
                 )
             }
         } finally {
+            callbackManager.unregisterCallback(pCallback)
             memory.freeSilent(pSql)
             memory.freeSilent(pzErrMsg)
         }
