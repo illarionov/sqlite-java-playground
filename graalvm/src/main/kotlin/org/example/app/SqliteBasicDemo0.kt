@@ -20,13 +20,13 @@ class SqliteBasicDemo0(
 
     fun run() {
         printVersion()
-        pringWasmEnumJson()
+        //pringWasmEnumJson()
         // testDbSqliteVersion()
 
         repeat(3) { iteration ->
             val t = measureTime {
-                testDbTable()
-                //testLargeSqliteDatabase()
+                //testDbTable()
+                testLargeSqliteDatabase()
             }
             log.info { "Iteration $iteration time: $t" }
         }
@@ -61,25 +61,14 @@ class SqliteBasicDemo0(
         val dbPointer: WasmPtr<Sqlite3Db> = api.sqlite3Open("/home/work/test7.db")
         //val dbPointer: Value = api.sqlite3Open(":memory:")
 
-        val cb: Sqlite3ExecCallback = object: Sqlite3ExecCallback {
-            override fun invoke(
-                sqliteDb: WasmPtr<Sqlite3Db>,
-                results: List<String>,
-                columnNames: List<String>,
-            ): Int {
-                log.info { "cb() db: $sqliteDb columns: $columnNames, results: $results" }
-                return 0
-            }
-        }
-
         try {
             val requests = listOf(
-                //"CREATE TABLE User(id INTEGER PRIMARY KEY, name TEXT);",
-                //"""INSERT INTO User(`id`, `name`) VALUES (1, 'user 1'), (2, 'user 2'), (3, 'user 3');""",
+                "CREATE TABLE User(id INTEGER PRIMARY KEY, name TEXT);",
+                """INSERT INTO User(`id`, `name`) VALUES (1, 'user 1'), (2, 'user 2'), (3, 'user 3');""",
                 """SELECT * FROM User;"""
             )
             for ((requestNo, sql) in requests.withIndex()) {
-                val result = api.sqlite3Exec(dbPointer, sql, cb)
+                val result = api.sqlite3Exec(dbPointer, sql, loggingExecCallback)
                 log.info { "REQ $requestNo (`${sql}`): result: $result" }
                 if (result is Sqlite3Result.Error) {
                     break
@@ -98,7 +87,7 @@ class SqliteBasicDemo0(
                 """SELECT distinct `author.name` from comments order by `author.name` limit 10 offset 5000;"""
             )
             for ((requestNo, sql) in requests.withIndex()) {
-                val result = api.sqlite3Exec(dbPointer, sql)
+                val result = api.sqlite3Exec(dbPointer, sql, loggingExecCallback)
                 log.info { "REQ $requestNo (`${sql}`): result: $result" }
                 if (result is Sqlite3Result.Error) {
                     break
@@ -108,4 +97,16 @@ class SqliteBasicDemo0(
             api.sqlite3Close(dbPointer)
         }
     }
+
+    val loggingExecCallback: Sqlite3ExecCallback = object: Sqlite3ExecCallback {
+        override fun invoke(
+            sqliteDb: WasmPtr<Sqlite3Db>,
+            results: List<String>,
+            columnNames: List<String>,
+        ): Int {
+            log.info { "cb() db: $sqliteDb columns: $columnNames, results: $results" }
+            return 0
+        }
+    }
+
 }
