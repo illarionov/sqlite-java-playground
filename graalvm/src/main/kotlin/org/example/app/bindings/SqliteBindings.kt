@@ -2,19 +2,19 @@ package org.example.app.bindings
 
 import org.example.app.ext.readNullTerminatedString
 import org.example.app.host.memory.GraalHostMemoryImpl
-import org.example.app.sqlite3.callback.Sqlite3CallbackManager
+import org.example.app.sqlite3.callback.Sqlite3CallbackStore
 import org.graalvm.polyglot.Context
 import org.graalvm.polyglot.Value
 import ru.pixnews.sqlite3.wasm.Sqlite3Errno
 import ru.pixnews.sqlite3.wasm.Sqlite3Exception
 import ru.pixnews.wasm.host.WasmPtr
+import ru.pixnews.wasm.host.functiontable.IndirectFunctionTableIndex
 import ru.pixnews.wasm.host.sqlite3.Sqlite3Db
-import ru.pixnews.wasm.host.sqlite3.Sqlite3ExecCallback
-
 
 
 class SqliteBindings(
     val context: Context,
+    private val sqlite3ExecCbFuncId: IndirectFunctionTableIndex,
     val envBindings: Value = context.getBindings("wasm").getMember("env"),
     val mainBindings: Value = context.getBindings("wasm").getMember("main"),
 ) {
@@ -261,7 +261,6 @@ class SqliteBindings(
     private val memory = GraalHostMemoryImpl(envBindings.getMember("memory"))
 
     val memoryBindings = SqliteMemoryBindings(mainBindings, memory)
-    val callbackManager = Sqlite3CallbackManager(context, memory, this)
 
     val sqlite3Version: String
         get() {
@@ -291,17 +290,15 @@ class SqliteBindings(
     fun sqlite3Exec(
         sqliteDb: WasmPtr<Sqlite3Db>,
         pSql: WasmPtr<Byte>,
-        callback: WasmPtr<Sqlite3ExecCallback> = WasmPtr.sqlite3Null(),
-        callbackFirstArg: WasmPtr<*> = WasmPtr.sqlite3Null<Unit>(),
+        callbackId: Sqlite3CallbackStore.Sqlite3ExecCallbackId? = null,
         pzErrMsg: WasmPtr<WasmPtr<Byte>> = WasmPtr.sqlite3Null(),
     ): Int = sqlite3_exec.execute(
         sqliteDb.addr,
         pSql.addr,
-        callback.addr,
-        callbackFirstArg.addr,
+        if (callbackId != null) sqlite3ExecCbFuncId.funcId else 0,
+        callbackId?.id ?: 0,
         pzErrMsg.addr
     ).asInt()
-
 
     // globalThis.sqlite3InitModule
     private fun initSqlite() {
@@ -314,24 +311,6 @@ class SqliteBindings(
     }
 
     private fun postRun() {
-        val config = mapOf(
-            "exports" to null,
-            "memory" to null,
-            "bigIntEnabled" to true,
-            "debug" to  null, // console.debug.bind(console)
-            "warn" to  null, // console.warn.bind(console)
-            "error" to  null, // console.error.bind(console)
-            "log" to  null, // console.log.bind(console)
-
-            "wasmfsOpfsDir" to  "/opfs",
-            "useStdAlloc" to false,
-
-            "allocExportName" to "sqlite3_malloc",
-            "deallocExportName" to "sqlite3_free",
-            "reallocExportName" to "sqlite3_realloc",
-
-            )
-
         val sqliteInitResult = sqlite3_initialize.execute().asInt()
         if (sqliteInitResult != Sqlite3Errno.SQLITE_OK.code) {
             throw Sqlite3Exception(sqliteInitResult, sqliteInitResult)

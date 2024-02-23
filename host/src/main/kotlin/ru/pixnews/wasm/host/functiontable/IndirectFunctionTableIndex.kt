@@ -1,6 +1,6 @@
 package ru.pixnews.wasm.host.functiontable
 
 @JvmInline
-public value class IndirectFunctionTableId(
+public value class IndirectFunctionTableIndex(
     val funcId: Int
 )

@@ -2,7 +2,8 @@ package org.example.app.sqlite3
 
 import org.example.app.bindings.SqliteBindings
 import org.example.app.bindings.SqliteMemoryBindings
-import org.example.app.sqlite3.callback.Sqlite3CallbackManager
+import org.example.app.sqlite3.callback.Sqlite3CallbackStore
+import org.example.app.sqlite3.callback.Sqlite3CallbackStore.Sqlite3ExecCallbackId
 import org.graalvm.polyglot.Value
 import ru.pixnews.sqlite3.wasm.Sqlite3Exception
 import ru.pixnews.sqlite3.wasm.Sqlite3Result
@@ -15,10 +16,10 @@ import ru.pixnews.wasm.host.isSqlite3Null
 import ru.pixnews.wasm.host.sqlite3.Sqlite3ExecCallback
 
 class Sqlite3CApi(
-    private val bindings: SqliteBindings
+    private val bindings: SqliteBindings,
+    val callbackStore: Sqlite3CallbackStore,
 ) {
     private val memory: SqliteMemoryBindings = bindings.memoryBindings
-    private val callbackManager: Sqlite3CallbackManager = bindings.callbackManager
 
     val version: Sqlite3Version
         get() = Sqlite3Version(
@@ -92,18 +93,20 @@ class Sqlite3CApi(
     ) : Sqlite3Result<Unit> {
         var pSql: WasmPtr<Byte> = sqlite3Null()
         var pzErrMsg: WasmPtr<WasmPtr<Byte>> = sqlite3Null()
-        var pCallback: WasmPtr<Sqlite3ExecCallback> = sqlite3Null()
+        val pCallbackId: Sqlite3ExecCallbackId? = if (callback != null) {
+            callbackStore.sqlite3ExecCallbacks.put(callback)
+        } else {
+            null
+        }
+
         try {
             pSql = memory.allocNullTerminatedString(sql)
             pzErrMsg = memory.allocOrThrow(WASM_SIZEOF_PTR)
-            if (callback != null) {
-                pCallback = callbackManager.registerExecCallback(callback)
-            }
 
             val errNo = bindings.sqlite3Exec(
                 sqliteDb = sqliteDb,
                 pSql = pSql,
-                callback = pCallback,
+                callbackId = pCallbackId,
                 pzErrMsg = pzErrMsg
             )
 
@@ -113,14 +116,10 @@ class Sqlite3CApi(
                 val errMsgAddr: WasmPtr<Byte> = memory.readAddr(pzErrMsg)
                 val errMsg = memory.readNullTerminatedString(errMsgAddr)
                 memory.freeSilent(errMsgAddr)
-                return Sqlite3Result.Error(
-                    errNo,
-                    errNo,
-                    errMsg,
-                )
+                return Sqlite3Result.Error(errNo, errNo, errMsg,)
             }
         } finally {
-            callbackManager.unregisterCallback(pCallback)
+            pCallbackId?.let { callbackStore.sqlite3ExecCallbacks.remove(it) }
             memory.freeSilent(pSql)
             memory.freeSilent(pzErrMsg)
         }

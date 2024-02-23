@@ -5,6 +5,7 @@ import kotlin.time.measureTime
 import kotlin.time.measureTimedValue
 import org.example.app.bindings.SqliteBindings
 import org.example.app.sqlite3.Sqlite3CApi
+import org.example.app.sqlite3.callback.Sqlite3CallbackStore
 import ru.pixnews.sqlite3.wasm.Sqlite3Result
 import ru.pixnews.wasm.host.sqlite3.Sqlite3Db
 import ru.pixnews.wasm.host.WasmPtr
@@ -13,9 +14,10 @@ import ru.pixnews.wasm.host.sqlite3.Sqlite3ExecCallback
 
 class SqliteBasicDemo0(
     private val sqliteBindings: SqliteBindings,
+    callbackStore: Sqlite3CallbackStore,
     private val log: Logger = Logger.getLogger(SqliteBasicDemo1::class.simpleName)
 ) {
-    private val api = Sqlite3CApi(sqliteBindings)
+    private val api = Sqlite3CApi(sqliteBindings, callbackStore)
     private val memory = sqliteBindings.memoryBindings
 
     fun run() {
@@ -25,8 +27,8 @@ class SqliteBasicDemo0(
 
         repeat(3) { iteration ->
             val t = measureTime {
-                //testDbTable()
-                testLargeSqliteDatabase()
+                testDbTable()
+                //testLargeSqliteDatabase()
             }
             log.info { "Iteration $iteration time: $t" }
         }
@@ -63,8 +65,8 @@ class SqliteBasicDemo0(
 
         try {
             val requests = listOf(
-                "CREATE TABLE User(id INTEGER PRIMARY KEY, name TEXT);",
-                """INSERT INTO User(`id`, `name`) VALUES (1, 'user 1'), (2, 'user 2'), (3, 'user 3');""",
+                //"CREATE TABLE IF NOT EXISTS User(id INTEGER PRIMARY KEY, name TEXT);",
+                //"""INSERT INTO User(`id`, `name`) VALUES (1, 'user 1'), (2, 'user 2'), (3, 'user 3');""",
                 """SELECT * FROM User;"""
             )
             for ((requestNo, sql) in requests.withIndex()) {
@@ -100,11 +102,10 @@ class SqliteBasicDemo0(
 
     val loggingExecCallback: Sqlite3ExecCallback = object: Sqlite3ExecCallback {
         override fun invoke(
-            sqliteDb: WasmPtr<Sqlite3Db>,
             results: List<String>,
             columnNames: List<String>,
         ): Int {
-            log.info { "cb() db: $sqliteDb columns: $columnNames, results: $results" }
+            log.info { "columns: $columnNames, results: $results" }
             return 0
         }
     }

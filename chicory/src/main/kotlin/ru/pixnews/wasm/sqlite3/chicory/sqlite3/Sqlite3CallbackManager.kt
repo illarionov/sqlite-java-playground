@@ -3,7 +3,7 @@ package ru.pixnews.wasm.sqlite3.chicory.sqlite3
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.wasm.types.Value
 import com.dylibso.chicory.wasm.types.ValueType
-import ru.pixnews.wasm.host.functiontable.IndirectFunctionTableId
+import ru.pixnews.wasm.host.functiontable.IndirectFunctionTableIndex
 import ru.pixnews.wasm.host.sqlite3.Sqlite3ExecCallback
 import ru.pixnews.wasm.host.WasmPtr
 import ru.pixnews.wasm.host.functiontable.IndirectFunctionRef
@@ -34,7 +34,7 @@ class Sqlite3CallbackManager(
 
     }
 
-    private fun getFunctionValue(id: IndirectFunctionTableId): IndirectFunctionRef {
+    private fun getFunctionValue(id: IndirectFunctionTableIndex): IndirectFunctionRef {
         val ref: Value = indirectFunctionTable.ref(id.funcId)
         return when (ref.type()) {
             ValueType.FuncRef -> FuncRef(ref.asFuncRef())

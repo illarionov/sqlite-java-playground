@@ -1,4 +1,4 @@
-package org.example.app.host.emscrypten.func
+package org.example.app.host.emscripten.func
 
 import com.oracle.truffle.api.frame.VirtualFrame
 import org.example.app.host.BaseWasmNode

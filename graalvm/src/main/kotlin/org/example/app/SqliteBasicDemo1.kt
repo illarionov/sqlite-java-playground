@@ -4,12 +4,14 @@ import java.util.logging.Logger
 import org.example.app.bindings.SqliteBindings
 import org.example.app.sqlite3.Sqlite3CApi
 import org.example.app.sqlite3.Sqlite3OopApi
+import org.example.app.sqlite3.callback.Sqlite3CallbackStore
 
 class SqliteBasicDemo1(
     private val sqlite: SqliteBindings,
+    callbackStore: Sqlite3CallbackStore,
     private val log: Logger = Logger.getLogger(SqliteBasicDemo1::class.simpleName)
 ) {
-    private val cApi = Sqlite3CApi(sqlite)
+    private val cApi = Sqlite3CApi(sqlite, callbackStore)
     private val oopApi = Sqlite3OopApi(sqlite)
 
     fun run() {
