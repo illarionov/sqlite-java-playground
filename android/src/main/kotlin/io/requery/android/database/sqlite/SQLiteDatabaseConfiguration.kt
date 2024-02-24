@@ -1,0 +1,208 @@
+/*
+ * Copyright (C) 2011 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.requery.android.database.sqlite
+
+import java.util.Locale
+import java.util.regex.Pattern
+
+/**
+ * Describes how to configure a database.
+ *
+ *
+ * The purpose of this object is to keep track of all of the little
+ * configuration settings that are applied to a database after it
+ * is opened so that they can be applied to all connections in the
+ * connection pool uniformly.
+ *
+ *
+ * Each connection maintains its own copy of this object so it can
+ * keep track of which settings have already been applied.
+ *
+ *
+ * @hide
+ */
+class SQLiteDatabaseConfiguration {
+    /**
+     * The database path.
+     */
+    @JvmField
+    val path: String
+
+    /**
+     * The label to use to describe the database when it appears in logs.
+     * This is derived from the path but is stripped to remove PII.
+     */
+    @JvmField
+    val label: String
+
+    /**
+     * The flags used to open the database.
+     */
+    @JvmField
+    @SQLiteDatabase.OpenFlags
+    var openFlags: Int = 0
+
+    /**
+     * The maximum size of the prepared statement cache for each database connection.
+     * Must be non-negative.
+     *
+     * Default is 25.
+     */
+    @JvmField
+    var maxSqlCacheSize: Int = 0
+
+    /**
+     * The database locale.
+     *
+     * Default is the value returned by [Locale.getDefault].
+     */
+    @JvmField
+    var locale: Locale? = null
+
+    /**
+     * True if foreign key constraints are enabled.
+     *
+     * Default is false.
+     */
+    @JvmField
+    var foreignKeyConstraintsEnabled: Boolean = false
+
+    /**
+     * The custom functions to register.
+     *
+     * This interface is deprecated; see [SQLiteFunction]
+     */
+    @JvmField
+    @Deprecated("")
+    val customFunctions: MutableList<SQLiteCustomFunction> = ArrayList()
+
+    /**
+     * The [SQLiteFunction]s to register.
+     */
+    @JvmField
+    val functions: MutableList<SQLiteFunction> = ArrayList()
+
+    /**
+     * The custom extensions to register.
+     */
+    @JvmField
+    val customExtensions: MutableList<SQLiteCustomExtension> = mutableListOf()
+
+    /**
+     * Creates a database configuration with the required parameters for opening a
+     * database and default values for all other parameters.
+     *
+     * @param path The database path.
+     * @param openFlags Open flags for the database, such as [SQLiteDatabase.OPEN_READWRITE].
+     */
+    constructor(
+        path: String,
+        @SQLiteDatabase.OpenFlags openFlags: Int
+    ) {
+
+        this.path = path
+        this.openFlags = openFlags
+        label = stripPathForLogs(path)
+
+        // Set default values for optional parameters.
+        maxSqlCacheSize = 25
+        locale = Locale.getDefault()
+    }
+
+    /**
+     * Creates a database configuration with the required parameters for opening a
+     * database and default values for all other parameters.
+     *
+     * @param path The database path.
+     * @param openFlags Open flags for the database, such as [SQLiteDatabase.OPEN_READWRITE].
+     * @param functions custom functions to use.
+     * @param extensions custom extensions to use.
+     */
+    constructor(
+        path: String,
+        @SQLiteDatabase.OpenFlags openFlags: Int,
+        customFunctions: List<SQLiteCustomFunction>?,
+        functions: List<SQLiteFunction>?,
+        extensions: List<SQLiteCustomExtension>
+    ) : this(path, openFlags) {
+        this.customFunctions.addAll(customFunctions!!)
+        this.customExtensions.addAll(extensions)
+        this.functions.addAll(functions!!)
+    }
+
+    /**
+     * Creates a database configuration as a copy of another configuration.
+     *
+     * @param other The other configuration.
+     */
+    internal constructor(other: SQLiteDatabaseConfiguration?) {
+        requireNotNull(other) { "other must not be null." }
+
+        this.path = other.path
+        this.label = other.label
+        updateParametersFrom(other)
+    }
+
+    /**
+     * Updates the non-immutable parameters of this configuration object
+     * from the other configuration object.
+     *
+     * @param other The object from which to copy the parameters.
+     */
+    fun updateParametersFrom(other: SQLiteDatabaseConfiguration?) {
+        requireNotNull(other) { "other must not be null." }
+        require(path == other.path) {
+            ("other configuration must refer to "
+                    + "the same database.")
+        }
+
+        openFlags = other.openFlags
+        maxSqlCacheSize = other.maxSqlCacheSize
+        locale = other.locale
+        foreignKeyConstraintsEnabled = other.foreignKeyConstraintsEnabled
+        customFunctions.clear()
+        customFunctions.addAll(other.customFunctions)
+        customExtensions.clear()
+        customExtensions.addAll(other.customExtensions)
+        functions.clear()
+        functions.addAll(other.functions)
+    }
+
+    val isInMemoryDb: Boolean
+        /**
+         * Returns true if the database is in-memory.
+         * @return True if the database is in-memory.
+         */
+        get() = path.equals(MEMORY_DB_PATH, ignoreCase = true)
+
+    companion object {
+        // The pattern we use to strip email addresses from database paths
+        // when constructing a label to use in log messages.
+        private val EMAIL_IN_DB_PATTERN: Pattern = Pattern.compile("[\\w\\.\\-]+@[\\w\\.\\-]+")
+
+        /**
+         * Special path used by in-memory databases.
+         */
+        const val MEMORY_DB_PATH: String = ":memory:"
+
+        private fun stripPathForLogs(path: String): String {
+            if (path.indexOf('@') == -1) {
+                return path
+            }
+            return EMAIL_IN_DB_PATTERN.matcher(path).replaceAll("XX@YY")
+        }
+    }
+}

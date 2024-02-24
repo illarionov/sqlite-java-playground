@@ -1,4 +1,5 @@
 [versions]
+agp = "8.2.1"
 kotlin-gradle-plugin = "1.9.20"
 graalvm = "23.1.2"
 chicory = "999-SNAPSHOT"
@@ -11,3 +12,7 @@ graalvm-polyglot-js = { group = "org.graalvm.polyglot", name = "js-community", v
 graalvm-polyglot-wasm = { group = "org.graalvm.polyglot", name = "wasm-community", version.ref = "graalvm" }
 graalvm-wasm-language = { group = "org.graalvm.wasm", name = "wasm-language", version.ref = "graalvm" }
 graalvm-compiler = { group = "org.graalvm.compiler", name = "compiler", version.ref = "graalvm" }
+
+[plugins]
+jetbrainsKotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin-gradle-plugin" }
+androidLibrary = { id = "com.android.library", version.ref = "agp" }

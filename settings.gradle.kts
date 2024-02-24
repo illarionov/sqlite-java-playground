@@ -1,5 +1,10 @@
 pluginManagement {
     includeBuild("build-logic")
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+        google()
+    }
 }
 
 plugins {
@@ -7,4 +12,4 @@ plugins {
 }
 
 rootProject.name = "sqlite-java-playground"
-include("graalvm", "sqlite3-wasm", "chicory", "host")
+include("graalvm", "sqlite3-wasm", "chicory", "host", "android")

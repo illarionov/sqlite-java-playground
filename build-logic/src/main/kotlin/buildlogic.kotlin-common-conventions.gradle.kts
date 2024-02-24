@@ -10,6 +10,7 @@ repositories {
         }
     }
     mavenCentral()
+    google()
 }
 
 testing {
