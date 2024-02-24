@@ -36,7 +36,7 @@ public class RequerySQLiteOpenHelperFactory(
     }
 
     private class CallbackSQLiteOpenHelper(
-        context: Context?,
+        context: Context,
         name: String?,
         cb: SupportSQLiteOpenHelper.Callback,
         ops: Iterable<ConfigurationOptions>
@@ -73,8 +73,9 @@ public class RequerySQLiteOpenHelperFactory(
         }
     }
 
-    private class CallbackDatabaseErrorHandler(private val callback: SupportSQLiteOpenHelper.Callback) :
-        DatabaseErrorHandler {
+    private class CallbackDatabaseErrorHandler(
+        private val callback: SupportSQLiteOpenHelper.Callback
+    ) : DatabaseErrorHandler {
         override fun onCorruption(db: SQLiteDatabase) = callback.onCorruption(db)
     }
 

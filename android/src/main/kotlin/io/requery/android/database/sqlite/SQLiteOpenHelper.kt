@@ -5,6 +5,7 @@ import android.database.sqlite.SQLiteException
 import android.util.Log
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import io.requery.android.database.DatabaseErrorHandler
+import io.requery.android.database.sqlite.SQLiteDatabase.OpenFlags
 
 /**
  * A helper class to manage database creation and version management.
@@ -34,7 +35,7 @@ import io.requery.android.database.DatabaseErrorHandler
 abstract class SQLiteOpenHelper @JvmOverloads constructor(
     private val context: Context,
     override val databaseName: String?,
-    private val factory: SQLiteDatabase.CursorFactory,
+    private val factory: SQLiteDatabase.CursorFactory?,
     private val version: Int,
     private val errorHandler: DatabaseErrorHandler? = null
 ) : SupportSQLiteOpenHelper {
@@ -358,11 +359,9 @@ abstract class SQLiteOpenHelper @JvmOverloads constructor(
      * @return [SQLiteDatabaseConfiguration] instance, cannot be null.
      */
     protected open fun createConfiguration(
-        path: String?,
-        @SQLiteDatabase.OpenFlags openFlags: Int
-    ): SQLiteDatabaseConfiguration {
-        return SQLiteDatabaseConfiguration(path!!, openFlags)
-    }
+        path: String,
+        @OpenFlags openFlags: Int
+    ): SQLiteDatabaseConfiguration = SQLiteDatabaseConfiguration(path, openFlags)
 
     companion object {
         private val TAG: String = SQLiteOpenHelper::class.java.simpleName
