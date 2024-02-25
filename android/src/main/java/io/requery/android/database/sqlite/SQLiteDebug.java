@@ -143,31 +143,4 @@ public final class SQLiteDebug {
             this.cache = hits + "/" + misses + "/" + cachesize;
         }
     }
-
-    /**
-     * return all pager and database stats for the current process.
-     * @return {@link PagerStats}
-     */
-    public static PagerStats getDatabaseInfo() {
-        PagerStats stats = new PagerStats();
-        nativeGetPagerStats(stats);
-        stats.dbStats = SQLiteDatabase.getDbStats();
-        return stats;
-    }
-
-    /**
-     * Dumps detailed information about all databases used by the process.
-     * @param printer The printer for dumping database state.
-     * @param args Command-line arguments supplied to dumpsys dbinfo
-     */
-    public static void dump(Printer printer, String[] args) {
-        boolean verbose = false;
-        for (String arg : args) {
-            if (arg.equals("-v")) {
-                verbose = true;
-            }
-        }
-
-        SQLiteDatabase.dumpAll(printer, verbose);
-    }
 }

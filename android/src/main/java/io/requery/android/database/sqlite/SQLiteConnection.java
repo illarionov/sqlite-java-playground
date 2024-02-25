@@ -128,8 +128,6 @@ public final class SQLiteConnection implements CancellationSignal.OnCancelListen
     private static native long nativeOpen(String path, int openFlags, String label,
             boolean enableTrace, boolean enableProfile);
     private static native void nativeClose(long connectionPtr);
-    private static native void nativeRegisterCustomFunction(long connectionPtr,
-            SQLiteCustomFunction function);
     private static native void nativeRegisterFunction(long connectionPtr,
         SQLiteFunction function);
     private static native void nativeRegisterLocalizedCollators(long connectionPtr, String locale);
@@ -235,13 +233,6 @@ public final class SQLiteConnection implements CancellationSignal.OnCancelListen
         if (!nativeHasCodec()) {
             setWalModeFromConfiguration();
             setLocaleFromConfiguration();
-        }
-
-        // Register (deprecated) custom functions.
-        final int customFunctionCount = mConfiguration.customFunctions.size();
-        for (int i = 0; i < customFunctionCount; i++) {
-            SQLiteCustomFunction function = mConfiguration.customFunctions.get(i);
-            nativeRegisterCustomFunction(mConnectionPtr, function);
         }
 
         // Register functions
@@ -437,15 +428,6 @@ public final class SQLiteConnection implements CancellationSignal.OnCancelListen
     // Called by SQLiteConnectionPool only.
     void reconfigure(SQLiteDatabaseConfiguration configuration) {
         mOnlyAllowReadOnlyOperations = false;
-
-        // Register (deprecated) custom functions.
-        final int customFunctionCount = configuration.customFunctions.size();
-        for (int i = 0; i < customFunctionCount; i++) {
-            SQLiteCustomFunction function = configuration.customFunctions.get(i);
-            if (!mConfiguration.customFunctions.contains(function)) {
-                nativeRegisterCustomFunction(mConnectionPtr, function);
-            }
-        }
 
         // Register Functions
         final int functionCount = configuration.functions.size();

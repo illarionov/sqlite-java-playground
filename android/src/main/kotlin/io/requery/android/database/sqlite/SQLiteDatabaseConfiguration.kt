@@ -81,15 +81,6 @@ class SQLiteDatabaseConfiguration {
     var foreignKeyConstraintsEnabled: Boolean = false
 
     /**
-     * The custom functions to register.
-     *
-     * This interface is deprecated; see [SQLiteFunction]
-     */
-    @JvmField
-    @Deprecated("")
-    val customFunctions: MutableList<SQLiteCustomFunction> = ArrayList()
-
-    /**
      * The [SQLiteFunction]s to register.
      */
     @JvmField
@@ -109,7 +100,7 @@ class SQLiteDatabaseConfiguration {
      * @param openFlags Open flags for the database, such as [SQLiteDatabase.OPEN_READWRITE].
      */
     constructor(
-        path: String,
+        path: String = MEMORY_DB_PATH,
         @SQLiteDatabase.OpenFlags openFlags: Int
     ) {
 
@@ -134,11 +125,9 @@ class SQLiteDatabaseConfiguration {
     constructor(
         path: String,
         @SQLiteDatabase.OpenFlags openFlags: Int,
-        customFunctions: List<SQLiteCustomFunction>?,
         functions: List<SQLiteFunction>?,
         extensions: List<SQLiteCustomExtension>
     ) : this(path, openFlags) {
-        this.customFunctions.addAll(customFunctions!!)
         this.customExtensions.addAll(extensions)
         this.functions.addAll(functions!!)
     }
@@ -173,8 +162,6 @@ class SQLiteDatabaseConfiguration {
         maxSqlCacheSize = other.maxSqlCacheSize
         locale = other.locale
         foreignKeyConstraintsEnabled = other.foreignKeyConstraintsEnabled
-        customFunctions.clear()
-        customFunctions.addAll(other.customFunctions)
         customExtensions.clear()
         customExtensions.addAll(other.customExtensions)
         functions.clear()
