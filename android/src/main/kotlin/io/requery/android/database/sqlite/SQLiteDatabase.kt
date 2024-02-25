@@ -82,7 +82,7 @@ class SQLiteDatabase private constructor(
 
     // Warns if the database is finalized without being closed properly.
     // INVARIANT: Guarded by mLock.
-    private val closeGuardLocked: CloseGuard? = CloseGuard.get()
+    private val closeGuardLocked: CloseGuard = CloseGuard.get()
 
     // The database configuration.
     // INVARIANT: Guarded by mLock.
@@ -138,12 +138,10 @@ class SQLiteDatabase private constructor(
     private fun dispose(finalized: Boolean) {
         val pool: SQLiteConnectionPool?
         synchronized(lock) {
-            if (closeGuardLocked != null) {
-                if (finalized) {
-                    closeGuardLocked.warnIfOpen()
-                }
-                closeGuardLocked.close()
+            if (finalized) {
+                closeGuardLocked.warnIfOpen()
             }
+            closeGuardLocked.close()
             pool = connectionPoolLocked
             connectionPoolLocked = null
         }
@@ -342,18 +340,14 @@ class SQLiteDatabase private constructor(
      * @throws IllegalStateException if the current thread is not in a transaction or the
      * transaction is already marked as successful.
      */
-    override fun setTransactionSuccessful() = useReference {
-        threadSession.setTransactionSuccessful()
-    }
+    override fun setTransactionSuccessful() = useReference(threadSession::setTransactionSuccessful)
 
     /**
      * Returns true if the current thread has a transaction pending.
      *
      * @return True if the current thread is in a transaction.
      */
-    override fun inTransaction(): Boolean = useReference {
-        threadSession.hasTransaction()
-    }
+    override fun inTransaction(): Boolean = useReference(threadSession::hasTransaction)
 
     /**
      * Returns true if the current thread is holding an active connection to the database.
@@ -369,9 +363,7 @@ class SQLiteDatabase private constructor(
      * @return True if the current thread is holding an active connection to the database.
      */
     override val isDbLockedByCurrentThread: Boolean
-        get() = useReference {
-            threadSession.hasConnection()
-        }
+        get() = useReference(threadSession::hasConnection)
 
     /**
      * Temporarily end the transaction to let other threads run. The transaction is assumed to be
@@ -454,20 +446,16 @@ class SQLiteDatabase private constructor(
     private fun openInner() = synchronized(lock) {
         check(connectionPoolLocked == null)
         connectionPoolLocked = SQLiteConnectionPool.open(configurationLocked)
-        closeGuardLocked!!.open("close")
+        closeGuardLocked.open("close")
     }
 
     override var version: Int
         /**
          * Gets the database version.
-         *
-         * @return the database version
          */
         get() = longForQuery("PRAGMA user_version;", null).toInt()
         /**
          * Sets the database version.
-         *
-         * @param version the new database version
          */
         set(version) {
             execSQL("PRAGMA user_version = $version")
@@ -476,8 +464,6 @@ class SQLiteDatabase private constructor(
     override val maximumSize: Long
         /**
          * Returns the maximum size the database may grow to.
-         *
-         * @return the new maximum database size
          */
         get() {
             val pageCount = longForQuery("PRAGMA max_page_count;", null)
@@ -619,7 +605,8 @@ class SQLiteDatabase private constructor(
         limit: String?,
         cancellationSignal: CancellationSignal? = null
     ): Cursor = useReference {
-        val sql = SQLiteQueryBuilder.buildQueryString(distinct, table, columns, selection, groupBy, having, orderBy, limit)
+        val sql =
+            SQLiteQueryBuilder.buildQueryString(distinct, table, columns, selection, groupBy, having, orderBy, limit)
 
         rawQueryWithFactory(
             cursorFactory, sql, selectionArgs,
