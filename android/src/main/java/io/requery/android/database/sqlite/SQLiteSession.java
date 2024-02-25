@@ -21,7 +21,6 @@
 
 package io.requery.android.database.sqlite;
 
-import android.annotation.SuppressLint;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteTransactionListener;
 import androidx.core.os.CancellationSignal;
@@ -166,8 +165,6 @@ import io.requery.android.database.CursorWindow;
  *
  * @hide
  */
-@SuppressWarnings({"unused", "JavaDoc"})
-@SuppressLint("Assert")
 public final class SQLiteSession {
     private final SQLiteConnectionPool mConnectionPool;
 
@@ -292,7 +289,7 @@ public final class SQLiteSession {
      *
      * @throws IllegalStateException if {@link #setTransactionSuccessful} has already been
      * called for the current transaction.
-     * @throws SQLiteException if an error occurs.
+     * @throws IllegalStateException if an error occurs.
      * @throws OperationCanceledException if the operation was canceled.
      *
      * @see #setTransactionSuccessful
