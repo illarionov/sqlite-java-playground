@@ -40,6 +40,7 @@ import io.requery.android.database.CursorWindow;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -1220,7 +1221,7 @@ public final class SQLiteConnection implements CancellationSignal.OnCancelListen
      * Collects statistics about database connection memory usage, in the case where the
      * caller might not actually own the connection.
      */
-    void collectDbStatsUnsafe(ArrayList<SQLiteDebug.DbStats> dbStatsList) {
+    void collectDbStatsUnsafe(List<SQLiteDebug.DbStats> dbStatsList) {
         dbStatsList.add(getMainDbStatsUnsafe(0, 0, 0));
     }
 

@@ -21,20 +21,16 @@ import java.util.regex.Pattern
 /**
  * Describes how to configure a database.
  *
- *
  * The purpose of this object is to keep track of all of the little
  * configuration settings that are applied to a database after it
  * is opened so that they can be applied to all connections in the
  * connection pool uniformly.
  *
- *
  * Each connection maintains its own copy of this object so it can
  * keep track of which settings have already been applied.
  *
- *
- * @hide
  */
-class SQLiteDatabaseConfiguration {
+public class SQLiteDatabaseConfiguration {
     /**
      * The database path.
      */
@@ -137,9 +133,7 @@ class SQLiteDatabaseConfiguration {
      *
      * @param other The other configuration.
      */
-    internal constructor(other: SQLiteDatabaseConfiguration?) {
-        requireNotNull(other) { "other must not be null." }
-
+    internal constructor(other: SQLiteDatabaseConfiguration) {
         this.path = other.path
         this.label = other.label
         updateParametersFrom(other)

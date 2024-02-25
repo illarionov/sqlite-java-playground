@@ -19,9 +19,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteQuery
 import io.requery.android.database.DatabaseErrorHandler
 import io.requery.android.database.DefaultDatabaseErrorHandler
-import io.requery.android.database.sqlite.SQLiteConnectionPool.CONNECTION_FLAG_INTERACTIVE
-import io.requery.android.database.sqlite.SQLiteConnectionPool.CONNECTION_FLAG_PRIMARY_CONNECTION_AFFINITY
-import io.requery.android.database.sqlite.SQLiteConnectionPool.CONNECTION_FLAG_READ_ONLY
+import io.requery.android.database.sqlite.SQLiteConnectionPool.Companion.CONNECTION_FLAG_INTERACTIVE
+import io.requery.android.database.sqlite.SQLiteConnectionPool.Companion.CONNECTION_FLAG_PRIMARY_CONNECTION_AFFINITY
+import io.requery.android.database.sqlite.SQLiteConnectionPool.Companion.CONNECTION_FLAG_READ_ONLY
 import io.requery.android.database.sqlite.SQLiteDatabaseConfiguration.Companion.MEMORY_DB_PATH
 import io.requery.android.database.sqlite.SQLiteSession.TRANSACTION_MODE_DEFERRED
 import io.requery.android.database.sqlite.SQLiteSession.TRANSACTION_MODE_EXCLUSIVE
@@ -57,7 +57,14 @@ class SQLiteDatabase private constructor(
     // Each thread has its own database session.
     // INVARIANT: Immutable.
     private val _threadSession: ThreadLocal<SQLiteSession> = object : ThreadLocal<SQLiteSession>() {
-        override fun initialValue(): SQLiteSession = createSession()
+        override fun initialValue(): SQLiteSession {
+            val pool: SQLiteConnectionPool?
+            synchronized(lock) {
+                throwIfNotOpenLocked()
+                pool = connectionPoolLocked
+            }
+            return SQLiteSession(pool)
+        }
     }
 
     // Error handler to be used when SQLite returns corruption errors.
@@ -164,15 +171,6 @@ class SQLiteDatabase private constructor(
     fun onCorruption() {
         EventLog.writeEvent(EVENT_DB_CORRUPT, label)
         errorHandler.onCorruption(this)
-    }
-
-    fun createSession(): SQLiteSession {
-        val pool: SQLiteConnectionPool?
-        synchronized(lock) {
-            throwIfNotOpenLocked()
-            pool = connectionPoolLocked
-        }
-        return SQLiteSession(pool)
     }
 
     /**
