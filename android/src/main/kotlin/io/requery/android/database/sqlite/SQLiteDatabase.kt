@@ -5,6 +5,7 @@ import android.database.Cursor
 import android.database.SQLException
 import android.database.sqlite.SQLiteDatabaseCorruptException
 import android.database.sqlite.SQLiteException
+import android.database.sqlite.SQLiteQueryBuilder
 import android.database.sqlite.SQLiteTransactionListener
 import android.os.Looper
 import android.os.ParcelFileDescriptor
@@ -317,29 +318,19 @@ class SQLiteDatabase private constructor(
         beginTransaction(transactionListener, TRANSACTION_MODE_IMMEDIATE)
     }
 
-    private fun beginTransaction(transactionListener: SQLiteTransactionListener?, mode: Int) {
-        acquireReference()
-        try {
-            threadSession.beginTransaction(
-                mode, transactionListener,
-                getThreadDefaultConnectionFlags(false /*readOnly*/), null
-            )
-        } finally {
-            releaseReference()
-        }
+    private fun beginTransaction(transactionListener: SQLiteTransactionListener?, mode: Int) = useReference {
+        threadSession.beginTransaction(
+            mode, transactionListener,
+            getThreadDefaultConnectionFlags(false /*readOnly*/), null
+        )
     }
 
     /**
      * End a transaction. See beginTransaction for notes about how to use this and when transactions
      * are committed and rolled back.
      */
-    override fun endTransaction() {
-        acquireReference()
-        try {
-            threadSession.endTransaction(null)
-        } finally {
-            releaseReference()
-        }
+    override fun endTransaction() = useReference {
+        threadSession.endTransaction(null)
     }
 
     /**
@@ -351,13 +342,8 @@ class SQLiteDatabase private constructor(
      * @throws IllegalStateException if the current thread is not in a transaction or the
      * transaction is already marked as successful.
      */
-    override fun setTransactionSuccessful() {
-        acquireReference()
-        try {
-            threadSession.setTransactionSuccessful()
-        } finally {
-            releaseReference()
-        }
+    override fun setTransactionSuccessful() = useReference {
+        threadSession.setTransactionSuccessful()
     }
 
     /**
@@ -365,13 +351,8 @@ class SQLiteDatabase private constructor(
      *
      * @return True if the current thread is in a transaction.
      */
-    override fun inTransaction(): Boolean {
-        acquireReference()
-        try {
-            return threadSession.hasTransaction()
-        } finally {
-            releaseReference()
-        }
+    override fun inTransaction(): Boolean = useReference {
+        threadSession.hasTransaction()
     }
 
     /**
@@ -388,13 +369,8 @@ class SQLiteDatabase private constructor(
      * @return True if the current thread is holding an active connection to the database.
      */
     override val isDbLockedByCurrentThread: Boolean
-        get() {
-            acquireReference()
-            try {
-                return threadSession.hasConnection()
-            } finally {
-                releaseReference()
-            }
+        get() = useReference {
+            threadSession.hasConnection()
         }
 
     /**
@@ -425,13 +401,8 @@ class SQLiteDatabase private constructor(
         return yieldIfContendedHelper(true,  /* check yielding */sleepAfterYieldDelayMillis)
     }
 
-    private fun yieldIfContendedHelper(throwIfUnsafe: Boolean, sleepAfterYieldDelay: Long): Boolean {
-        acquireReference()
-        try {
-            return threadSession.yieldTransaction(sleepAfterYieldDelay, throwIfUnsafe, null)
-        } finally {
-            releaseReference()
-        }
+    private fun yieldIfContendedHelper(throwIfUnsafe: Boolean, sleepAfterYieldDelay: Long): Boolean = useReference {
+        threadSession.yieldTransaction(sleepAfterYieldDelay, throwIfUnsafe, null)
     }
 
     /**
@@ -563,13 +534,8 @@ class SQLiteDatabase private constructor(
      * [SQLiteStatement]s are not synchronized, see the documentation for more details.
      */
     @Throws(SQLException::class)
-    override fun compileStatement(sql: String): SQLiteStatement {
-        acquireReference()
-        try {
-            return SQLiteStatement(this, sql, null)
-        } finally {
-            releaseReference()
-        }
+    override fun compileStatement(sql: String): SQLiteStatement = useReference {
+        SQLiteStatement(this, sql, null)
     }
 
     /**
@@ -652,20 +618,13 @@ class SQLiteDatabase private constructor(
         orderBy: String?,
         limit: String?,
         cancellationSignal: CancellationSignal? = null
-    ): Cursor {
-        acquireReference()
-        try {
-            val sql = SQLiteQueryBuilder.buildQueryString(
-                distinct, table, columns, selection, groupBy, having, orderBy, limit
-            )
+    ): Cursor = useReference {
+        val sql = SQLiteQueryBuilder.buildQueryString(distinct, table, columns, selection, groupBy, having, orderBy, limit)
 
-            return rawQueryWithFactory(
-                cursorFactory, sql, selectionArgs,
-                findEditTable(table), cancellationSignal
-            )
-        } finally {
-            releaseReference()
-        }
+        rawQueryWithFactory(
+            cursorFactory, sql, selectionArgs,
+            findEditTable(table), cancellationSignal
+        )
     }
 
     /**
@@ -795,14 +754,9 @@ class SQLiteDatabase private constructor(
         selectionArgs: Array<out Any?>?,
         editTable: String?,
         cancellationSignal: CancellationSignal? = null
-    ): Cursor {
-        acquireReference()
-        try {
-            val driver: SQLiteCursorDriver = SQLiteDirectCursorDriver(this, sql, editTable, cancellationSignal)
-            return driver.query(cursorFactory ?: this.cursorFactory, selectionArgs)
-        } finally {
-            releaseReference()
-        }
+    ): Cursor = useReference {
+        val driver: SQLiteCursorDriver = SQLiteDirectCursorDriver(this, sql, editTable, cancellationSignal)
+        return driver.query(cursorFactory ?: this.cursorFactory, selectionArgs)
     }
 
     /**
@@ -852,44 +806,60 @@ class SQLiteDatabase private constructor(
         nullColumnHack: String?,
         initialValues: ContentValues?,
         @ConflictAlgorithm conflictAlgorithm: Int
-    ): Long {
-        acquireReference()
-        try {
-            val sql = StringBuilder()
-            sql.append("INSERT")
-            sql.append(CONFLICT_VALUES[conflictAlgorithm])
-            sql.append(" INTO ")
-            sql.append(table)
-            sql.append('(')
+    ): Long = useReference {
+        val sql = StringBuilder()
+        sql.append("INSERT")
+        sql.append(CONFLICT_VALUES[conflictAlgorithm])
+        sql.append(" INTO ")
+        sql.append(table)
+        sql.append('(')
 
-            var bindArgs: Array<Any?>? = null
-            val size = if ((initialValues != null && initialValues.size() > 0)
-            ) initialValues.size() else 0
-            if (size > 0) {
-                bindArgs = arrayOfNulls(size)
-                var i = 0
-                for ((key, value) in initialValues!!.valueSet()) {
-                    sql.append(if ((i > 0)) "," else "")
-                    sql.append(key)
-                    bindArgs[i++] = value
-                }
-                sql.append(')')
-                sql.append(" VALUES (")
-                i = 0
-                while (i < size) {
-                    sql.append(if ((i > 0)) ",?" else "?")
-                    i++
-                }
-            } else {
-                sql.append("$nullColumnHack) VALUES (NULL")
+        var bindArgs: Array<Any?>? = null
+        val size = if ((initialValues != null && initialValues.size() > 0)
+        ) initialValues.size() else 0
+        if (size > 0) {
+            bindArgs = arrayOfNulls(size)
+            var i = 0
+            for ((key, value) in initialValues!!.valueSet()) {
+                sql.append(if ((i > 0)) "," else "")
+                sql.append(key)
+                bindArgs[i++] = value
             }
             sql.append(')')
-
-            return SQLiteStatement(this, sql.toString(), bindArgs).use {
-                it.executeInsert()
+            sql.append(" VALUES (")
+            i = 0
+            while (i < size) {
+                sql.append(if ((i > 0)) ",?" else "?")
+                i++
             }
-        } finally {
-            releaseReference()
+        } else {
+            sql.append("$nullColumnHack) VALUES (NULL")
+        }
+        sql.append(')')
+
+        return SQLiteStatement(this, sql.toString(), bindArgs).use { it.executeInsert() }
+    }
+
+    /**
+     * Convenience method for deleting rows in the database.
+     *
+     * @param table the table to delete from
+     * @param whereClause the optional WHERE clause to apply when deleting.
+     * Passing null will delete all rows.
+     * @param whereArgs You may include ?s in the where clause, which
+     * will be replaced by the values from whereArgs. The values
+     * will be bound as Strings.
+     * @return the number of rows affected if a whereClause is passed in, 0
+     * otherwise. To remove all rows and get a count pass "1" as the
+     * whereClause.
+     */
+    fun delete(table: String, whereClause: String, whereArgs: Array<String?>?): Int = useReference {
+        SQLiteStatement(
+            this,
+            "DELETE FROM $table" + (if (whereClause.isNotEmpty()) " WHERE $whereClause" else ""),
+            whereArgs
+        ).use {
+            it.executeUpdateDelete()
         }
     }
 
@@ -906,44 +876,13 @@ class SQLiteDatabase private constructor(
      * otherwise. To remove all rows and get a count pass "1" as the
      * whereClause.
      */
-    fun delete(table: String, whereClause: String, whereArgs: Array<String?>?): Int {
-        acquireReference()
-        try {
-            return SQLiteStatement(
-                this, "DELETE FROM " + table +
-                        (if (whereClause.isNotEmpty()) " WHERE $whereClause" else ""), whereArgs
-            ).use {
-                it.executeUpdateDelete()
-            }
-        } finally {
-            releaseReference()
-        }
-    }
-
-    /**
-     * Convenience method for deleting rows in the database.
-     *
-     * @param table the table to delete from
-     * @param whereClause the optional WHERE clause to apply when deleting.
-     * Passing null will delete all rows.
-     * @param whereArgs You may include ?s in the where clause, which
-     * will be replaced by the values from whereArgs. The values
-     * will be bound as Strings.
-     * @return the number of rows affected if a whereClause is passed in, 0
-     * otherwise. To remove all rows and get a count pass "1" as the
-     * whereClause.
-     */
-    override fun delete(table: String, whereClause: String?, whereArgs: Array<out Any?>?): Int {
-        acquireReference()
-        try {
-            return SQLiteStatement(
-                this, "DELETE FROM " + table +
-                        (if (whereClause?.isNotEmpty() == true) " WHERE $whereClause" else ""), whereArgs
-            ).use {
-                it.executeUpdateDelete()
-            }
-        } finally {
-            releaseReference()
+    override fun delete(table: String, whereClause: String?, whereArgs: Array<out Any?>?): Int = useReference {
+        SQLiteStatement(
+            this,
+            "DELETE FROM " + table + (if (whereClause?.isNotEmpty() == true) " WHERE $whereClause" else ""),
+            whereArgs
+        ).use {
+            it.executeUpdateDelete()
         }
     }
 
@@ -984,46 +923,39 @@ class SQLiteDatabase private constructor(
         values: ContentValues,
         whereClause: String?,
         whereArgs: Array<out Any?>?
-    ): Int {
+    ): Int = useReference {
         require(values.size() != 0) { "Empty values" }
 
-        acquireReference()
-        try {
-            val sql = StringBuilder(120)
-            sql.append("UPDATE ")
-            sql.append(CONFLICT_VALUES[conflictAlgorithm])
-            sql.append(table)
-            sql.append(" SET ")
+        val sql = StringBuilder(120)
+        sql.append("UPDATE ")
+        sql.append(CONFLICT_VALUES[conflictAlgorithm])
+        sql.append(table)
+        sql.append(" SET ")
 
-            // move all bind args to one array
-            val setValuesSize = values.size()
-            val bindArgsSize = if ((whereArgs == null)) setValuesSize else (setValuesSize + whereArgs.size)
-            val bindArgs = arrayOfNulls<Any>(bindArgsSize)
-            var i = 0
-            for ((key, value) in values.valueSet()) {
-                sql.append(if ((i > 0)) "," else "")
-                sql.append(key)
-                bindArgs[i++] = value
-                sql.append("=?")
-            }
-            if (whereArgs != null) {
-                i = setValuesSize
-                while (i < bindArgsSize) {
-                    bindArgs[i] = whereArgs[i - setValuesSize]
-                    i++
-                }
-            }
-            if (whereClause?.isNotEmpty() == true) {
-                sql.append(" WHERE ")
-                sql.append(whereClause)
-            }
-
-            return SQLiteStatement(this, sql.toString(), bindArgs).use {
-                it.executeUpdateDelete()
-            }
-        } finally {
-            releaseReference()
+        // move all bind args to one array
+        val setValuesSize = values.size()
+        val bindArgsSize = if ((whereArgs == null)) setValuesSize else (setValuesSize + whereArgs.size)
+        val bindArgs = arrayOfNulls<Any>(bindArgsSize)
+        var i = 0
+        for ((key, value) in values.valueSet()) {
+            sql.append(if ((i > 0)) "," else "")
+            sql.append(key)
+            bindArgs[i++] = value
+            sql.append("=?")
         }
+        if (whereArgs != null) {
+            i = setValuesSize
+            while (i < bindArgsSize) {
+                bindArgs[i] = whereArgs[i - setValuesSize]
+                i++
+            }
+        }
+        if (whereClause?.isNotEmpty() == true) {
+            sql.append(" WHERE ")
+            sql.append(whereClause)
+        }
+
+        return SQLiteStatement(this, sql.toString(), bindArgs).use(SQLiteStatement::executeUpdateDelete)
     }
 
     /**
@@ -1046,46 +978,39 @@ class SQLiteDatabase private constructor(
         whereClause: String?,
         whereArgs: Array<String?>?,
         @ConflictAlgorithm conflictAlgorithm: Int,
-    ): Int {
+    ): Int = useReference {
         require(!(values == null || values.size() == 0)) { "Empty values" }
 
-        acquireReference()
-        try {
-            val sql = StringBuilder(120)
-            sql.append("UPDATE ")
-            sql.append(CONFLICT_VALUES[conflictAlgorithm])
-            sql.append(table)
-            sql.append(" SET ")
+        val sql = StringBuilder(120)
+        sql.append("UPDATE ")
+        sql.append(CONFLICT_VALUES[conflictAlgorithm])
+        sql.append(table)
+        sql.append(" SET ")
 
-            // move all bind args to one array
-            val setValuesSize = values.size()
-            val bindArgsSize = if ((whereArgs == null)) setValuesSize else (setValuesSize + whereArgs.size)
-            val bindArgs = arrayOfNulls<Any>(bindArgsSize)
-            var i = 0
-            for ((key, value) in values.valueSet()) {
-                sql.append(if ((i > 0)) "," else "")
-                sql.append(key)
-                bindArgs[i++] = value
-                sql.append("=?")
-            }
-            if (whereArgs != null) {
-                i = setValuesSize
-                while (i < bindArgsSize) {
-                    bindArgs[i] = whereArgs[i - setValuesSize]
-                    i++
-                }
-            }
-            if (whereClause?.isNotEmpty() == true) {
-                sql.append(" WHERE ")
-                sql.append(whereClause)
-            }
-
-            return SQLiteStatement(this, sql.toString(), bindArgs).use {
-                it.executeUpdateDelete()
-            }
-        } finally {
-            releaseReference()
+        // move all bind args to one array
+        val setValuesSize = values.size()
+        val bindArgsSize = if ((whereArgs == null)) setValuesSize else (setValuesSize + whereArgs.size)
+        val bindArgs = arrayOfNulls<Any>(bindArgsSize)
+        var i = 0
+        for ((key, value) in values.valueSet()) {
+            sql.append(if ((i > 0)) "," else "")
+            sql.append(key)
+            bindArgs[i++] = value
+            sql.append("=?")
         }
+        if (whereArgs != null) {
+            i = setValuesSize
+            while (i < bindArgsSize) {
+                bindArgs[i] = whereArgs[i - setValuesSize]
+                i++
+            }
+        }
+        if (whereClause?.isNotEmpty() == true) {
+            sql.append(" WHERE ")
+            sql.append(whereClause)
+        }
+
+        return SQLiteStatement(this, sql.toString(), bindArgs).use(SQLiteStatement::executeUpdateDelete)
     }
 
     /**
@@ -1165,15 +1090,8 @@ class SQLiteDatabase private constructor(
     }
 
     @Throws(SQLException::class)
-    private fun executeSql(sql: String, bindArgs: Array<out Any?>?): Int {
-        acquireReference()
-        try {
-            return SQLiteStatement(this, sql, bindArgs).use { statement ->
-                statement.executeUpdateDelete()
-            }
-        } finally {
-            releaseReference()
-        }
+    private fun executeSql(sql: String, bindArgs: Array<out Any?>?): Int = useReference {
+        SQLiteStatement(this, sql, bindArgs).use(SQLiteStatement::executeUpdateDelete)
     }
 
     /**
@@ -1553,30 +1471,25 @@ class SQLiteDatabase private constructor(
      * false otherwise.
      */
     override val isDatabaseIntegrityOk: Boolean
-        get() {
-            acquireReference()
-            try {
-                val attachedDbs = try {
-                    checkNotNull(this.attachedDbs) {
-                        "databaselist for: $path couldn't be retrieved. probably because the database is closed"
-                    }
-                } catch (e: SQLiteException) {
-                    // can't get attachedDb list. do integrity check on the main database
-                    listOf(Pair("main", path))
+        get() = useReference {
+            val attachedDbs = try {
+                checkNotNull(this.attachedDbs) {
+                    "databaselist for: $path couldn't be retrieved. probably because the database is closed"
                 }
+            } catch (e: SQLiteException) {
+                // can't get attachedDb list. do integrity check on the main database
+                listOf(Pair("main", path))
+            }
 
-                attachedDbs.forEach { p ->
-                    compileStatement("PRAGMA ${p.first}.integrity_check(1);").use { prog ->
-                        val rslt = prog.simpleQueryForString()
-                        if (!rslt.equals("ok", ignoreCase = true)) {
-                            // integrity_checker failed on main or attached databases
-                            Log.e(TAG, "PRAGMA integrity_check on " + p.second + " returned: " + rslt)
-                            return false
-                        }
+            attachedDbs.forEach { p ->
+                compileStatement("PRAGMA ${p.first}.integrity_check(1);").use { prog ->
+                    val rslt = prog.simpleQueryForString()
+                    if (!rslt.equals("ok", ignoreCase = true)) {
+                        // integrity_checker failed on main or attached databases
+                        Log.e(TAG, "PRAGMA integrity_check on " + p.second + " returned: " + rslt)
+                        return false
                     }
                 }
-            } finally {
-                releaseReference()
             }
             return true
         }
