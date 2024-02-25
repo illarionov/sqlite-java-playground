@@ -22,6 +22,7 @@ import android.util.SparseIntArray;
 import io.requery.android.database.AbstractWindowedCursor;
 import io.requery.android.database.CursorWindow;
 
+import java.util.Arrays;
 import java.util.HashMap;
 
 /**
@@ -63,12 +64,10 @@ public class SQLiteCursor extends AbstractWindowedCursor {
      * phone) would be in the projection argument and everything from
      * {@code FROM} onward would be in the params argument.
      *
-     * @param editTable not used, present only for compatibility with
-     *                  {@link android.database.sqlite.SQLiteCursor}
      * @param query     the {@link SQLiteQuery} object associated with this cursor object.
      */
     @SuppressWarnings("unused")
-    public SQLiteCursor(SQLiteCursorDriver driver, String editTable, SQLiteQuery query) {
+    public SQLiteCursor(SQLiteCursorDriver driver, SQLiteQuery query) {
         if (query == null) {
             throw new IllegalArgumentException("query object cannot be null");
         }
@@ -239,7 +238,7 @@ public class SQLiteCursor extends AbstractWindowedCursor {
      * Changes the selection arguments. The new values take effect after a call to requery().
      */
     public void setSelectionArguments(String[] selectionArgs) {
-        mDriver.setBindArguments(selectionArgs);
+        mDriver.setBindArguments(Arrays.asList(selectionArgs));
     }
 
     /**

@@ -14,6 +14,7 @@ import io.requery.android.database.CursorWindow
 import io.requery.android.database.sqlite.SQLiteDatabase.Companion.ENABLE_WRITE_AHEAD_LOGGING
 import io.requery.android.database.sqlite.SQLiteDebug.DEBUG_SQL_STATEMENTS
 import io.requery.android.database.sqlite.SQLiteDebug.DEBUG_SQL_TIME
+import io.requery.android.database.sqlite.SQLiteStatementType.getSqlStatementType
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.regex.Pattern
@@ -73,7 +74,6 @@ class SQLiteConnection private constructor(
 
     private val isReadOnlyConnection = configuration.openFlags and SQLiteDatabase.OPEN_READONLY != 0
     private val preparedStatementCache = PreparedStatementCache(this.configuration.maxSqlCacheSize)
-    private val preparedStatementPool: ArrayDeque<PreparedStatement> = ArrayDeque()
 
     // The recent operations log.
     private val recentOperations = OperationLog()
@@ -722,11 +722,16 @@ class SQLiteConnection private constructor(
 
         val statementPtr = nativePrepareStatement(connectionPtr, sql)
         try {
-            val numParameters = nativeGetParameterCount(connectionPtr, statementPtr)
-            val type = SQLiteStatementType.getSqlStatementType(sql)
-            val readOnly = nativeIsReadOnly(connectionPtr, statementPtr)
-            statement = obtainPreparedStatement(sql, statementPtr, numParameters, type, readOnly)
-            if (!skipCache && isCacheable(type)) {
+            val statementType = getSqlStatementType(sql)
+            val putInCache = !skipCache && isCacheable(statementType)
+            statement = PreparedStatement(
+                sql = sql,
+                statementPtr = statementPtr,
+                numParameters = nativeGetParameterCount(connectionPtr, statementPtr),
+                type = statementType,
+                readOnly = nativeIsReadOnly(connectionPtr, statementPtr),
+            )
+            if (putInCache) {
                 preparedStatementCache.put(sql, statement)
                 statement.inCache = true
             }
@@ -742,8 +747,8 @@ class SQLiteConnection private constructor(
         return statement
     }
 
-    private fun releasePreparedStatement(statement: PreparedStatement?) {
-        statement!!.inUse = false
+    private fun releasePreparedStatement(statement: PreparedStatement) {
+        statement.inUse = false
         if (statement.inCache) {
             try {
                 nativeResetStatementAndClearBindings(connectionPtr, statement.statementPtr)
@@ -760,7 +765,7 @@ class SQLiteConnection private constructor(
                     )
                 }
 
-                preparedStatementCache.remove(statement.sql!!)
+                preparedStatementCache.remove(statement.sql)
             }
         } else {
             finalizePreparedStatement(statement)
@@ -769,7 +774,6 @@ class SQLiteConnection private constructor(
 
     private fun finalizePreparedStatement(statement: PreparedStatement?) {
         nativeFinalizeStatement(connectionPtr, statement!!.statementPtr)
-        recyclePreparedStatement(statement)
     }
 
     private fun attachCancellationSignal(cancellationSignal: CancellationSignal?) {
@@ -1040,30 +1044,6 @@ class SQLiteConnection private constructor(
         return "SQLiteConnection: " + configuration.path + " (" + connectionId + ")"
     }
 
-    private fun obtainPreparedStatement(
-        sql: String, statementPtr: Long,
-        numParameters: Int, type: Int, readOnly: Boolean
-    ): PreparedStatement {
-        var statement = preparedStatementPool.removeFirstOrNull()
-        if (statement != null) {
-            statement.inCache = false
-        } else {
-            statement = PreparedStatement()
-        }
-        return statement.apply {
-            this.sql = sql
-            this.statementPtr = statementPtr
-            this.numParameters = numParameters
-            this.type = type
-            this.readOnly = readOnly
-        }
-    }
-
-    private fun recyclePreparedStatement(statement: PreparedStatement) {
-        statement.sql = null
-        preparedStatementPool.addLast(statement)
-    }
-
     /**
      * Holder type for a prepared statement.
      *
@@ -1076,20 +1056,20 @@ class SQLiteConnection private constructor(
      */
     private data class PreparedStatement(
         // The SQL from which the statement was prepared.
-        var sql: String? = null,
+        val sql: String,
 
         // The native sqlite3_stmt object pointer.
         // Lifetime is managed explicitly by the connection.
-        var statementPtr: Long = 0,
+        val statementPtr: Long = 0,
 
         // The number of parameters that the prepared statement has.
-        var numParameters: Int = 0,
+        val numParameters: Int = 0,
 
         // The statement type.
-        var type: Int = 0,
+        val type: Int = 0,
 
         // True if the statement is read-only.
-        var readOnly: Boolean = false,
+        val readOnly: Boolean = false,
 
         // True if the statement is in the cache.
         var inCache: Boolean = false,
@@ -1331,7 +1311,7 @@ class SQLiteConnection private constructor(
                 else -> "succeeded"
             }
 
-        internal val formattedStartTime: String
+        val formattedStartTime: String
             get() = startTimeDateFormat.format(Date(startTime))
 
         companion object {

@@ -23,6 +23,7 @@ import android.util.Log;
 import androidx.core.os.CancellationSignal;
 import androidx.core.os.OperationCanceledException;
 import io.requery.android.database.CursorWindow;
+import java.util.List;
 
 /**
  * Represents a query that reads the resulting rows into a {@link SQLiteQuery}.
@@ -36,7 +37,7 @@ public final class SQLiteQuery extends SQLiteProgram {
 
     private final CancellationSignal mCancellationSignal;
 
-    SQLiteQuery(SQLiteDatabase db, String query, Object[] bindArgs,
+    SQLiteQuery(SQLiteDatabase db, String query, List<?> bindArgs,
                 CancellationSignal cancellationSignal) {
         super(db, query, bindArgs, cancellationSignal);
         mCancellationSignal = cancellationSignal;

@@ -21,6 +21,7 @@ import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabaseCorruptException;
 import android.database.sqlite.SQLiteDoneException;
 import androidx.sqlite.db.SupportSQLiteStatement;
+import java.util.List;
 
 /**
  * Represents a statement that can be executed against a database.  The statement
@@ -33,7 +34,7 @@ import androidx.sqlite.db.SupportSQLiteStatement;
 @SuppressWarnings("unused")
 public final class SQLiteStatement extends SQLiteProgram implements SupportSQLiteStatement {
 
-    SQLiteStatement(SQLiteDatabase db, String sql, Object[] bindArgs) {
+    SQLiteStatement(SQLiteDatabase db, String sql, List<?> bindArgs) {
         super(db, sql, bindArgs, null);
     }
 

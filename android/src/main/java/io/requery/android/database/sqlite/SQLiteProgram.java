@@ -21,6 +21,8 @@ import androidx.core.os.CancellationSignal;
 import androidx.sqlite.db.SupportSQLiteProgram;
 
 import java.util.Arrays;
+import java.util.List;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * A base class for compiled SQLite programs.
@@ -39,7 +41,7 @@ public abstract class SQLiteProgram extends SQLiteClosable implements SupportSQL
     private final int mNumParameters;
     private final Object[] mBindArgs;
 
-    SQLiteProgram(SQLiteDatabase db, String sql, Object[] bindArgs,
+    SQLiteProgram(SQLiteDatabase db, String sql, List<?> bindArgs,
             CancellationSignal cancellationSignalForPrepare) {
         mDatabase = db;
         mSql = sql.trim();
@@ -66,16 +68,18 @@ public abstract class SQLiteProgram extends SQLiteClosable implements SupportSQL
                 break;
         }
 
-        if (bindArgs != null && bindArgs.length > mNumParameters) {
+        if (bindArgs != null && bindArgs.size() > mNumParameters) {
             throw new IllegalArgumentException("Too many bind arguments.  "
-                    + bindArgs.length + " arguments were provided but the statement needs "
+                    + bindArgs.size() + " arguments were provided but the statement needs "
                     + mNumParameters + " arguments.");
         }
 
         if (mNumParameters != 0) {
             mBindArgs = new Object[mNumParameters];
             if (bindArgs != null) {
-                System.arraycopy(bindArgs, 0, mBindArgs, 0, bindArgs.length);
+                for (int i = 0; i < bindArgs.size(); i++) {
+                    mBindArgs[i] = bindArgs.get(i);
+                }
             }
         } else {
             mBindArgs = null;
@@ -156,10 +160,7 @@ public abstract class SQLiteProgram extends SQLiteClosable implements SupportSQL
      * @param value The value to bind, must not be null
      */
     @Override
-    public void bindString(int index, String value) {
-        if (value == null) {
-            throw new IllegalArgumentException("the bind value at index " + index + " is null");
-        }
+    public void bindString(int index, @NotNull String value) {
         bind(index, value);
     }
 
@@ -171,10 +172,7 @@ public abstract class SQLiteProgram extends SQLiteClosable implements SupportSQL
      * @param value The value to bind, must not be null
      */
     @Override
-    public void bindBlob(int index, byte[] value) {
-        if (value == null) {
-            throw new IllegalArgumentException("the bind value at index " + index + " is null");
-        }
+    public void bindBlob(int index, @NotNull byte[] value) {
         bind(index, value);
     }
 
@@ -222,10 +220,10 @@ public abstract class SQLiteProgram extends SQLiteClosable implements SupportSQL
      *
      * @param bindArgs the String array of bind args, none of which must be null.
      */
-    public void bindAllArgsAsStrings(String[] bindArgs) {
+    public void bindAllArgsAsStrings(List<String> bindArgs) {
         if (bindArgs != null) {
-            for (int i = bindArgs.length; i != 0; i--) {
-                bindString(i, bindArgs[i - 1]);
+            for (int i = bindArgs.size(); i != 0; i--) {
+                bindString(i, bindArgs.get(i - 1));
             }
         }
     }

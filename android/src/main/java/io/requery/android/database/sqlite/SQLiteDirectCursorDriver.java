@@ -19,6 +19,9 @@ package io.requery.android.database.sqlite;
 
 import android.database.Cursor;
 import androidx.core.os.CancellationSignal;
+import java.util.List;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A cursor driver that uses the given query directly.
@@ -27,27 +30,26 @@ import androidx.core.os.CancellationSignal;
  */
 public final class SQLiteDirectCursorDriver implements SQLiteCursorDriver {
     private final SQLiteDatabase mDatabase;
-    private final String mEditTable; 
     private final String mSql;
     private final CancellationSignal mCancellationSignal;
     private SQLiteQuery mQuery;
 
-    public SQLiteDirectCursorDriver(SQLiteDatabase db, String sql, String editTable,
-            CancellationSignal cancellationSignal) {
+    public SQLiteDirectCursorDriver(SQLiteDatabase db, String sql, CancellationSignal cancellationSignal) {
         mDatabase = db;
-        mEditTable = editTable;
         mSql = sql;
         mCancellationSignal = cancellationSignal;
     }
 
-    public Cursor query(SQLiteDatabase.CursorFactory factory, Object[] selectionArgs) {
+    @NotNull
+    @Override
+    public Cursor query(@Nullable SQLiteDatabase.CursorFactory factory, @NotNull List<?> selectionArgs) {
         SQLiteQuery query = new SQLiteQuery(mDatabase, mSql, selectionArgs, mCancellationSignal);
         final Cursor cursor;
         try {
             if (factory == null) {
-                cursor = new SQLiteCursor(this, mEditTable, query);
+                cursor = new SQLiteCursor(this, query);
             } else {
-                cursor = factory.newCursor(mDatabase, this, mEditTable, query);
+                cursor = factory.newCursor(mDatabase, this, query);
             }
         } catch (RuntimeException ex) {
             query.close();
@@ -64,7 +66,7 @@ public final class SQLiteDirectCursorDriver implements SQLiteCursorDriver {
     }
 
     @Override
-    public void setBindArguments(String[] bindArgs) {
+    public void setBindArguments(@NotNull List<String> bindArgs) {
         mQuery.bindAllArgsAsStrings(bindArgs);
     }
 

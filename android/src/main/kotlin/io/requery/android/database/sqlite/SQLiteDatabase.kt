@@ -451,7 +451,7 @@ class SQLiteDatabase private constructor(
         /**
          * Gets the database version.
          */
-        get() = longForQuery("PRAGMA user_version;", null).toInt()
+        get() = longForQuery("PRAGMA user_version;").toInt()
         /**
          * Sets the database version.
          */
@@ -464,7 +464,7 @@ class SQLiteDatabase private constructor(
          * Returns the maximum size the database may grow to.
          */
         get() {
-            val pageCount = longForQuery("PRAGMA max_page_count;", null)
+            val pageCount = longForQuery("PRAGMA max_page_count;")
             return pageCount * pageSize
         }
 
@@ -482,7 +482,7 @@ class SQLiteDatabase private constructor(
         if ((numBytes % pageSize) != 0L) {
             numPages++
         }
-        val newPageCount = longForQuery("PRAGMA max_page_count = $numPages", null)
+        val newPageCount = longForQuery("PRAGMA max_page_count = $numPages")
         return newPageCount * pageSize
     }
 
@@ -492,7 +492,7 @@ class SQLiteDatabase private constructor(
          *
          * @return the database page size, in bytes
          */
-        get() = longForQuery("PRAGMA page_size;", null)
+        get() = longForQuery("PRAGMA page_size;")
         /**
          * Sets the database page size. The page size must be a power of two. This
          * method does not work if any data has been written to the database file,
@@ -596,7 +596,7 @@ class SQLiteDatabase private constructor(
         table: String,
         columns: Array<String?>?,
         selection: String?,
-        selectionArgs: Array<Any?>?,
+        selectionArgs: List<Any?>,
         groupBy: String?,
         having: String?,
         orderBy: String?,
@@ -605,11 +605,7 @@ class SQLiteDatabase private constructor(
     ): Cursor = useReference {
         val sql =
             SQLiteQueryBuilder.buildQueryString(distinct, table, columns, selection, groupBy, having, orderBy, limit)
-
-        rawQueryWithFactory(
-            cursorFactory, sql, selectionArgs,
-            findEditTable(table), cancellationSignal
-        )
+        rawQueryWithFactory(cursorFactory, sql, selectionArgs, cancellationSignal)
     }
 
     /**
@@ -624,8 +620,6 @@ class SQLiteDatabase private constructor(
     ): Cursor = rawQueryWithFactory(
         cursorFactory = null,
         sql = query,
-        selectionArgs = null,
-        editTable = null,
         cancellationSignal = null
     )
 
@@ -644,8 +638,7 @@ class SQLiteDatabase private constructor(
     ): Cursor = rawQueryWithFactory(
         cursorFactory = null,
         sql = query,
-        selectionArgs = bindArgs,
-        editTable = null,
+        selectionArgs = bindArgs.toList(),
         cancellationSignal = null
     )
 
@@ -695,16 +688,11 @@ class SQLiteDatabase private constructor(
         supportQuery: SupportSQLiteQuery,
         signal: CancellationSignal?
     ): Cursor = rawQueryWithFactory(
-        { db, masterQuery, editTable, query ->
+        { db, masterQuery, query ->
             supportQuery.bindTo(query)
-            cursorFactory?.newCursor(
-                db = db,
-                masterQuery = masterQuery,
-                editTable = editTable,
-                query = query
-            ) ?: SQLiteCursor(masterQuery, editTable, query)
+            cursorFactory?.newCursor(db, masterQuery, query) ?: SQLiteCursor(masterQuery, query)
         },
-        supportQuery.sql, arrayOf(), null, signal
+        supportQuery.sql, listOf(), signal
     )
 
     /**
@@ -736,11 +724,10 @@ class SQLiteDatabase private constructor(
     fun rawQueryWithFactory(
         cursorFactory: CursorFactory?,
         sql: String?,
-        selectionArgs: Array<out Any?>?,
-        editTable: String?,
+        selectionArgs: List<Any?> = listOf(),
         cancellationSignal: CancellationSignal? = null
     ): Cursor = useReference {
-        val driver: SQLiteCursorDriver = SQLiteDirectCursorDriver(this, sql, editTable, cancellationSignal)
+        val driver: SQLiteCursorDriver = SQLiteDirectCursorDriver(this, sql, cancellationSignal)
         return driver.query(cursorFactory ?: this.cursorFactory, selectionArgs)
     }
 
@@ -799,9 +786,12 @@ class SQLiteDatabase private constructor(
         sql.append(table)
         sql.append('(')
 
-        var bindArgs: Array<Any?>? = null
-        val size = if ((initialValues != null && initialValues.size() > 0)
-        ) initialValues.size() else 0
+        val bindArgs: Array<Any?>
+        val size = if ((initialValues != null && initialValues.size() > 0)) {
+            initialValues.size()
+        } else {
+            0
+        }
         if (size > 0) {
             bindArgs = arrayOfNulls(size)
             var i = 0
@@ -819,10 +809,11 @@ class SQLiteDatabase private constructor(
             }
         } else {
             sql.append("$nullColumnHack) VALUES (NULL")
+            bindArgs = emptyArray()
         }
         sql.append(')')
 
-        return SQLiteStatement(this, sql.toString(), bindArgs).use { it.executeInsert() }
+        return SQLiteStatement(this, sql.toString(), bindArgs.toList()).use { it.executeInsert() }
     }
 
     /**
@@ -838,7 +829,7 @@ class SQLiteDatabase private constructor(
      * otherwise. To remove all rows and get a count pass "1" as the
      * whereClause.
      */
-    fun delete(table: String, whereClause: String, whereArgs: Array<String?>?): Int = useReference {
+    fun delete(table: String, whereClause: String, whereArgs: List<String?> = emptyList()): Int = useReference {
         SQLiteStatement(
             this,
             "DELETE FROM $table" + (if (whereClause.isNotEmpty()) " WHERE $whereClause" else ""),
@@ -865,7 +856,7 @@ class SQLiteDatabase private constructor(
         SQLiteStatement(
             this,
             "DELETE FROM " + table + (if (whereClause?.isNotEmpty() == true) " WHERE $whereClause" else ""),
-            whereArgs
+            whereArgs?.toList()
         ).use {
             it.executeUpdateDelete()
         }
@@ -884,7 +875,7 @@ class SQLiteDatabase private constructor(
      * will be bound as Strings.
      * @return the number of rows affected
      */
-    fun update(table: String?, values: ContentValues?, whereClause: String?, whereArgs: Array<String?>?): Int {
+    fun update(table: String?, values: ContentValues?, whereClause: String?, whereArgs: List<String?>): Int {
         return updateWithOnConflict(table, values, whereClause, whereArgs, CONFLICT_NONE)
     }
 
@@ -940,7 +931,7 @@ class SQLiteDatabase private constructor(
             sql.append(whereClause)
         }
 
-        return SQLiteStatement(this, sql.toString(), bindArgs).use(SQLiteStatement::executeUpdateDelete)
+        return SQLiteStatement(this, sql.toString(), bindArgs.toList()).use(SQLiteStatement::executeUpdateDelete)
     }
 
     /**
@@ -961,7 +952,7 @@ class SQLiteDatabase private constructor(
         table: String?,
         values: ContentValues?,
         whereClause: String?,
-        whereArgs: Array<String?>?,
+        whereArgs: List<String?>,
         @ConflictAlgorithm conflictAlgorithm: Int,
     ): Int = useReference {
         require(!(values == null || values.size() == 0)) { "Empty values" }
@@ -973,23 +964,16 @@ class SQLiteDatabase private constructor(
         sql.append(" SET ")
 
         // move all bind args to one array
-        val setValuesSize = values.size()
-        val bindArgsSize = if ((whereArgs == null)) setValuesSize else (setValuesSize + whereArgs.size)
-        val bindArgs = arrayOfNulls<Any>(bindArgsSize)
+        val bindArgs = ArrayList<Any?>(values.size() + whereArgs.size)
         var i = 0
         for ((key, value) in values.valueSet()) {
             sql.append(if ((i > 0)) "," else "")
             sql.append(key)
-            bindArgs[i++] = value
             sql.append("=?")
+            bindArgs[i++] = value
         }
-        if (whereArgs != null) {
-            i = setValuesSize
-            while (i < bindArgsSize) {
-                bindArgs[i] = whereArgs[i - setValuesSize]
-                i++
-            }
-        }
+        bindArgs.addAll(whereArgs)
+
         if (whereClause?.isNotEmpty() == true) {
             sql.append(" WHERE ")
             sql.append(whereClause)
@@ -1021,7 +1005,7 @@ class SQLiteDatabase private constructor(
      */
     @Throws(SQLException::class)
     override fun execSQL(sql: String) {
-        executeSql(sql, null)
+        executeSql(sql)
     }
 
     /**
@@ -1071,11 +1055,11 @@ class SQLiteDatabase private constructor(
      */
     @Throws(SQLException::class)
     override fun execSQL(sql: String, bindArgs: Array<out Any?>) {
-        executeSql(sql, bindArgs)
+        executeSql(sql, bindArgs.toList())
     }
 
     @Throws(SQLException::class)
-    private fun executeSql(sql: String, bindArgs: Array<out Any?>?): Int = useReference {
+    private fun executeSql(sql: String, bindArgs: List<Any?> = emptyList()): Int = useReference {
         SQLiteStatement(this, sql, bindArgs).use(SQLiteStatement::executeUpdateDelete)
     }
 
@@ -1426,7 +1410,7 @@ class SQLiteDatabase private constructor(
 
             try {
                 // has attached databases. query sqlite to get the list of attached databases.
-                rawQuery("pragma database_list;", null).use { c ->
+                rawQuery("pragma database_list;").use { c ->
                     while (c.moveToNext()) {
                         // sqlite returns a row for each database in the returned list of databases.
                         //   in each row,
@@ -1495,7 +1479,6 @@ class SQLiteDatabase private constructor(
         fun newCursor(
             db: SQLiteDatabase,
             masterQuery: SQLiteCursorDriver?,
-            editTable: String?,
             query: SQLiteQuery
         ): Cursor
     }
@@ -1567,7 +1550,7 @@ class SQLiteDatabase private constructor(
      * @return the number of rows in the table filtered by the selection
      */
     @JvmOverloads
-    fun queryNumEntries(table: String, selection: String? = null, selectionArgs: Array<String?>? = null): Long {
+    fun queryNumEntries(table: String, selection: String? = null, selectionArgs: List<String> = listOf()): Long {
         val s = if (selection?.isNotEmpty() == true) " where $selection" else ""
         return longForQuery("select count(*) from $table$s", selectionArgs)
     }
@@ -1576,7 +1559,10 @@ class SQLiteDatabase private constructor(
      * Utility method to run the query on the db and return the value in the
      * first column of the first row.
      */
-    fun longForQuery(query: String, selectionArgs: Array<String?>?): Long = compileStatement(query).use { prog ->
+    fun longForQuery(
+        query: String,
+        selectionArgs: List<String> = emptyList()
+    ): Long = compileStatement(query).use { prog ->
         longForQuery(prog, selectionArgs)
     }
 
@@ -1584,27 +1570,10 @@ class SQLiteDatabase private constructor(
      * Utility method to run the query on the db and return the value in the
      * first column of the first row.
      */
-    fun stringForQuery(query: String, selectionArgs: Array<String?>?): String? = compileStatement(query).use { prog ->
-        stringForQuery(prog, selectionArgs)
-    }
-
-    /**
-     * Utility method to run the query on the db and return the blob value in the
-     * first column of the first row.
-     *
-     * @return A read-only file descriptor for a copy of the blob value.
-     */
-    fun blobFileDescriptorForQuery(
+    fun stringForQuery(
         query: String,
-        selectionArgs: Array<String?>?
-    ): ParcelFileDescriptor {
-        val prog = compileStatement(query)
-        try {
-            return blobFileDescriptorForQuery(prog, selectionArgs)
-        } finally {
-            prog.close()
-        }
-    }
+        selectionArgs: List<String> = emptyList()
+    ): String? = compileStatement(query).use { prog: SQLiteStatement -> stringForQuery(prog, selectionArgs) }
 
     companion object {
         private const val TAG = "SQLiteDatabase"
@@ -1923,7 +1892,7 @@ class SQLiteDatabase private constructor(
          * Utility method to run the pre-compiled query and return the value in the
          * first column of the first row.
          */
-        private fun longForQuery(prog: SQLiteStatement, selectionArgs: Array<String?>?): Long {
+        private fun longForQuery(prog: SQLiteStatement, selectionArgs: List<String?>): Long {
             prog.bindAllArgsAsStrings(selectionArgs)
             return prog.simpleQueryForLong()
         }
@@ -1932,23 +1901,9 @@ class SQLiteDatabase private constructor(
          * Utility method to run the pre-compiled query and return the value in the
          * first column of the first row.
          */
-        fun stringForQuery(prog: SQLiteStatement, selectionArgs: Array<String?>?): String? {
+        fun stringForQuery(prog: SQLiteStatement, selectionArgs: List<String?>): String? {
             prog.bindAllArgsAsStrings(selectionArgs)
             return prog.simpleQueryForString()
-        }
-
-        /**
-         * Utility method to run the pre-compiled query and return the blob value in the
-         * first column of the first row.
-         *
-         * @return A read-only file descriptor for a copy of the blob value.
-         */
-        fun blobFileDescriptorForQuery(
-            prog: SQLiteStatement,
-            selectionArgs: Array<String?>?
-        ): ParcelFileDescriptor {
-            prog.bindAllArgsAsStrings(selectionArgs)
-            return prog.simpleQueryForBlobFileDescriptor()
         }
 
         /**
@@ -1985,7 +1940,7 @@ class SQLiteDatabase private constructor(
             table: String,
             columns: Array<String?>?,
             selection: String?,
-            selectionArgs: Array<Any?>?,
+            selectionArgs: List<Any?>,
             groupBy: String?,
             having: String?,
             orderBy: String?,
@@ -2041,7 +1996,7 @@ class SQLiteDatabase private constructor(
             table: String,
             columns: Array<String?>?,
             selection: String?,
-            selectionArgs: Array<Any?>?,
+            selectionArgs: List<Any?>,
             groupBy: String?,
             having: String?,
             orderBy: String?,
@@ -2075,9 +2030,9 @@ class SQLiteDatabase private constructor(
          */
         fun SQLiteDatabase.rawQuery(
             sql: String?,
-            selectionArgs: Array<Any?>?,
+            selectionArgs: List<Any> = listOf(),
             cancellationSignal: CancellationSignal? = null
-        ): Cursor = rawQueryWithFactory(null, sql, selectionArgs, null, cancellationSignal)
+        ): Cursor = rawQueryWithFactory(null, sql, selectionArgs, cancellationSignal)
 
         /**
          * Convenience method for inserting a row into the database.
