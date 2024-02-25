@@ -45,7 +45,7 @@ import java.util.concurrent.locks.LockSupport
  * and most likely the VM is about to crash.
  *
  */
-internal class SQLiteConnectionPool private constructor(
+class SQLiteConnectionPool private constructor(
     configuration: SQLiteDatabaseConfiguration
 ) : Closeable {
     private val closeGuard: CloseGuard = CloseGuard.get()
@@ -823,8 +823,8 @@ internal class SQLiteConnectionPool private constructor(
             acquiredConnections[connection] = AcquiredConnectionStatus.NORMAL
         } catch (ex: RuntimeException) {
             Log.e(
-                TAG, "Failed to prepare acquired connection for session, closing it: "
-                        + connection + ", connectionFlags=" + connectionFlags
+                TAG,
+                "Failed to prepare acquired connection for session, closing it: $connection, connectionFlags=$connectionFlags"
             )
             closeConnectionAndLogExceptionsLocked(connection)
             throw ex // rethrow!

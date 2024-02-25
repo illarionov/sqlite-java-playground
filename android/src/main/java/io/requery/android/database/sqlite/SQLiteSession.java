@@ -24,7 +24,6 @@ package io.requery.android.database.sqlite;
 import android.annotation.SuppressLint;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteTransactionListener;
-import android.os.ParcelFileDescriptor;
 import androidx.core.os.CancellationSignal;
 import androidx.core.os.OperationCanceledException;
 import io.requery.android.database.CursorWindow;
@@ -326,15 +325,13 @@ public final class SQLiteSession {
                 // Execute SQL might throw a runtime exception.
                 switch (transactionMode) {
                     case TRANSACTION_MODE_IMMEDIATE:
-                        mConnection.execute("BEGIN IMMEDIATE;", null,
-                                cancellationSignal); // might throw
+                        mConnection.execute("BEGIN IMMEDIATE;", new String[0], cancellationSignal); // might throw
                         break;
                     case TRANSACTION_MODE_EXCLUSIVE:
-                        mConnection.execute("BEGIN EXCLUSIVE;", null,
-                                cancellationSignal); // might throw
+                        mConnection.execute("BEGIN EXCLUSIVE;", new String[0], cancellationSignal); // might throw
                         break;
                     default:
-                        mConnection.execute("BEGIN;", null, cancellationSignal); // might throw
+                        mConnection.execute("BEGIN;", new String[0], cancellationSignal); // might throw
                         break;
                 }
             }
@@ -693,42 +690,6 @@ public final class SQLiteSession {
         acquireConnection(sql, connectionFlags, cancellationSignal); // might throw
         try {
             return mConnection.executeForString(sql, bindArgs, cancellationSignal); // might throw
-        } finally {
-            releaseConnection(); // might throw
-        }
-    }
-
-    /**
-     * Executes a statement that returns a single BLOB result as a
-     * file descriptor to a shared memory region.
-     *
-     * @param sql The SQL statement to execute.
-     * @param bindArgs The arguments to bind, or null if none.
-     * @param connectionFlags The connection flags to use if a connection must be
-     * acquired by this operation.  Refer to {@link SQLiteConnectionPool}.
-     * @param cancellationSignal A signal to cancel the operation in progress, or null if none.
-     * @return The file descriptor for a shared memory region that contains
-     * the value of the first column in the first row of the result set as a BLOB,
-     * or null if none.
-     *
-     * @throws SQLiteException if an error occurs, such as a syntax error
-     * or invalid number of bind arguments.
-     * @throws OperationCanceledException if the operation was canceled.
-     */
-    public ParcelFileDescriptor executeForBlobFileDescriptor(String sql, Object[] bindArgs,
-            int connectionFlags, CancellationSignal cancellationSignal) {
-        if (sql == null) {
-            throw new IllegalArgumentException("sql must not be null.");
-        }
-
-        if (executeSpecial(sql, bindArgs, connectionFlags, cancellationSignal)) {
-            return null;
-        }
-
-        acquireConnection(sql, connectionFlags, cancellationSignal); // might throw
-        try {
-            return mConnection.executeForBlobFileDescriptor(sql, bindArgs,
-                    cancellationSignal); // might throw
         } finally {
             releaseConnection(); // might throw
         }

@@ -22,6 +22,7 @@ import android.database.sqlite.SQLiteDatabaseCorruptException;
 import android.database.sqlite.SQLiteDoneException;
 import android.os.ParcelFileDescriptor;
 import androidx.sqlite.db.SupportSQLiteStatement;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Represents a statement that can be executed against a database.  The statement
@@ -135,27 +136,6 @@ public final class SQLiteStatement extends SQLiteProgram implements SupportSQLit
         acquireReference();
         try {
             return getSession().executeForString(
-                    getSql(), getBindArgs(), getConnectionFlags(), null);
-        } catch (SQLiteDatabaseCorruptException ex) {
-            onCorruption();
-            throw ex;
-        } finally {
-            releaseReference();
-        }
-    }
-
-    /**
-     * Executes a statement that returns a 1 by 1 table with a blob value.
-     *
-     * @return A read-only file descriptor for a copy of the blob value, or {@code null}
-     *         if the value is null or could not be read for some reason.
-     *
-     * @throws SQLiteDoneException if the query returns zero rows
-     */
-    public ParcelFileDescriptor simpleQueryForBlobFileDescriptor() {
-        acquireReference();
-        try {
-            return getSession().executeForBlobFileDescriptor(
                     getSql(), getBindArgs(), getConnectionFlags(), null);
         } catch (SQLiteDatabaseCorruptException ex) {
             onCorruption();
