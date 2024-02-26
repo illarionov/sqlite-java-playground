@@ -67,7 +67,7 @@ public final class SQLiteDirectCursorDriver implements SQLiteCursorDriver {
 
     @Override
     public void setBindArguments(@NotNull List<String> bindArgs) {
-        mQuery.bindAllArgsAsStrings(bindArgs);
+        SQLiteProgram.bindAllArgsAsStrings(mQuery, bindArgs);
     }
 
     @Override

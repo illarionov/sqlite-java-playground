@@ -10,7 +10,7 @@ import androidx.sqlite.db.SupportSQLiteProgram
  * This class is not thread-safe.
  *
  */
-internal abstract class SQLiteProgram internal constructor(
+abstract class SQLiteProgram internal constructor(
     val database: SQLiteDatabase,
     sql: String,
     bindArgs: List<Any?>,
@@ -72,22 +72,6 @@ internal abstract class SQLiteProgram internal constructor(
 
     override fun clearBindings() = _bindArgs.indices.forEach { _bindArgs[it] = null }
 
-    /**
-     * Given an array of String bindArgs, this method binds all of them in one single call.
-     *
-     * @param bindArgs the String array of bind args, none of which must be null.
-     */
-    fun bindAllArgsAsStrings(bindArgs: List<String?>) {
-        (bindArgs.size downTo 1).forEach { i ->
-            val arg = bindArgs[i - 1]
-            if (arg != null) {
-                bindString(i, arg)
-            } else {
-                bindNull(i)
-            }
-        }
-    }
-
     override fun onAllReferencesReleased() = clearBindings()
 
     private fun bind(index: Int, value: Any?) {
@@ -98,4 +82,24 @@ internal abstract class SQLiteProgram internal constructor(
         }
         _bindArgs[index - 1] = value
     }
+
+    companion object {
+        /**
+         * Given an array of String bindArgs, this method binds all of them in one single call.
+         *
+         * @param bindArgs the String array of bind args, none of which must be null.
+         */
+        @JvmStatic
+        fun SupportSQLiteProgram.bindAllArgsAsStrings(bindArgs: List<String?>) {
+            (bindArgs.size downTo 1).forEach { i ->
+                val arg = bindArgs[i - 1]
+                if (arg != null) {
+                    bindString(i, arg)
+                } else {
+                    bindNull(i)
+                }
+            }
+        }
+    }
+
 }

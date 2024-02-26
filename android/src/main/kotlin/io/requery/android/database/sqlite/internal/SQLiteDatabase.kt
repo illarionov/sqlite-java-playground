@@ -16,10 +16,12 @@ import androidx.annotation.IntDef
 import androidx.core.os.CancellationSignal
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteQuery
+import androidx.sqlite.db.SupportSQLiteStatement
 import io.requery.android.database.DatabaseErrorHandler
 import io.requery.android.database.DefaultDatabaseErrorHandler
 import io.requery.android.database.sqlite.internal.SQLiteCursor
 import io.requery.android.database.sqlite.SQLiteDatabaseConfiguration
+import io.requery.android.database.sqlite.internal.SQLiteProgram.Companion.bindAllArgsAsStrings
 import java.io.File
 import java.io.FileFilter
 import java.io.IOException
@@ -512,8 +514,8 @@ class SQLiteDatabase private constructor(
      * [SQLiteStatement]s are not synchronized, see the documentation for more details.
      */
     @Throws(SQLException::class)
-    override fun compileStatement(sql: String): SQLiteStatement = useReference {
-        SQLiteStatement(this, sql, null)
+    override fun compileStatement(sql: String): SupportSQLiteStatement = useReference {
+        SQLiteStatement(this, sql)
     }
 
     /**
@@ -862,7 +864,7 @@ class SQLiteDatabase private constructor(
         SQLiteStatement(
             this,
             "DELETE FROM " + table + (if (whereClause?.isNotEmpty() == true) " WHERE $whereClause" else ""),
-            whereArgs?.toList()
+            whereArgs?.toList() ?: emptyList()
         ).use {
             it.executeUpdateDelete()
         }
@@ -1573,9 +1575,9 @@ class SQLiteDatabase private constructor(
      */
     fun longForQuery(
         query: String,
-        selectionArgs: List<String> = emptyList()
+        selectionArgs: List<String?> = emptyList()
     ): Long = compileStatement(query).use { prog ->
-        longForQuery(prog, selectionArgs)
+        longForQuery(prog = prog, selectionArgs)
     }
 
     /**
@@ -1585,7 +1587,7 @@ class SQLiteDatabase private constructor(
     fun stringForQuery(
         query: String,
         selectionArgs: List<String> = emptyList()
-    ): String? = compileStatement(query).use { prog: SQLiteStatement -> stringForQuery(prog, selectionArgs) }
+    ): String? = compileStatement(query).use { prog -> stringForQuery(prog, selectionArgs) }
 
     companion object {
         private const val TAG = "SQLiteDatabase"
@@ -1904,7 +1906,7 @@ class SQLiteDatabase private constructor(
          * Utility method to run the pre-compiled query and return the value in the
          * first column of the first row.
          */
-        private fun longForQuery(prog: SQLiteStatement, selectionArgs: List<String?>): Long {
+        private fun longForQuery(prog: SupportSQLiteStatement, selectionArgs: List<String?>): Long {
             prog.bindAllArgsAsStrings(selectionArgs)
             return prog.simpleQueryForLong()
         }
@@ -1913,7 +1915,7 @@ class SQLiteDatabase private constructor(
          * Utility method to run the pre-compiled query and return the value in the
          * first column of the first row.
          */
-        fun stringForQuery(prog: SQLiteStatement, selectionArgs: List<String?>): String? {
+        fun stringForQuery(prog: SupportSQLiteStatement, selectionArgs: List<String?>): String? {
             prog.bindAllArgsAsStrings(selectionArgs)
             return prog.simpleQueryForString()
         }

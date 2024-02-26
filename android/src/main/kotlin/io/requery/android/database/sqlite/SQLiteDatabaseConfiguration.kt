@@ -15,7 +15,6 @@
  */
 package io.requery.android.database.sqlite
 
-import io.requery.android.database.sqlite.internal.SQLiteCustomExtension
 import io.requery.android.database.sqlite.internal.SQLiteDatabase
 import io.requery.android.database.sqlite.internal.SQLiteFunction
 import java.util.Locale
