@@ -3,7 +3,7 @@ package io.requery.android.database.sqlite.internal
 /**
  * Describes a SQLite statement.
  */
-internal data class SQLiteStatementInfo(
+data class SQLiteStatementInfo(
     /**
      * The number of parameters that the statement has.
      */

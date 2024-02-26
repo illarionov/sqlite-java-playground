@@ -43,7 +43,7 @@ import java.util.Locale
  * to the current locale.
  *
  */
-class SQLiteDatabase private constructor(
+internal class SQLiteDatabase private constructor(
     configuration: SQLiteDatabaseConfiguration,
     // The optional factory to use when creating new Cursors.  May be null.
     private val cursorFactory: CursorFactory? = null,
@@ -54,11 +54,7 @@ class SQLiteDatabase private constructor(
     // INVARIANT: Immutable.
     private val _threadSession: ThreadLocal<SQLiteSession> = object : ThreadLocal<SQLiteSession>() {
         override fun initialValue(): SQLiteSession {
-            val pool: SQLiteConnectionPool?
-            synchronized(lock) {
-                throwIfNotOpenLocked()
-                pool = connectionPoolLocked
-            }
+            val pool = synchronized(lock) { requireConnectionPoolLocked() }
             return SQLiteSession(pool)
         }
     }
@@ -403,7 +399,7 @@ class SQLiteDatabase private constructor(
      * @hide
      */
     fun reopenReadWrite() = synchronized(lock) {
-        throwIfNotOpenLocked()
+        val pool = requireConnectionPoolLocked()
         if (!isReadOnlyLocked) {
             return  // nothing to do
         }
@@ -412,7 +408,7 @@ class SQLiteDatabase private constructor(
         val oldOpenFlags = configurationLocked.openFlags
         configurationLocked.openFlags = (configurationLocked.openFlags and OPEN_READONLY.inv())
         try {
-            connectionPoolLocked!!.reconfigure(configurationLocked)
+            pool.reconfigure(configurationLocked)
         } catch (ex: RuntimeException) {
             configurationLocked.openFlags = oldOpenFlags
             throw ex
@@ -722,16 +718,11 @@ class SQLiteDatabase private constructor(
     @JvmOverloads
     internal fun rawQueryWithFactory(
         cursorFactory: CursorFactory?,
-        sql: String?,
+        sql: String,
         selectionArgs: List<Any?> = listOf(),
         cancellationSignal: CancellationSignal? = null
     ): Cursor = useReference {
-        val driver: SQLiteCursorDriver =
-            SQLiteDirectCursorDriver(
-                this,
-                sql,
-                cancellationSignal
-            )
+        val driver: SQLiteCursorDriver = SQLiteDirectCursorDriver(this, sql, cancellationSignal)
         return driver.query(cursorFactory ?: this.cursorFactory, selectionArgs)
     }
 
@@ -1152,11 +1143,11 @@ class SQLiteDatabase private constructor(
      * In this case the database remains unchanged.
      */
     override fun setLocale(locale: Locale) = synchronized(lock) {
-        throwIfNotOpenLocked()
+        val pool = requireConnectionPoolLocked()
         val oldLocale = configurationLocked.locale
         configurationLocked.locale = locale
         try {
-            connectionPoolLocked!!.reconfigure(configurationLocked)
+            pool.reconfigure(configurationLocked)
         } catch (ex: RuntimeException) {
             configurationLocked.locale = oldLocale
             throw ex
@@ -1182,11 +1173,11 @@ class SQLiteDatabase private constructor(
         check(!(cacheSize > MAX_SQL_CACHE_SIZE || cacheSize < 0)) { "expected value between 0 and $MAX_SQL_CACHE_SIZE" }
 
         synchronized(lock) {
-            throwIfNotOpenLocked()
+            val pool = requireConnectionPoolLocked()
             val oldMaxSqlCacheSize = configurationLocked.maxSqlCacheSize
             configurationLocked.maxSqlCacheSize = cacheSize
             try {
-                connectionPoolLocked!!.reconfigure(configurationLocked)
+                pool.reconfigure(configurationLocked)
             } catch (ex: RuntimeException) {
                 configurationLocked.maxSqlCacheSize = oldMaxSqlCacheSize
                 throw ex
@@ -1229,14 +1220,14 @@ class SQLiteDatabase private constructor(
      * when this method is called.
      */
     override fun setForeignKeyConstraintsEnabled(enabled: Boolean) = synchronized(lock) {
-        throwIfNotOpenLocked()
+        val pool = requireConnectionPoolLocked()
         if (configurationLocked.foreignKeyConstraintsEnabled == enabled) {
             return
         }
 
         configurationLocked.foreignKeyConstraintsEnabled = enabled
         try {
-            connectionPoolLocked!!.reconfigure(configurationLocked)
+            pool.reconfigure(configurationLocked)
         } catch (ex: RuntimeException) {
             configurationLocked.foreignKeyConstraintsEnabled = !enabled
             throw ex
@@ -1328,7 +1319,7 @@ class SQLiteDatabase private constructor(
      * @see .disableWriteAheadLogging
      */
     override fun enableWriteAheadLogging(): Boolean = synchronized(lock) {
-        throwIfNotOpenLocked()
+        val pool = requireConnectionPoolLocked()
         if ((configurationLocked.openFlags and ENABLE_WRITE_AHEAD_LOGGING) != 0) {
             return true
         }
@@ -1346,7 +1337,7 @@ class SQLiteDatabase private constructor(
 
         configurationLocked.openFlags = configurationLocked.openFlags or ENABLE_WRITE_AHEAD_LOGGING
         try {
-            connectionPoolLocked!!.reconfigure(configurationLocked)
+            pool.reconfigure(configurationLocked)
         } catch (ex: RuntimeException) {
             configurationLocked.openFlags = configurationLocked.openFlags and ENABLE_WRITE_AHEAD_LOGGING.inv()
             throw ex
@@ -1364,14 +1355,14 @@ class SQLiteDatabase private constructor(
      * @see .enableWriteAheadLogging
      */
     override fun disableWriteAheadLogging() = synchronized(lock) {
-        throwIfNotOpenLocked()
+        val pool = requireConnectionPoolLocked()
         if ((configurationLocked.openFlags and ENABLE_WRITE_AHEAD_LOGGING) == 0) {
             return
         }
 
         configurationLocked.openFlags = configurationLocked.openFlags and ENABLE_WRITE_AHEAD_LOGGING.inv()
         try {
-            connectionPoolLocked!!.reconfigure(configurationLocked)
+            pool.reconfigure(configurationLocked)
         } catch (ex: RuntimeException) {
             configurationLocked.openFlags = configurationLocked.openFlags or ENABLE_WRITE_AHEAD_LOGGING
             throw ex
@@ -1387,7 +1378,7 @@ class SQLiteDatabase private constructor(
     override val isWriteAheadLoggingEnabled: Boolean
         get() {
             synchronized(lock) {
-                throwIfNotOpenLocked()
+                requireConnectionPoolLocked()
                 return (configurationLocked.openFlags and ENABLE_WRITE_AHEAD_LOGGING) != 0
             }
         }
@@ -1479,8 +1470,8 @@ class SQLiteDatabase private constructor(
 
     override fun toString(): String = "SQLiteDatabase: $path"
 
-    private fun throwIfNotOpenLocked() {
-        checkNotNull(connectionPoolLocked) { "The database '${configurationLocked.label}' is not open." }
+    private fun requireConnectionPoolLocked(): SQLiteConnectionPool = checkNotNull(connectionPoolLocked) {
+        "The database '${configurationLocked.label}' is not open."
     }
 
     /**
@@ -1501,40 +1492,6 @@ class SQLiteDatabase private constructor(
      * A callback interface for a custom sqlite3 function. This can be used to create a function
      * that can be called from sqlite3 database triggers, or used in queries.
      */
-    interface Function {
-        interface Args {
-            fun getBlob(arg: Int): ByteArray?
-            fun getString(arg: Int): String?
-            fun getDouble(arg: Int): Double
-            fun getInt(arg: Int): Int
-            fun getLong(arg: Int): Long
-        }
-
-        interface Result {
-            fun set(value: ByteArray?)
-            fun set(value: Double)
-            fun set(value: Int)
-            fun set(value: Long)
-            fun set(value: String?)
-            fun setError(error: String?)
-            fun setNull()
-        }
-
-        /**
-         * Invoked whenever the function is called.
-         * @param args function arguments
-         * @return String value of the result or null
-         */
-        fun callback(args: Args?, result: Result?)
-
-        companion object {
-            /**
-             * Flag that declares this function to be "deterministic,"
-             * which means it may be used with Indexes on Expressions.
-             */
-            const val FLAG_DETERMINISTIC: Int = 0x800
-        }
-    }
 
     fun enableLocalizedCollators() = connectionPoolLocked!!.enableLocalizedCollators()
 
@@ -2043,7 +2000,7 @@ class SQLiteDatabase private constructor(
          * [Cursor]s are not synchronized, see the documentation for more details.
          */
         fun SQLiteDatabase.rawQuery(
-            sql: String?,
+            sql: String,
             selectionArgs: List<Any> = listOf(),
             cancellationSignal: CancellationSignal? = null
         ): Cursor = rawQueryWithFactory(null, sql, selectionArgs, cancellationSignal)
@@ -2140,5 +2097,40 @@ class SQLiteDatabase private constructor(
             initialValues: ContentValues?,
         ): Long = insertWithOnConflict(table, nullColumnHack, initialValues, CONFLICT_REPLACE)
 
+    }
+}
+
+public interface SQLiteDatabaseFunction {
+    interface Args {
+        fun getBlob(arg: Int): ByteArray?
+        fun getString(arg: Int): String?
+        fun getDouble(arg: Int): Double
+        fun getInt(arg: Int): Int
+        fun getLong(arg: Int): Long
+    }
+
+    interface Result {
+        fun set(value: ByteArray?)
+        fun set(value: Double)
+        fun set(value: Int)
+        fun set(value: Long)
+        fun set(value: String?)
+        fun setError(error: String?)
+        fun setNull()
+    }
+
+    /**
+     * Invoked whenever the function is called.
+     * @param args function arguments
+     * @return String value of the result or null
+     */
+    fun callback(args: Args?, result: Result?)
+
+    companion object {
+        /**
+         * Flag that declares this function to be "deterministic,"
+         * which means it may be used with Indexes on Expressions.
+         */
+        const val FLAG_DETERMINISTIC: Int = 0x800
     }
 }

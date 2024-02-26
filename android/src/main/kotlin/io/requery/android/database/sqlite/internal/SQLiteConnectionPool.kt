@@ -255,7 +255,7 @@ internal class SQLiteConnectionPool private constructor(
      * @throws OperationCanceledException if the operation was canceled.
      */
     fun acquireConnection(
-        sql: String,
+        sql: String?,
         connectionFlags: Int,
         cancellationSignal: CancellationSignal?
     ): SQLiteConnection = waitForConnection(sql, connectionFlags, cancellationSignal)
@@ -500,7 +500,7 @@ internal class SQLiteConnectionPool private constructor(
 
     // Might throw.
     private fun waitForConnection(
-        sql: String,
+        sql: String?,
         connectionFlags: Int,
         cancellationSignal: CancellationSignal?
     ): SQLiteConnection {
@@ -880,7 +880,7 @@ internal class SQLiteConnectionPool private constructor(
         startTime: Long,
         priority: Int,
         wantPrimaryConnection: Boolean,
-        sql: String,
+        sql: String?,
         connectionFlags: Int
     ): ConnectionWaiter {
         var waiter = connectionWaiterPool

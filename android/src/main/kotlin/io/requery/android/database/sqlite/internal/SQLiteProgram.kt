@@ -10,7 +10,7 @@ import androidx.sqlite.db.SupportSQLiteProgram
  * This class is not thread-safe.
  *
  */
-abstract class SQLiteProgram internal constructor(
+internal abstract class SQLiteProgram internal constructor(
     val database: SQLiteDatabase,
     sql: String,
     bindArgs: List<Any?>,

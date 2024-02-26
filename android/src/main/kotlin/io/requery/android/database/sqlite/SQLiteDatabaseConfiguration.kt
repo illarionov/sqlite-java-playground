@@ -16,7 +16,6 @@
 package io.requery.android.database.sqlite
 
 import io.requery.android.database.sqlite.internal.SQLiteDatabase
-import io.requery.android.database.sqlite.internal.SQLiteFunction
 import java.util.Locale
 import java.util.regex.Pattern
 
@@ -36,20 +35,17 @@ public class SQLiteDatabaseConfiguration {
     /**
      * The database path.
      */
-    @JvmField
     val path: String
 
     /**
      * The label to use to describe the database when it appears in logs.
      * This is derived from the path but is stripped to remove PII.
      */
-    @JvmField
     val label: String
 
     /**
      * The flags used to open the database.
      */
-    @JvmField
     @SQLiteDatabase.OpenFlags
     var openFlags: Int = 0
 
@@ -59,7 +55,6 @@ public class SQLiteDatabaseConfiguration {
      *
      * Default is 25.
      */
-    @JvmField
     var maxSqlCacheSize: Int = 0
 
     /**
@@ -67,7 +62,6 @@ public class SQLiteDatabaseConfiguration {
      *
      * Default is the value returned by [Locale.getDefault].
      */
-    @JvmField
     var locale: Locale? = null
 
     /**
@@ -75,19 +69,16 @@ public class SQLiteDatabaseConfiguration {
      *
      * Default is false.
      */
-    @JvmField
     var foreignKeyConstraintsEnabled: Boolean = false
 
     /**
      * The [SQLiteFunction]s to register.
      */
-    @JvmField
     val functions: MutableList<SQLiteFunction> = ArrayList()
 
     /**
      * The custom extensions to register.
      */
-    @JvmField
     val customExtensions: MutableList<SQLiteCustomExtension> = mutableListOf()
 
     /**
@@ -101,7 +92,6 @@ public class SQLiteDatabaseConfiguration {
         path: String = MEMORY_DB_PATH,
         @SQLiteDatabase.OpenFlags openFlags: Int
     ) {
-
         this.path = path
         this.openFlags = openFlags
         label = stripPathForLogs(path)
@@ -123,11 +113,11 @@ public class SQLiteDatabaseConfiguration {
     constructor(
         path: String,
         @SQLiteDatabase.OpenFlags openFlags: Int,
-        functions: List<SQLiteFunction>?,
+        functions: List<SQLiteFunction>,
         extensions: List<SQLiteCustomExtension>
     ) : this(path, openFlags) {
         this.customExtensions.addAll(extensions)
-        this.functions.addAll(functions!!)
+        this.functions.addAll(functions)
     }
 
     /**
