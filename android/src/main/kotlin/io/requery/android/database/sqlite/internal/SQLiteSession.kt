@@ -1,32 +1,8 @@
-/*
- * Copyright (C) 2011 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-// modified from original source see README at the top level of this project
-/*
- ** Modified to support SQLite extensions by the SQLite developers:
- ** sqlite-dev@sqlite.org.
- */
 package io.requery.android.database.sqlite.internal
 
 import android.database.sqlite.SQLiteTransactionListener
 import androidx.core.os.CancellationSignal
 import io.requery.android.database.CursorWindow
-import io.requery.android.database.sqlite.internal.SQLiteStatementType.Companion.getSqlStatementType
-import io.requery.android.database.sqlite.internal.SQLiteStatementType.STATEMENT_ABORT
-import io.requery.android.database.sqlite.internal.SQLiteStatementType.STATEMENT_BEGIN
-import io.requery.android.database.sqlite.internal.SQLiteStatementType.STATEMENT_COMMIT
 
 /**
  * Provides a single client the ability to use a database.
@@ -167,7 +143,6 @@ internal class SQLiteSession(
     private var connection: SQLiteConnection? = null
     private var connectionFlags = 0
     private var connectionUseCount = 0
-    private var transactionPool: Transaction? = null
     private var transactionStack: Transaction? = null
 
     /**
@@ -178,7 +153,7 @@ internal class SQLiteSession(
     /**
      * Returns true if the session has a nested transaction in progress.
      */
-    fun hasNestedTransaction(): Boolean = transactionStack != null && transactionStack!!.mParent != null
+    fun hasNestedTransaction(): Boolean = transactionStack != null && transactionStack!!.parent != null
 
     /**
      * Returns true if the session has an active database connection.
@@ -268,8 +243,13 @@ internal class SQLiteSession(
             }
 
             // Bookkeeping can't throw, except an OOM, which is just too bad...
-            val transaction = obtainTransaction(transactionMode, transactionListener)
-            transaction.mParent = transactionStack
+            val transaction = Transaction(
+                mode = transactionMode,
+                listener = transactionListener,
+                markedSuccessful = false,
+                childFailed = false
+            )
+            transaction.parent = transactionStack
             transactionStack = transaction
         } finally {
             if (transactionStack == null) {
@@ -295,7 +275,7 @@ internal class SQLiteSession(
     fun setTransactionSuccessful() {
         throwIfNoTransaction()
         throwIfTransactionMarkedSuccessful()
-        transactionStack!!.mMarkedSuccessful = true
+        transactionStack!!.markedSuccessful = true
     }
 
     /**
@@ -329,10 +309,10 @@ internal class SQLiteSession(
         cancellationSignal?.throwIfCanceled()
 
         val top = checkNotNull(transactionStack)
-        var successful = (top.mMarkedSuccessful || yielding) && !top.mChildFailed
+        var successful = (top.markedSuccessful || yielding) && !top.childFailed
 
         var listenerException: RuntimeException? = null
-        val listener = top.mListener
+        val listener = top.listener
         if (listener != null) {
             try {
                 if (successful) {
@@ -346,13 +326,12 @@ internal class SQLiteSession(
             }
         }
 
-        transactionStack = top.mParent
-        recycleTransaction(top)
+        transactionStack = top.parent
 
         val transactionStack = transactionStack
         if (transactionStack != null) {
             if (!successful) {
-                transactionStack.mChildFailed = true
+                transactionStack.childFailed = true
             }
         } else {
             try {
@@ -437,13 +416,13 @@ internal class SQLiteSession(
             throwIfTransactionMarkedSuccessful()
             throwIfNestedTransaction()
         } else {
-            if (transaction == null || transaction.mMarkedSuccessful || transaction.mParent != null) {
+            if (transaction == null || transaction.markedSuccessful || transaction.parent != null) {
                 return false
             }
         }
         checkNotNull(connection)
 
-        if (transaction!!.mChildFailed) {
+        if (transaction!!.childFailed) {
             return false
         }
 
@@ -460,8 +439,8 @@ internal class SQLiteSession(
             return false
         }
 
-        val transactionMode = transactionStack!!.mMode
-        val listener = transactionStack!!.mListener
+        val transactionMode = transactionStack!!.mode
+        val listener = transactionStack!!.listener
         val connectionFlags = connectionFlags
         endTransactionUnchecked(cancellationSignal, true) // might throw
 
@@ -729,20 +708,20 @@ internal class SQLiteSession(
     ): Boolean {
         cancellationSignal?.throwIfCanceled()
 
-        val type = getSqlStatementType(sql)
+        val type = SQLiteStatementType.getSqlStatementType(sql)
         return when (type) {
-            STATEMENT_BEGIN -> {
+            SQLiteStatementType.STATEMENT_BEGIN -> {
                 beginTransaction(TRANSACTION_MODE_EXCLUSIVE, null, connectionFlags, cancellationSignal)
                 true
             }
 
-            STATEMENT_COMMIT -> {
+            SQLiteStatementType.STATEMENT_COMMIT -> {
                 setTransactionSuccessful()
                 endTransaction(cancellationSignal)
                 true
             }
 
-            STATEMENT_ABORT -> {
+            SQLiteStatementType.STATEMENT_ABORT -> {
                 endTransaction(cancellationSignal)
                 true
             }
@@ -799,7 +778,7 @@ internal class SQLiteSession(
 
     private fun throwIfTransactionMarkedSuccessful() {
         val transaction = transactionStack
-        check(transaction == null || !transaction.mMarkedSuccessful) {
+        check(transaction == null || !transaction.markedSuccessful) {
             ("Cannot perform this operation because "
                     + "the transaction has already been marked successful.  The only "
                     + "thing you can do now is call endTransaction().")
@@ -812,33 +791,12 @@ internal class SQLiteSession(
         }
     }
 
-    private fun obtainTransaction(mode: Int, listener: SQLiteTransactionListener?): Transaction {
-        var transaction = transactionPool
-        if (transaction != null) {
-            transactionPool = transaction.mParent
-            transaction.mParent = null
-            transaction.mMarkedSuccessful = false
-            transaction.mChildFailed = false
-        } else {
-            transaction = Transaction()
-        }
-        transaction.mMode = mode
-        transaction.mListener = listener
-        return transaction
-    }
-
-    private fun recycleTransaction(transaction: Transaction?) {
-        transaction!!.mParent = transactionPool
-        transaction.mListener = null
-        transactionPool = transaction
-    }
-
     private class Transaction(
-        var mParent: Transaction? = null,
-        var mMode: Int = 0,
-        var mListener: SQLiteTransactionListener? = null,
-        var mMarkedSuccessful: Boolean = false,
-        var mChildFailed: Boolean = false,
+        var parent: Transaction? = null,
+        val mode: Int = 0,
+        val listener: SQLiteTransactionListener? = null,
+        var markedSuccessful: Boolean = false,
+        var childFailed: Boolean = false,
     )
 
     companion object {
