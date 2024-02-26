@@ -199,18 +199,19 @@ abstract class AbstractCursor : Cursor {
 
     override fun getColumnIndex(columnName: String): Int {
         // Hack according to bug 903852
-        var columnName = columnName
         val periodIndex = columnName.lastIndexOf('.')
-        if (periodIndex != -1) {
+        val tableColumnName = if (periodIndex != -1) {
             val e = Exception()
             Log.e(TAG, "requesting column name with table name -- $columnName", e)
-            columnName = columnName.substring(periodIndex + 1)
+            columnName.substring(periodIndex + 1)
+        } else {
+            columnName
         }
 
         val columnNames = columnNames
         val length = columnNames.size
         for (i in 0 until length) {
-            if (columnNames[i].equals(columnName, ignoreCase = true)) {
+            if (columnNames[i].equals(tableColumnName, ignoreCase = true)) {
                 return i
             }
         }

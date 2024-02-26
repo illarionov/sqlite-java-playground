@@ -2,7 +2,7 @@ package io.requery.android.database.sqlite.internal
 
 import android.database.sqlite.SQLiteTransactionListener
 import androidx.core.os.CancellationSignal
-import io.requery.android.database.CursorWindow
+import io.requery.android.database.sqlite.base.CursorWindow
 
 /**
  * Provides a single client the ability to use a database.

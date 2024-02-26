@@ -10,7 +10,7 @@ import android.util.Log
 import android.util.Printer
 import androidx.collection.LruCache
 import androidx.core.os.CancellationSignal
-import io.requery.android.database.CursorWindow
+import io.requery.android.database.sqlite.base.CursorWindow
 import io.requery.android.database.sqlite.SQLiteDatabaseConfiguration
 import io.requery.android.database.sqlite.SQLiteFunction
 import java.text.SimpleDateFormat

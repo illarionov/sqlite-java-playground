@@ -3,7 +3,6 @@ package io.requery.android.database.sqlite.base
 import android.database.CharArrayBuffer
 import android.database.Cursor
 import android.database.StaleDataException
-import io.requery.android.database.CursorWindow
 
 /**
  * A base class for Cursors that store their data in [android.database.CursorWindow]s.
@@ -25,7 +24,7 @@ import io.requery.android.database.CursorWindow
  * (because it is owned by the cursor) and set to null.
  *
  */
-abstract class AbstractWindowedCursor : AbstractCursor() {
+internal abstract class AbstractWindowedCursor : AbstractCursor() {
     /**
      * The cursor window owned by this cursor.
      */

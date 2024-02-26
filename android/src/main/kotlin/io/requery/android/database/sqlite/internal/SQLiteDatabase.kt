@@ -17,8 +17,8 @@ import androidx.core.os.CancellationSignal
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteQuery
 import androidx.sqlite.db.SupportSQLiteStatement
-import io.requery.android.database.DatabaseErrorHandler
-import io.requery.android.database.DefaultDatabaseErrorHandler
+import io.requery.android.database.sqlite.base.DatabaseErrorHandler
+import io.requery.android.database.sqlite.base.DefaultDatabaseErrorHandler
 import io.requery.android.database.sqlite.internal.SQLiteCursor
 import io.requery.android.database.sqlite.SQLiteDatabaseConfiguration
 import io.requery.android.database.sqlite.internal.SQLiteProgram.Companion.bindAllArgsAsStrings

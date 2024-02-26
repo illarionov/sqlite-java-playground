@@ -17,7 +17,7 @@ package io.requery.android.database.sqlite
 
 import android.content.Context
 import androidx.sqlite.db.SupportSQLiteOpenHelper
-import io.requery.android.database.DatabaseErrorHandler
+import io.requery.android.database.sqlite.base.DatabaseErrorHandler
 import io.requery.android.database.sqlite.internal.RequerySqliteOpenHelper
 import io.requery.android.database.sqlite.internal.SQLiteDatabase
 
@@ -78,7 +78,7 @@ public class RequerySQLiteOpenHelperFactory(
     private class CallbackDatabaseErrorHandler(
         private val callback: SupportSQLiteOpenHelper.Callback
     ) : DatabaseErrorHandler {
-        override fun onCorruption(db: SQLiteDatabase) = callback.onCorruption(db)
+        override fun onCorruption(dbObj: SQLiteDatabase) = callback.onCorruption(dbObj)
     }
 
     interface ConfigurationOptions {

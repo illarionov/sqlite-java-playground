@@ -4,7 +4,7 @@ import android.database.sqlite.SQLiteDatabaseCorruptException
 import android.database.sqlite.SQLiteException
 import android.util.Log
 import androidx.core.os.CancellationSignal
-import io.requery.android.database.CursorWindow
+import io.requery.android.database.sqlite.base.CursorWindow
 
 /**
  * Represents a query that reads the resulting rows into a [SQLiteQuery].

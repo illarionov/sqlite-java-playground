@@ -4,7 +4,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteException
 import android.util.Log
 import androidx.sqlite.db.SupportSQLiteOpenHelper
-import io.requery.android.database.DatabaseErrorHandler
+import io.requery.android.database.sqlite.base.DatabaseErrorHandler
 import io.requery.android.database.sqlite.SQLiteDatabaseConfiguration
 
 /**

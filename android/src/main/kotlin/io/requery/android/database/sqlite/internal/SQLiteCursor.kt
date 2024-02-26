@@ -3,7 +3,7 @@ package io.requery.android.database.sqlite.internal
 import android.util.Log
 import android.util.SparseIntArray
 import io.requery.android.database.sqlite.base.AbstractWindowedCursor
-import io.requery.android.database.CursorWindow
+import io.requery.android.database.sqlite.base.CursorWindow
 import kotlin.math.max
 
 /**
