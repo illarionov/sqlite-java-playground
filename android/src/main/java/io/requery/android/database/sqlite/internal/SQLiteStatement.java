@@ -15,7 +15,7 @@
  */
 // modified from original source see README at the top level of this project
 
-package io.requery.android.database.sqlite;
+package io.requery.android.database.sqlite.internal;
 
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabaseCorruptException;

@@ -1,11 +1,11 @@
-package io.requery.android.database.sqlite
+package io.requery.android.database.sqlite.internal
 
 import android.os.SystemClock
 import android.util.Log
 import android.util.Printer
 import androidx.core.os.CancellationSignal
 import androidx.core.os.OperationCanceledException
-import io.requery.android.database.sqlite.SQLiteDatabase.Companion.ENABLE_WRITE_AHEAD_LOGGING
+import io.requery.android.database.sqlite.SQLiteDatabaseConfiguration
 import java.io.Closeable
 import java.util.WeakHashMap
 import java.util.concurrent.atomic.AtomicBoolean
@@ -45,7 +45,7 @@ import java.util.concurrent.locks.LockSupport
  * and most likely the VM is about to crash.
  *
  */
-class SQLiteConnectionPool private constructor(
+internal class SQLiteConnectionPool private constructor(
     configuration: SQLiteDatabaseConfiguration
 ) : Closeable {
     private val closeGuard: CloseGuard = CloseGuard.get()
@@ -167,7 +167,7 @@ class SQLiteConnectionPool private constructor(
     fun reconfigure(configuration: SQLiteDatabaseConfiguration): Unit = synchronized(lock) {
         throwIfClosedLocked()
         val walModeChanged = (
-                (configuration.openFlags xor this.configuration.openFlags) and ENABLE_WRITE_AHEAD_LOGGING
+                (configuration.openFlags xor this.configuration.openFlags) and SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING
                 ) != 0
         if (walModeChanged) {
             // WAL mode can only be changed if there are no acquired connections
@@ -859,7 +859,7 @@ class SQLiteConnectionPool private constructor(
 
     private fun setMaxConnectionPoolSizeLocked() {
         maxConnectionPoolSize = if (!SQLiteDatabase.hasCodec()
-            && (configuration.openFlags and ENABLE_WRITE_AHEAD_LOGGING) != 0
+            && (configuration.openFlags and SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING) != 0
         ) {
             SQLiteGlobal.wALConnectionPoolSize
         } else {

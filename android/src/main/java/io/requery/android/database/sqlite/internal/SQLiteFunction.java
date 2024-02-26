@@ -1,4 +1,4 @@
-package io.requery.android.database.sqlite;
+package io.requery.android.database.sqlite.internal;
 
 /**
  * @author dhleong

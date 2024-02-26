@@ -17,7 +17,7 @@
 
 package io.requery.android.database;
 
-import io.requery.android.database.sqlite.SQLiteDatabase;
+import io.requery.android.database.sqlite.internal.SQLiteDatabase;
 
 /**
  * An interface to let apps define an action to take when database corruption is detected.

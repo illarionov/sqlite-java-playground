@@ -1,4 +1,4 @@
-package io.requery.android.database.sqlite
+package io.requery.android.database.sqlite.internal
 
 import android.util.Log
 import kotlin.concurrent.Volatile

@@ -15,10 +15,9 @@
  */
 // modified from original source see README at the top level of this project
 
-package io.requery.android.database.sqlite;
+package io.requery.android.database.sqlite.internal;
 
 import android.util.Log;
-import android.util.Printer;
 
 import java.util.ArrayList;
 

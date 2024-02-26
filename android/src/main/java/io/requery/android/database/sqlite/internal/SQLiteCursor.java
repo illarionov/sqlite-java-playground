@@ -15,7 +15,7 @@
  */
 // modified from original source see README at the top level of this project
 
-package io.requery.android.database.sqlite;
+package io.requery.android.database.sqlite.internal;
 
 import android.util.Log;
 import android.util.SparseIntArray;
@@ -24,6 +24,7 @@ import io.requery.android.database.CursorWindow;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * A Cursor implementation that exposes results from a query on a {@link SQLiteDatabase}.
@@ -36,7 +37,7 @@ public class SQLiteCursor extends AbstractWindowedCursor {
     static final int NO_COUNT = -1;
 
     /** The names of the columns in the rows */
-    private final String[] mColumns;
+    private final List<String> mColumns;
 
     /** The query object for the cursor */
     private final SQLiteQuery mQuery;
@@ -139,12 +140,12 @@ public class SQLiteCursor extends AbstractWindowedCursor {
     public int getColumnIndex(String columnName) {
         // Create mColumnNameMap on demand
         if (mColumnNameArray == null && mColumnNameMap == null) {
-            String[] columns = mColumns;
-            int columnCount = columns.length;
+            List<String> columns = mColumns;
+            int columnCount = columns.size();
             SparseIntArray map = new SparseIntArray(columnCount);
             boolean collision = false;
             for (int i = 0; i < columnCount; i++) {
-                int key = columns[i].hashCode();
+                int key = columns.get(i).hashCode();
                 // check for hashCode collision
                 if (map.get(key, -1) != -1) {
                     collision = true;
@@ -156,7 +157,7 @@ public class SQLiteCursor extends AbstractWindowedCursor {
             if (collision) {
                 mColumnNameMap = new HashMap<>();
                 for (int i = 0; i < columnCount; i++) {
-                    mColumnNameMap.put(columns[i], i);
+                    mColumnNameMap.put(columns.get(i), i);
                 }
             } else {
                 mColumnNameArray = map;
@@ -181,7 +182,7 @@ public class SQLiteCursor extends AbstractWindowedCursor {
 
     @Override
     public String[] getColumnNames() {
-        return mColumns;
+        return mColumns.toArray(new String[0]);
     }
 
     @Override

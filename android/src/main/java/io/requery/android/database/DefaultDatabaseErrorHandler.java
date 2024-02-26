@@ -20,7 +20,7 @@ package io.requery.android.database;
 import android.database.sqlite.SQLiteException;
 import android.util.Log;
 import android.util.Pair;
-import io.requery.android.database.sqlite.SQLiteDatabase;
+import io.requery.android.database.sqlite.internal.SQLiteDatabase;
 
 import java.io.File;
 import java.util.List;

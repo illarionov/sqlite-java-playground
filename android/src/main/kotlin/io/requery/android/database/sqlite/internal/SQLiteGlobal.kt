@@ -1,4 +1,4 @@
-package io.requery.android.database.sqlite
+package io.requery.android.database.sqlite.internal
 
 /**
  * Provides access to SQLite functions that affect all database connection,

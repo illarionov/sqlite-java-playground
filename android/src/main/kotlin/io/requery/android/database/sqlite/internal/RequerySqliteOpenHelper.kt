@@ -1,11 +1,11 @@
-package io.requery.android.database.sqlite
+package io.requery.android.database.sqlite.internal
 
 import android.content.Context
 import android.database.sqlite.SQLiteException
 import android.util.Log
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import io.requery.android.database.DatabaseErrorHandler
-import io.requery.android.database.sqlite.SQLiteDatabase.OpenFlags
+import io.requery.android.database.sqlite.SQLiteDatabaseConfiguration
 
 /**
  * A helper class to manage database creation and version management.
@@ -32,7 +32,7 @@ import io.requery.android.database.sqlite.SQLiteDatabase.OpenFlags
  *
  */
 @Suppress("unused")
-abstract class SQLiteOpenHelper @JvmOverloads constructor(
+internal abstract class RequerySqliteOpenHelper(
     private val context: Context,
     override val databaseName: String?,
     private val factory: SQLiteDatabase.CursorFactory?,
@@ -360,11 +360,11 @@ abstract class SQLiteOpenHelper @JvmOverloads constructor(
      */
     protected open fun createConfiguration(
         path: String,
-        @OpenFlags openFlags: Int
+        @SQLiteDatabase.OpenFlags openFlags: Int
     ): SQLiteDatabaseConfiguration = SQLiteDatabaseConfiguration(path, openFlags)
 
     companion object {
-        private val TAG: String = SQLiteOpenHelper::class.java.simpleName
+        private val TAG: String = RequerySqliteOpenHelper::class.java.simpleName
 
         // When true, getReadableDatabase returns a read-only database if it is just being opened.
         // The database handle is reopened in read/write mode when getWritableDatabase is called.

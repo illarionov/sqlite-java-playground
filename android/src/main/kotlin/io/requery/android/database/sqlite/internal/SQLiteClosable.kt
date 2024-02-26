@@ -1,4 +1,4 @@
-package io.requery.android.database.sqlite
+package io.requery.android.database.sqlite.internal
 
 import java.io.Closeable
 import kotlin.contracts.ExperimentalContracts
@@ -10,7 +10,8 @@ import kotlin.contracts.contract
  *
  * This class implements a primitive reference counting scheme for database objects.
  */
-abstract class SQLiteClosable : Closeable {
+abstract class SQLiteClosable internal constructor() : Closeable {
+
     private var referenceCount = 1
 
     /**

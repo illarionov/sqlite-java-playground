@@ -18,6 +18,8 @@ package io.requery.android.database.sqlite
 import android.content.Context
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import io.requery.android.database.DatabaseErrorHandler
+import io.requery.android.database.sqlite.internal.RequerySqliteOpenHelper
+import io.requery.android.database.sqlite.internal.SQLiteDatabase
 
 /**
  * Implements [SupportSQLiteOpenHelper.Factory] using the SQLite implementation shipped in
@@ -40,12 +42,12 @@ public class RequerySQLiteOpenHelperFactory(
         name: String?,
         cb: SupportSQLiteOpenHelper.Callback,
         ops: Iterable<ConfigurationOptions>
-    ) : SQLiteOpenHelper(
-        /* context = */ context,
-        /* name = */ name,
-        /* factory = */ null,
-        /* version = */ cb.version,
-        /* errorHandler = */ CallbackDatabaseErrorHandler(cb)
+    ) : RequerySqliteOpenHelper(
+        context = context,
+        databaseName = name,
+        factory = null,
+        version = cb.version,
+        errorHandler = CallbackDatabaseErrorHandler(cb)
     ) {
         private val callback: SupportSQLiteOpenHelper.Callback = cb
         private val configurationOptions = ops

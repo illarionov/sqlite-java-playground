@@ -15,17 +15,21 @@
  */
 // modified from original source see README at the top level of this project
 /*
-** Modified to support SQLite extensions by the SQLite developers: 
-** sqlite-dev@sqlite.org.
-*/
+ ** Modified to support SQLite extensions by the SQLite developers:
+ ** sqlite-dev@sqlite.org.
+ */
 
-package io.requery.android.database.sqlite;
+package io.requery.android.database.sqlite.internal;
 
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteTransactionListener;
 import androidx.core.os.CancellationSignal;
 import androidx.core.os.OperationCanceledException;
 import io.requery.android.database.CursorWindow;
+import java.util.List;
+
+
+import static java.util.Collections.emptyList;
 
 /**
  * Provides a single client the ability to use a database.
@@ -279,19 +283,17 @@ public final class SQLiteSession {
      * be rolled back when the outermost transaction is ended.
      * </p>
      *
-     * @param transactionMode The transaction mode.  One of: {@link #TRANSACTION_MODE_DEFERRED},
-     * {@link #TRANSACTION_MODE_IMMEDIATE}, or {@link #TRANSACTION_MODE_EXCLUSIVE}.
-     * Ignored when creating a nested transaction.
+     * @param transactionMode     The transaction mode.  One of: {@link #TRANSACTION_MODE_DEFERRED},
+     *                            {@link #TRANSACTION_MODE_IMMEDIATE}, or {@link #TRANSACTION_MODE_EXCLUSIVE}.
+     *                            Ignored when creating a nested transaction.
      * @param transactionListener The transaction listener, or null if none.
-     * @param connectionFlags The connection flags to use if a connection must be
-     * acquired by this operation.  Refer to {@link SQLiteConnectionPool}.
-     * @param cancellationSignal A signal to cancel the operation in progress, or null if none.
-     *
-     * @throws IllegalStateException if {@link #setTransactionSuccessful} has already been
-     * called for the current transaction.
-     * @throws IllegalStateException if an error occurs.
+     * @param connectionFlags     The connection flags to use if a connection must be
+     *                            acquired by this operation.  Refer to {@link SQLiteConnectionPool}.
+     * @param cancellationSignal  A signal to cancel the operation in progress, or null if none.
+     * @throws IllegalStateException      if {@link #setTransactionSuccessful} has already been
+     *                                    called for the current transaction.
+     * @throws IllegalStateException      if an error occurs.
      * @throws OperationCanceledException if the operation was canceled.
-     *
      * @see #setTransactionSuccessful
      * @see #yieldTransaction
      * @see #endTransaction
@@ -306,8 +308,8 @@ public final class SQLiteSession {
     }
 
     private void beginTransactionUnchecked(int transactionMode,
-            SQLiteTransactionListener transactionListener, int connectionFlags,
-            CancellationSignal cancellationSignal) {
+                                           SQLiteTransactionListener transactionListener, int connectionFlags,
+                                           CancellationSignal cancellationSignal) {
         if (cancellationSignal != null) {
             cancellationSignal.throwIfCanceled();
         }
@@ -322,13 +324,13 @@ public final class SQLiteSession {
                 // Execute SQL might throw a runtime exception.
                 switch (transactionMode) {
                     case TRANSACTION_MODE_IMMEDIATE:
-                        mConnection.execute("BEGIN IMMEDIATE;", new String[0], cancellationSignal); // might throw
+                        mConnection.execute("BEGIN IMMEDIATE;", emptyList(), cancellationSignal); // might throw
                         break;
                     case TRANSACTION_MODE_EXCLUSIVE:
-                        mConnection.execute("BEGIN EXCLUSIVE;", new String[0], cancellationSignal); // might throw
+                        mConnection.execute("BEGIN EXCLUSIVE;", emptyList(), cancellationSignal); // might throw
                         break;
                     default:
-                        mConnection.execute("BEGIN;", new String[0], cancellationSignal); // might throw
+                        mConnection.execute("BEGIN;", emptyList(), cancellationSignal); // might throw
                         break;
                 }
             }
@@ -366,8 +368,7 @@ public final class SQLiteSession {
      * </p>
      *
      * @throws IllegalStateException if there is no current transaction, or if
-     * {@link #setTransactionSuccessful} has already been called for the current transaction.
-     *
+     *                               {@link #setTransactionSuccessful} has already been called for the current transaction.
      * @see #beginTransaction
      * @see #endTransaction
      */
@@ -389,11 +390,9 @@ public final class SQLiteSession {
      * </p>
      *
      * @param cancellationSignal A signal to cancel the operation in progress, or null if none.
-     *
-     * @throws IllegalStateException if there is no current transaction.
-     * @throws SQLiteException if an error occurs.
+     * @throws IllegalStateException      if there is no current transaction.
+     * @throws SQLiteException            if an error occurs.
      * @throws OperationCanceledException if the operation was canceled.
-     *
      * @see #beginTransaction
      * @see #setTransactionSuccessful
      * @see #yieldTransaction
@@ -485,26 +484,24 @@ public final class SQLiteSession {
      * </p>
      *
      * @param sleepAfterYieldDelayMillis A delay time to wait after yielding
-     * the database connection to allow other threads some time to run.
-     * If the value is less than or equal to zero, there will be no additional
-     * delay beyond the time it will take to begin a new transaction.
-     * @param throwIfUnsafe If true, then instead of returning false when no
-     * transaction is in progress, a nested transaction is in progress, or when
-     * the transaction has already been marked successful, throws {@link IllegalStateException}.
-     * @param cancellationSignal A signal to cancel the operation in progress, or null if none.
+     *                                   the database connection to allow other threads some time to run.
+     *                                   If the value is less than or equal to zero, there will be no additional
+     *                                   delay beyond the time it will take to begin a new transaction.
+     * @param throwIfUnsafe              If true, then instead of returning false when no
+     *                                   transaction is in progress, a nested transaction is in progress, or when
+     *                                   the transaction has already been marked successful, throws {@link IllegalStateException}.
+     * @param cancellationSignal         A signal to cancel the operation in progress, or null if none.
      * @return True if the transaction was actually yielded.
-     *
-     * @throws IllegalStateException if <code>throwIfNested</code> is true and
-     * there is no current transaction, there is a nested transaction in progress or
-     * if {@link #setTransactionSuccessful} has already been called for the current transaction.
-     * @throws SQLiteException if an error occurs.
+     * @throws IllegalStateException      if <code>throwIfNested</code> is true and
+     *                                    there is no current transaction, there is a nested transaction in progress or
+     *                                    if {@link #setTransactionSuccessful} has already been called for the current transaction.
+     * @throws SQLiteException            if an error occurs.
      * @throws OperationCanceledException if the operation was canceled.
-     *
      * @see #beginTransaction
      * @see #endTransaction
      */
     public boolean yieldTransaction(long sleepAfterYieldDelayMillis, boolean throwIfUnsafe,
-            CancellationSignal cancellationSignal) {
+                                    CancellationSignal cancellationSignal) {
         if (throwIfUnsafe) {
             throwIfNoTransaction();
             throwIfTransactionMarkedSuccessful();
@@ -526,7 +523,7 @@ public final class SQLiteSession {
     }
 
     private boolean yieldTransactionUnchecked(long sleepAfterYieldDelayMillis,
-            CancellationSignal cancellationSignal) {
+                                              CancellationSignal cancellationSignal) {
         if (cancellationSignal != null) {
             cancellationSignal.throwIfCanceled();
         }
@@ -567,18 +564,18 @@ public final class SQLiteSession {
      * then it will be stored in the cache for later and reused if possible.
      * </p>
      *
-     * @param sql The SQL statement to prepare.
-     * @param connectionFlags The connection flags to use if a connection must be
-     * acquired by this operation.  Refer to {@link SQLiteConnectionPool}.
+     * @param sql                The SQL statement to prepare.
+     * @param connectionFlags    The connection flags to use if a connection must be
+     *                           acquired by this operation.  Refer to {@link SQLiteConnectionPool}.
      * @param cancellationSignal A signal to cancel the operation in progress, or null if none.
-     * @param outStatementInfo The {@link SQLiteStatementInfo} object to populate
-     * with information about the statement, or null if none.
-     *
-     * @throws SQLiteException if an error occurs, such as a syntax error.
+     * @throws SQLiteException            if an error occurs, such as a syntax error.
      * @throws OperationCanceledException if the operation was canceled.
      */
-    public void prepare(String sql, int connectionFlags, CancellationSignal cancellationSignal,
-            SQLiteStatementInfo outStatementInfo) {
+    public SQLiteStatementInfo prepare(
+            String sql,
+            int connectionFlags,
+            CancellationSignal cancellationSignal
+    ) {
         if (sql == null) {
             throw new IllegalArgumentException("sql must not be null.");
         }
@@ -589,7 +586,7 @@ public final class SQLiteSession {
 
         acquireConnection(sql, connectionFlags, cancellationSignal); // might throw
         try {
-            mConnection.prepare(sql, outStatementInfo); // might throw
+            return mConnection.prepare(sql); // might throw
         } finally {
             releaseConnection(); // might throw
         }
@@ -598,23 +595,22 @@ public final class SQLiteSession {
     /**
      * Executes a statement that does not return a result.
      *
-     * @param sql The SQL statement to execute.
-     * @param bindArgs The arguments to bind, or null if none.
-     * @param connectionFlags The connection flags to use if a connection must be
-     * acquired by this operation.  Refer to {@link SQLiteConnectionPool}.
+     * @param sql                The SQL statement to execute.
+     * @param bindArgs           The arguments to bind, or null if none.
+     * @param connectionFlags    The connection flags to use if a connection must be
+     *                           acquired by this operation.  Refer to {@link SQLiteConnectionPool}.
      * @param cancellationSignal A signal to cancel the operation in progress, or null if none.
-     *
-     * @throws SQLiteException if an error occurs, such as a syntax error
-     * or invalid number of bind arguments.
+     * @throws SQLiteException            if an error occurs, such as a syntax error
+     *                                    or invalid number of bind arguments.
      * @throws OperationCanceledException if the operation was canceled.
      */
-    public void execute(String sql, Object[] bindArgs, int connectionFlags,
-            CancellationSignal cancellationSignal) {
+    public void execute(String sql, List<Object> bindArgs, int connectionFlags,
+                        CancellationSignal cancellationSignal) {
         if (sql == null) {
             throw new IllegalArgumentException("sql must not be null.");
         }
 
-        if (executeSpecial(sql, bindArgs, connectionFlags, cancellationSignal)) {
+        if (executeSpecial(sql, connectionFlags, cancellationSignal)) {
             return;
         }
 
@@ -629,25 +625,24 @@ public final class SQLiteSession {
     /**
      * Executes a statement that returns a single <code>long</code> result.
      *
-     * @param sql The SQL statement to execute.
-     * @param bindArgs The arguments to bind, or null if none.
-     * @param connectionFlags The connection flags to use if a connection must be
-     * acquired by this operation.  Refer to {@link SQLiteConnectionPool}.
+     * @param sql                The SQL statement to execute.
+     * @param bindArgs           The arguments to bind, or null if none.
+     * @param connectionFlags    The connection flags to use if a connection must be
+     *                           acquired by this operation.  Refer to {@link SQLiteConnectionPool}.
      * @param cancellationSignal A signal to cancel the operation in progress, or null if none.
      * @return The value of the first column in the first row of the result set
      * as a <code>long</code>, or zero if none.
-     *
-     * @throws SQLiteException if an error occurs, such as a syntax error
-     * or invalid number of bind arguments.
+     * @throws SQLiteException            if an error occurs, such as a syntax error
+     *                                    or invalid number of bind arguments.
      * @throws OperationCanceledException if the operation was canceled.
      */
-    public long executeForLong(String sql, Object[] bindArgs, int connectionFlags,
-            CancellationSignal cancellationSignal) {
+    public long executeForLong(String sql, List<Object> bindArgs, int connectionFlags,
+                               CancellationSignal cancellationSignal) {
         if (sql == null) {
             throw new IllegalArgumentException("sql must not be null.");
         }
 
-        if (executeSpecial(sql, bindArgs, connectionFlags, cancellationSignal)) {
+        if (executeSpecial(sql, connectionFlags, cancellationSignal)) {
             return 0;
         }
 
@@ -662,25 +657,24 @@ public final class SQLiteSession {
     /**
      * Executes a statement that returns a single {@link String} result.
      *
-     * @param sql The SQL statement to execute.
-     * @param bindArgs The arguments to bind, or null if none.
-     * @param connectionFlags The connection flags to use if a connection must be
-     * acquired by this operation.  Refer to {@link SQLiteConnectionPool}.
+     * @param sql                The SQL statement to execute.
+     * @param bindArgs           The arguments to bind, or null if none.
+     * @param connectionFlags    The connection flags to use if a connection must be
+     *                           acquired by this operation.  Refer to {@link SQLiteConnectionPool}.
      * @param cancellationSignal A signal to cancel the operation in progress, or null if none.
      * @return The value of the first column in the first row of the result set
      * as a <code>String</code>, or null if none.
-     *
-     * @throws SQLiteException if an error occurs, such as a syntax error
-     * or invalid number of bind arguments.
+     * @throws SQLiteException            if an error occurs, such as a syntax error
+     *                                    or invalid number of bind arguments.
      * @throws OperationCanceledException if the operation was canceled.
      */
-    public String executeForString(String sql, Object[] bindArgs, int connectionFlags,
-            CancellationSignal cancellationSignal) {
+    public String executeForString(String sql, List<Object> bindArgs, int connectionFlags,
+                                   CancellationSignal cancellationSignal) {
         if (sql == null) {
             throw new IllegalArgumentException("sql must not be null.");
         }
 
-        if (executeSpecial(sql, bindArgs, connectionFlags, cancellationSignal)) {
+        if (executeSpecial(sql, connectionFlags, cancellationSignal)) {
             return null;
         }
 
@@ -696,24 +690,23 @@ public final class SQLiteSession {
      * Executes a statement that returns a count of the number of rows
      * that were changed.  Use for UPDATE or DELETE SQL statements.
      *
-     * @param sql The SQL statement to execute.
-     * @param bindArgs The arguments to bind, or null if none.
-     * @param connectionFlags The connection flags to use if a connection must be
-     * acquired by this operation.  Refer to {@link SQLiteConnectionPool}.
+     * @param sql                The SQL statement to execute.
+     * @param bindArgs           The arguments to bind, or null if none.
+     * @param connectionFlags    The connection flags to use if a connection must be
+     *                           acquired by this operation.  Refer to {@link SQLiteConnectionPool}.
      * @param cancellationSignal A signal to cancel the operation in progress, or null if none.
      * @return The number of rows that were changed.
-     *
-     * @throws SQLiteException if an error occurs, such as a syntax error
-     * or invalid number of bind arguments.
+     * @throws SQLiteException            if an error occurs, such as a syntax error
+     *                                    or invalid number of bind arguments.
      * @throws OperationCanceledException if the operation was canceled.
      */
-    public int executeForChangedRowCount(String sql, Object[] bindArgs, int connectionFlags,
-            CancellationSignal cancellationSignal) {
+    public int executeForChangedRowCount(String sql, List<Object> bindArgs, int connectionFlags,
+                                         CancellationSignal cancellationSignal) {
         if (sql == null) {
             throw new IllegalArgumentException("sql must not be null.");
         }
 
-        if (executeSpecial(sql, bindArgs, connectionFlags, cancellationSignal)) {
+        if (executeSpecial(sql, connectionFlags, cancellationSignal)) {
             return 0;
         }
 
@@ -730,24 +723,23 @@ public final class SQLiteSession {
      * Executes a statement that returns the row id of the last row inserted
      * by the statement.  Use for INSERT SQL statements.
      *
-     * @param sql The SQL statement to execute.
-     * @param bindArgs The arguments to bind, or null if none.
-     * @param connectionFlags The connection flags to use if a connection must be
-     * acquired by this operation.  Refer to {@link SQLiteConnectionPool}.
+     * @param sql                The SQL statement to execute.
+     * @param bindArgs           The arguments to bind, or null if none.
+     * @param connectionFlags    The connection flags to use if a connection must be
+     *                           acquired by this operation.  Refer to {@link SQLiteConnectionPool}.
      * @param cancellationSignal A signal to cancel the operation in progress, or null if none.
      * @return The row id of the last row that was inserted, or 0 if none.
-     *
-     * @throws SQLiteException if an error occurs, such as a syntax error
-     * or invalid number of bind arguments.
+     * @throws SQLiteException            if an error occurs, such as a syntax error
+     *                                    or invalid number of bind arguments.
      * @throws OperationCanceledException if the operation was canceled.
      */
-    public long executeForLastInsertedRowId(String sql, Object[] bindArgs, int connectionFlags,
-            CancellationSignal cancellationSignal) {
+    public long executeForLastInsertedRowId(String sql, List<Object> bindArgs, int connectionFlags,
+                                            CancellationSignal cancellationSignal) {
         if (sql == null) {
             throw new IllegalArgumentException("sql must not be null.");
         }
 
-        if (executeSpecial(sql, bindArgs, connectionFlags, cancellationSignal)) {
+        if (executeSpecial(sql, connectionFlags, cancellationSignal)) {
             return 0;
         }
 
@@ -765,30 +757,34 @@ public final class SQLiteSession {
      * with a range of results.  Returns the number of rows that were counted
      * during query execution.
      *
-     * @param sql The SQL statement to execute.
-     * @param bindArgs The arguments to bind, or null if none.
-     * @param window The cursor window to clear and fill.
-     * @param startPos The start position for filling the window.
-     * @param requiredPos The position of a row that MUST be in the window.
-     * If it won't fit, then the query should discard part of what it filled
-     * so that it does.  Must be greater than or equal to <code>startPos</code>.
-     * @param countAllRows True to count all rows that the query would return
-     * regagless of whether they fit in the window.
-     * @param connectionFlags The connection flags to use if a connection must be
-     * acquired by this operation.  Refer to {@link SQLiteConnectionPool}.
+     * @param sql                The SQL statement to execute.
+     * @param bindArgs           The arguments to bind, or null if none.
+     * @param window             The cursor window to clear and fill.
+     * @param startPos           The start position for filling the window.
+     * @param requiredPos        The position of a row that MUST be in the window.
+     *                           If it won't fit, then the query should discard part of what it filled
+     *                           so that it does.  Must be greater than or equal to <code>startPos</code>.
+     * @param countAllRows       True to count all rows that the query would return
+     *                           regagless of whether they fit in the window.
+     * @param connectionFlags    The connection flags to use if a connection must be
+     *                           acquired by this operation.  Refer to {@link SQLiteConnectionPool}.
      * @param cancellationSignal A signal to cancel the operation in progress, or null if none.
      * @return The number of rows that were counted during query execution.  Might
      * not be all rows in the result set unless <code>countAllRows</code> is true.
-     *
-     * @throws SQLiteException if an error occurs, such as a syntax error
-     * or invalid number of bind arguments.
+     * @throws SQLiteException            if an error occurs, such as a syntax error
+     *                                    or invalid number of bind arguments.
      * @throws OperationCanceledException if the operation was canceled.
      */
-    public int executeForCursorWindow(String sql, Object[] bindArgs,
-                                      CursorWindow window, int startPos, int requiredPos,
-                                      boolean countAllRows,
-                                      int connectionFlags,
-                                      CancellationSignal cancellationSignal) {
+    public int executeForCursorWindow(
+            String sql,
+            List<Object> bindArgs,
+            CursorWindow window,
+            int startPos,
+            int requiredPos,
+            boolean countAllRows,
+            int connectionFlags,
+            CancellationSignal cancellationSignal
+    ) {
         if (sql == null) {
             throw new IllegalArgumentException("sql must not be null.");
         }
@@ -796,7 +792,7 @@ public final class SQLiteSession {
             throw new IllegalArgumentException("window must not be null.");
         }
 
-        if (executeSpecial(sql, bindArgs, connectionFlags, cancellationSignal)) {
+        if (executeSpecial(sql, connectionFlags, cancellationSignal)) {
             window.clear();
             return 0;
         }
@@ -815,42 +811,39 @@ public final class SQLiteSession {
      * Performs special reinterpretation of certain SQL statements such as "BEGIN",
      * "COMMIT" and "ROLLBACK" to ensure that transaction state invariants are
      * maintained.
-     *
+     * <p>
      * This function is mainly used to support legacy apps that perform their
      * own transactions by executing raw SQL rather than calling {@link #beginTransaction}
      * and the like.
      *
-     * @param sql The SQL statement to execute.
-     * @param bindArgs The arguments to bind, or null if none.
-     * @param connectionFlags The connection flags to use if a connection must be
-     * acquired by this operation.  Refer to {@link SQLiteConnectionPool}.
+     * @param sql                The SQL statement to execute.
+     * @param connectionFlags    The connection flags to use if a connection must be
+     *                           acquired by this operation.  Refer to {@link SQLiteConnectionPool}.
      * @param cancellationSignal A signal to cancel the operation in progress, or null if none.
      * @return True if the statement was of a special form that was handled here,
      * false otherwise.
-     *
-     * @throws SQLiteException if an error occurs, such as a syntax error
-     * or invalid number of bind arguments.
+     * @throws SQLiteException            if an error occurs, such as a syntax error
+     *                                    or invalid number of bind arguments.
      * @throws OperationCanceledException if the operation was canceled.
      */
-    private boolean executeSpecial(String sql, Object[] bindArgs, int connectionFlags,
-            CancellationSignal cancellationSignal) {
+    private boolean executeSpecial(String sql, int connectionFlags,
+                                   CancellationSignal cancellationSignal) {
         if (cancellationSignal != null) {
             cancellationSignal.throwIfCanceled();
         }
 
-        final int type = SQLiteStatementType.getSqlStatementType(sql);
+        final var type = SQLiteStatementType.getSqlStatementType(sql);
         switch (type) {
-            case SQLiteStatementType.STATEMENT_BEGIN:
-                beginTransaction(TRANSACTION_MODE_EXCLUSIVE, null, connectionFlags,
-                        cancellationSignal);
+            case STATEMENT_BEGIN:
+                beginTransaction(TRANSACTION_MODE_EXCLUSIVE, null, connectionFlags, cancellationSignal);
                 return true;
 
-            case SQLiteStatementType.STATEMENT_COMMIT:
+            case STATEMENT_COMMIT:
                 setTransactionSuccessful();
                 endTransaction(cancellationSignal);
                 return true;
 
-            case SQLiteStatementType.STATEMENT_ABORT:
+            case STATEMENT_ABORT:
                 endTransaction(cancellationSignal);
                 return true;
         }
@@ -858,7 +851,7 @@ public final class SQLiteSession {
     }
 
     private void acquireConnection(String sql, int connectionFlags,
-            CancellationSignal cancellationSignal) {
+                                   CancellationSignal cancellationSignal) {
         if (mConnection == null) {
             assert mConnectionUseCount == 0;
             mConnection = mConnectionPool.acquireConnection(sql, connectionFlags,

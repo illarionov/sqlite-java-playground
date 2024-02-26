@@ -1,4 +1,4 @@
-package io.requery.android.database.sqlite
+package io.requery.android.database.sqlite.internal
 
 import android.content.ContentValues
 import android.database.Cursor
@@ -8,7 +8,6 @@ import android.database.sqlite.SQLiteException
 import android.database.sqlite.SQLiteQueryBuilder
 import android.database.sqlite.SQLiteTransactionListener
 import android.os.Looper
-import android.os.ParcelFileDescriptor
 import android.util.EventLog
 import android.util.Log
 import android.util.Pair
@@ -19,13 +18,8 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteQuery
 import io.requery.android.database.DatabaseErrorHandler
 import io.requery.android.database.DefaultDatabaseErrorHandler
-import io.requery.android.database.sqlite.SQLiteConnectionPool.Companion.CONNECTION_FLAG_INTERACTIVE
-import io.requery.android.database.sqlite.SQLiteConnectionPool.Companion.CONNECTION_FLAG_PRIMARY_CONNECTION_AFFINITY
-import io.requery.android.database.sqlite.SQLiteConnectionPool.Companion.CONNECTION_FLAG_READ_ONLY
-import io.requery.android.database.sqlite.SQLiteDatabaseConfiguration.Companion.MEMORY_DB_PATH
-import io.requery.android.database.sqlite.SQLiteSession.TRANSACTION_MODE_DEFERRED
-import io.requery.android.database.sqlite.SQLiteSession.TRANSACTION_MODE_EXCLUSIVE
-import io.requery.android.database.sqlite.SQLiteSession.TRANSACTION_MODE_IMMEDIATE
+import io.requery.android.database.sqlite.internal.SQLiteCursor
+import io.requery.android.database.sqlite.SQLiteDatabaseConfiguration
 import java.io.File
 import java.io.FileFilter
 import java.io.IOException
@@ -181,9 +175,9 @@ class SQLiteDatabase private constructor(
      * @return The connection flags.
      */
     fun getThreadDefaultConnectionFlags(readOnly: Boolean): Int {
-        var flags = if (readOnly) CONNECTION_FLAG_READ_ONLY else CONNECTION_FLAG_PRIMARY_CONNECTION_AFFINITY
+        var flags = if (readOnly) SQLiteConnectionPool.CONNECTION_FLAG_READ_ONLY else SQLiteConnectionPool.CONNECTION_FLAG_PRIMARY_CONNECTION_AFFINITY
         if (isMainThread) {
-            flags = flags or CONNECTION_FLAG_INTERACTIVE
+            flags = flags or SQLiteConnectionPool.CONNECTION_FLAG_INTERACTIVE
         }
         return flags
     }
@@ -211,7 +205,7 @@ class SQLiteDatabase private constructor(
      * }
     </pre> *
      */
-    override fun beginTransaction() = beginTransaction(null, TRANSACTION_MODE_EXCLUSIVE)
+    override fun beginTransaction() = beginTransaction(null, SQLiteSession.TRANSACTION_MODE_EXCLUSIVE)
 
     /**
      * Begins a transaction in IMMEDIATE mode. Transactions can be nested. When
@@ -234,12 +228,12 @@ class SQLiteDatabase private constructor(
      * }
     </pre> *
      */
-    override fun beginTransactionNonExclusive() = beginTransaction(null, TRANSACTION_MODE_IMMEDIATE)
+    override fun beginTransactionNonExclusive() = beginTransaction(null, SQLiteSession.TRANSACTION_MODE_IMMEDIATE)
 
     /**
      * Begins a transaction in DEFERRED mode.
      */
-    fun beginTransactionDeferred() = beginTransaction(null, TRANSACTION_MODE_DEFERRED)
+    fun beginTransactionDeferred() = beginTransaction(null, SQLiteSession.TRANSACTION_MODE_DEFERRED)
 
     /**
      * Begins a transaction in DEFERRED mode.
@@ -250,7 +244,7 @@ class SQLiteDatabase private constructor(
      */
     fun beginTransactionWithListenerDeferred(
         transactionListener: SQLiteTransactionListener?
-    ) = beginTransaction(transactionListener, TRANSACTION_MODE_DEFERRED)
+    ) = beginTransaction(transactionListener, SQLiteSession.TRANSACTION_MODE_DEFERRED)
 
     /**
      * Begins a transaction in EXCLUSIVE mode.
@@ -281,7 +275,7 @@ class SQLiteDatabase private constructor(
      */
     override fun beginTransactionWithListener(
         transactionListener: SQLiteTransactionListener
-    ) = beginTransaction(transactionListener, TRANSACTION_MODE_EXCLUSIVE)
+    ) = beginTransaction(transactionListener, SQLiteSession.TRANSACTION_MODE_EXCLUSIVE)
 
     /**
      * Begins a transaction in IMMEDIATE mode. Transactions can be nested. When
@@ -311,7 +305,7 @@ class SQLiteDatabase private constructor(
     override fun beginTransactionWithListenerNonExclusive(
         transactionListener: SQLiteTransactionListener
     ) {
-        beginTransaction(transactionListener, TRANSACTION_MODE_IMMEDIATE)
+        beginTransaction(transactionListener, SQLiteSession.TRANSACTION_MODE_IMMEDIATE)
     }
 
     private fun beginTransaction(transactionListener: SQLiteTransactionListener?, mode: Int) = useReference {
@@ -590,7 +584,7 @@ class SQLiteDatabase private constructor(
      * @see Cursor
      */
     @JvmOverloads
-    fun queryWithFactory(
+    internal fun queryWithFactory(
         cursorFactory: CursorFactory?,
         distinct: Boolean,
         table: String,
@@ -690,7 +684,10 @@ class SQLiteDatabase private constructor(
     ): Cursor = rawQueryWithFactory(
         { db, masterQuery, query ->
             supportQuery.bindTo(query)
-            cursorFactory?.newCursor(db, masterQuery, query) ?: SQLiteCursor(masterQuery, query)
+            cursorFactory?.newCursor(db, masterQuery, query) ?: SQLiteCursor(
+                masterQuery,
+                query
+            )
         },
         supportQuery.sql, listOf(), signal
     )
@@ -721,13 +718,18 @@ class SQLiteDatabase private constructor(
      * [Cursor]s are not synchronized, see the documentation for more details.
      */
     @JvmOverloads
-    fun rawQueryWithFactory(
+    internal fun rawQueryWithFactory(
         cursorFactory: CursorFactory?,
         sql: String?,
         selectionArgs: List<Any?> = listOf(),
         cancellationSignal: CancellationSignal? = null
     ): Cursor = useReference {
-        val driver: SQLiteCursorDriver = SQLiteDirectCursorDriver(this, sql, cancellationSignal)
+        val driver: SQLiteCursorDriver =
+            SQLiteDirectCursorDriver(
+                this,
+                sql,
+                cancellationSignal
+            )
         return driver.query(cursorFactory ?: this.cursorFactory, selectionArgs)
     }
 
@@ -813,7 +815,11 @@ class SQLiteDatabase private constructor(
         }
         sql.append(')')
 
-        return SQLiteStatement(this, sql.toString(), bindArgs.toList()).use { it.executeInsert() }
+        return SQLiteStatement(
+            this,
+            sql.toString(),
+            bindArgs.toList()
+        ).use { it.executeInsert() }
     }
 
     /**
@@ -875,7 +881,7 @@ class SQLiteDatabase private constructor(
      * will be bound as Strings.
      * @return the number of rows affected
      */
-    fun update(table: String?, values: ContentValues?, whereClause: String?, whereArgs: List<String?>): Int {
+    internal fun update(table: String?, values: ContentValues?, whereClause: String?, whereArgs: List<String?>): Int {
         return updateWithOnConflict(table, values, whereClause, whereArgs, CONFLICT_NONE)
     }
 
@@ -931,7 +937,11 @@ class SQLiteDatabase private constructor(
             sql.append(whereClause)
         }
 
-        return SQLiteStatement(this, sql.toString(), bindArgs.toList()).use(SQLiteStatement::executeUpdateDelete)
+        return SQLiteStatement(
+            this,
+            sql.toString(),
+            bindArgs.toList()
+        ).use(SQLiteStatement::executeUpdateDelete)
     }
 
     /**
@@ -979,7 +989,11 @@ class SQLiteDatabase private constructor(
             sql.append(whereClause)
         }
 
-        return SQLiteStatement(this, sql.toString(), bindArgs).use(SQLiteStatement::executeUpdateDelete)
+        return SQLiteStatement(
+            this,
+            sql.toString(),
+            bindArgs
+        ).use(SQLiteStatement::executeUpdateDelete)
     }
 
     /**
@@ -1060,7 +1074,8 @@ class SQLiteDatabase private constructor(
 
     @Throws(SQLException::class)
     private fun executeSql(sql: String, bindArgs: List<Any?> = emptyList()): Int = useReference {
-        SQLiteStatement(this, sql, bindArgs).use(SQLiteStatement::executeUpdateDelete)
+        SQLiteStatement(this, sql, bindArgs)
+            .use(SQLiteStatement::executeUpdateDelete)
     }
 
     /**
@@ -1074,10 +1089,7 @@ class SQLiteDatabase private constructor(
      * @throws SQLiteException if `sql` is invalid
      */
     fun validateSql(sql: String, cancellationSignal: CancellationSignal?) {
-        threadSession.prepare(
-            sql,
-            getThreadDefaultConnectionFlags(true), cancellationSignal, null
-        )
+        threadSession.prepare(sql, getThreadDefaultConnectionFlags(true), cancellationSignal)
     }
 
     /**
@@ -1125,7 +1137,7 @@ class SQLiteDatabase private constructor(
      */
     override val path: String?
         get() = synchronized(lock) {
-            configurationLocked.path.takeIf { it != MEMORY_DB_PATH }
+            configurationLocked.path.takeIf { it != SQLiteDatabaseConfiguration.MEMORY_DB_PATH }
         }
 
     /**
@@ -1191,7 +1203,7 @@ class SQLiteDatabase private constructor(
      *
      *
      * A good time to call this method is right after calling [.openOrCreateDatabase]
-     * or in the [SQLiteOpenHelper.onConfigure] callback.
+     * or in the [RequerySqliteOpenHelper.onConfigure] callback.
      *
      *
      * When foreign key constraints are disabled, the database does not check whether
@@ -1472,7 +1484,7 @@ class SQLiteDatabase private constructor(
     /**
      * Used to allow returning sub-classes of [Cursor] when calling query.
      */
-    fun interface CursorFactory {
+    internal fun interface CursorFactory {
         /**
          * See [SQLiteCursor.SQLiteCursor].
          */
@@ -1723,7 +1735,7 @@ class SQLiteDatabase private constructor(
          */
         @JvmStatic
         @JvmOverloads
-        fun openDatabase(
+        internal fun openDatabase(
             path: String,
             factory: CursorFactory?,
             @OpenFlags flags: Int,
@@ -1754,7 +1766,7 @@ class SQLiteDatabase private constructor(
          * @return the newly opened database
          * @throws SQLiteException if the database cannot be opened
          */
-        fun openDatabase(
+        internal fun openDatabase(
             configuration: SQLiteDatabaseConfiguration,
             factory: CursorFactory?,
             errorHandler: DatabaseErrorHandler?
@@ -1767,7 +1779,7 @@ class SQLiteDatabase private constructor(
         /**
          * Equivalent to openDatabase(file.getPath(), factory, CREATE_IF_NECESSARY).
          */
-        fun openOrCreateDatabase(
+        internal fun openOrCreateDatabase(
             file: File,
             factory: CursorFactory
         ): SQLiteDatabase = openOrCreateDatabase(file.path, factory)
@@ -1775,7 +1787,7 @@ class SQLiteDatabase private constructor(
         /**
          * Equivalent to openDatabase(path, factory, CREATE_IF_NECESSARY).
          */
-        fun openOrCreateDatabase(
+        internal fun openOrCreateDatabase(
             path: String,
             factory: CursorFactory
         ): SQLiteDatabase = openDatabase(
@@ -1789,7 +1801,7 @@ class SQLiteDatabase private constructor(
          * Equivalent to openDatabase(path, factory, CREATE_IF_NECESSARY, errorHandler).
          */
         @JvmStatic
-        fun openOrCreateDatabase(
+        internal fun openOrCreateDatabase(
             path: String,
             factory: CursorFactory,
             errorHandler: DatabaseErrorHandler?
@@ -1859,7 +1871,7 @@ class SQLiteDatabase private constructor(
          * cursor when query is called
          * @return a SQLiteDatabase object, or null if the database can't be created
          */
-        fun create(factory: CursorFactory?): SQLiteDatabase = openDatabase(MEMORY_DB_PATH, factory, CREATE_IF_NECESSARY)
+        internal fun create(factory: CursorFactory?): SQLiteDatabase = openDatabase(SQLiteDatabaseConfiguration.MEMORY_DB_PATH, factory, CREATE_IF_NECESSARY)
 
         /**
          * Finds the name of the first table, which is editable.

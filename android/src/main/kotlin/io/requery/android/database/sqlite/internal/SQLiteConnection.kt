@@ -1,4 +1,4 @@
-package io.requery.android.database.sqlite
+package io.requery.android.database.sqlite.internal
 
 import android.annotation.SuppressLint
 import android.database.Cursor
@@ -11,10 +11,7 @@ import android.util.Printer
 import androidx.collection.LruCache
 import androidx.core.os.CancellationSignal
 import io.requery.android.database.CursorWindow
-import io.requery.android.database.sqlite.SQLiteDatabase.Companion.ENABLE_WRITE_AHEAD_LOGGING
-import io.requery.android.database.sqlite.SQLiteDebug.DEBUG_SQL_STATEMENTS
-import io.requery.android.database.sqlite.SQLiteDebug.DEBUG_SQL_TIME
-import io.requery.android.database.sqlite.SQLiteStatementType.getSqlStatementType
+import io.requery.android.database.sqlite.SQLiteDatabaseConfiguration
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.regex.Pattern
@@ -62,7 +59,7 @@ import java.util.regex.Pattern
  * triggers may call custom SQLite functions that perform additional queries.
  *
  */
-class SQLiteConnection private constructor(
+internal class SQLiteConnection private constructor(
     private val pool: SQLiteConnectionPool,
     configuration: SQLiteDatabaseConfiguration,
     private val connectionId: Int,
@@ -112,9 +109,9 @@ class SQLiteConnection private constructor(
     private fun open() {
         connectionPtr = nativeOpen(
             configuration.path,  // remove the wal flag as its a custom flag not supported by sqlite3_open_v2
-            configuration.openFlags and ENABLE_WRITE_AHEAD_LOGGING.inv(),
+            configuration.openFlags and SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING.inv(),
             configuration.label,
-            DEBUG_SQL_STATEMENTS, DEBUG_SQL_TIME
+            SQLiteDebug.DEBUG_SQL_STATEMENTS, SQLiteDebug.DEBUG_SQL_TIME
         )
 
         setPageSize()
@@ -146,7 +143,7 @@ class SQLiteConnection private constructor(
         closeGuard.close()
 
         if (connectionPtr != 0L) {
-            val cookie = recentOperations.beginOperation("close", null, null)
+            val cookie = recentOperations.beginOperation("close", null)
             try {
                 preparedStatementCache.evictAll()
                 nativeClose(connectionPtr)
@@ -199,7 +196,7 @@ class SQLiteConnection private constructor(
 
     private fun setWalModeFromConfiguration() {
         if (!configuration.isInMemoryDb && !isReadOnlyConnection) {
-            if ((configuration.openFlags and ENABLE_WRITE_AHEAD_LOGGING) != 0) {
+            if ((configuration.openFlags and SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING) != 0) {
                 setJournalMode("WAL")
                 setSyncMode(SQLiteGlobal.wALSyncMode)
             } else {
@@ -288,7 +285,7 @@ class SQLiteConnection private constructor(
             var success = false
             try {
                 execute("DELETE FROM android_metadata")
-                execute("INSERT INTO android_metadata (locale) VALUES(?)", arrayOf(newLocale))
+                execute("INSERT INTO android_metadata (locale) VALUES(?)", listOf(newLocale))
                 execute("REINDEX LOCALIZED")
                 success = true
             } finally {
@@ -318,7 +315,7 @@ class SQLiteConnection private constructor(
         val foreignKeyModeChanged = (newConfiguration.foreignKeyConstraintsEnabled
                 != this.configuration.foreignKeyConstraintsEnabled)
         val walModeChanged = ((newConfiguration.openFlags xor this.configuration.openFlags)
-                and ENABLE_WRITE_AHEAD_LOGGING) != 0
+                and SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING) != 0
         val localeChanged = newConfiguration.locale != this.configuration.locale
 
         // Update configuration parameters.
@@ -381,20 +378,21 @@ class SQLiteConnection private constructor(
      *
      * @throws SQLiteException if an error occurs, such as a syntax error.
      */
-    fun prepare(sql: String, outStatementInfo: SQLiteStatementInfo?) {
-        val cookie = recentOperations.beginOperation("prepare", sql, null)
+    fun prepare(sql: String): SQLiteStatementInfo {
+        val cookie = recentOperations.beginOperation("prepare", sql)
         try {
             val statement = acquirePreparedStatement(sql)
             try {
-                if (outStatementInfo != null) {
-                    outStatementInfo.numParameters = statement.numParameters
-                    outStatementInfo.readOnly = statement.readOnly
-
-                    val columnCount = nativeGetColumnCount(connectionPtr, statement.statementPtr)
-                    outStatementInfo.columnNames = Array(columnCount) {
-                        nativeGetColumnName(connectionPtr, statement.statementPtr, it)
+                val columnCount = nativeGetColumnCount(connectionPtr, statement.statementPtr)
+                return SQLiteStatementInfo(
+                    numParameters = statement.numParameters,
+                    readOnly = statement.readOnly,
+                    columnNames = List(columnCount) {
+                        checkNotNull(nativeGetColumnName(connectionPtr, statement.statementPtr, it)) {
+                            "Column $it not found"
+                        }
                     }
-                }
+                )
             } finally {
                 releasePreparedStatement(statement)
             }
@@ -419,7 +417,7 @@ class SQLiteConnection private constructor(
      */
     fun execute(
         sql: String,
-        bindArgs: Array<out Any?> = arrayOf(),
+        bindArgs: List<Any?> = listOf(),
         cancellationSignal: CancellationSignal? = null
     ) {
         val cookie = recentOperations.beginOperation("execute", sql, bindArgs)
@@ -461,7 +459,7 @@ class SQLiteConnection private constructor(
      */
     fun executeForLong(
         sql: String,
-        bindArgs: Array<out Any?> = arrayOf(),
+        bindArgs: List<Any?> = emptyList(),
         cancellationSignal: CancellationSignal? = null
     ): Long {
         val cookie = recentOperations.beginOperation("executeForLong", sql, bindArgs)
@@ -503,7 +501,7 @@ class SQLiteConnection private constructor(
      */
     fun executeForString(
         sql: String,
-        bindArgs: Array<out Any?> = arrayOf(),
+        bindArgs: List<Any?> = listOf(),
         cancellationSignal: CancellationSignal? = null
     ): String {
         val cookie = recentOperations.beginOperation("executeForString", sql, bindArgs)
@@ -545,13 +543,14 @@ class SQLiteConnection private constructor(
      */
     fun executeForChangedRowCount(
         sql: String,
-        bindArgs: Array<out Any?> = arrayOf(),
+        bindArgs: List<Any?> = listOf(),
         cancellationSignal: CancellationSignal? = null
     ): Int {
         var changedRows = 0
         val cookie = recentOperations.beginOperation(
             "executeForChangedRowCount",
-            sql, bindArgs
+            sql,
+            bindArgs
         )
         try {
             val statement = acquirePreparedStatement(sql)
@@ -594,12 +593,13 @@ class SQLiteConnection private constructor(
      */
     fun executeForLastInsertedRowId(
         sql: String,
-        bindArgs: Array<out Any?> = arrayOf(),
+        bindArgs: List<Any?> = listOf(),
         cancellationSignal: CancellationSignal? = null
     ): Long {
         val cookie = recentOperations.beginOperation(
             "executeForLastInsertedRowId",
-            sql, bindArgs
+            sql,
+            bindArgs
         )
         try {
             val statement = acquirePreparedStatement(sql)
@@ -648,7 +648,7 @@ class SQLiteConnection private constructor(
      */
     fun executeForCursorWindow(
         sql: String,
-        bindArgs: Array<out Any?> = arrayOf(),
+        bindArgs: List<Any?> = listOf(),
         window: CursorWindow,
         startPos: Int = 0,
         requiredPos: Int = 0,
@@ -722,7 +722,7 @@ class SQLiteConnection private constructor(
 
         val statementPtr = nativePrepareStatement(connectionPtr, sql)
         try {
-            val statementType = getSqlStatementType(sql)
+            val statementType = SQLiteStatementType.getSqlStatementType(sql)
             val putInCache = !skipCache && isCacheable(statementType)
             statement = PreparedStatement(
                 sql = sql,
@@ -818,7 +818,7 @@ class SQLiteConnection private constructor(
     // that the SQLite connection is still alive.
     override fun onCancel() = nativeCancel(connectionPtr)
 
-    private fun bindArguments(statement: PreparedStatement, bindArgs: Array<out Any?>) {
+    private fun bindArguments(statement: PreparedStatement, bindArgs: List<Any?>) {
         if (bindArgs.size != statement.numParameters) {
             throw SQLiteBindOrColumnIndexOutOfRangeException(
                 "Expected ${statement.numParameters} bind arguments but $${bindArgs.size} were provided."
@@ -1066,7 +1066,7 @@ class SQLiteConnection private constructor(
         val numParameters: Int = 0,
 
         // The statement type.
-        val type: Int = 0,
+        val type: SQLiteStatementType = SQLiteStatementType.STATEMENT_SELECT,
 
         // True if the statement is read-only.
         val readOnly: Boolean = false,
@@ -1123,7 +1123,7 @@ class SQLiteConnection private constructor(
         private var index = 0
         private var generation = 0
 
-        fun beginOperation(kind: String?, sql: String?, bindArgs: Array<out Any?>?): Int = synchronized(operations) {
+        fun beginOperation(kind: String?, sql: String?, bindArgs: List<Any?> = emptyList()): Int = synchronized(operations) {
             val index = (index + 1) % MAX_RECENT_OPERATIONS
             var operation = operations[index]
             if (operation == null) {
@@ -1132,26 +1132,16 @@ class SQLiteConnection private constructor(
             } else {
                 operation.finished = false
                 operation.exception = null
-                if (operation.bindArgs != null) {
-                    operation.bindArgs!!.clear()
-                }
             }
             operation.startTime = System.currentTimeMillis()
             operation.kind = kind
             operation.sql = sql
-            if (bindArgs != null) {
-                if (operation.bindArgs == null) {
-                    operation.bindArgs = ArrayList()
+            operation.bindArgs = bindArgs.map {
+                if (it is ByteArray) {
+                    // Don't hold onto the real byte array longer than necessary.
+                    arrayOf<Byte>()
                 } else {
-                    operation.bindArgs!!.clear()
-                }
-                for (arg in bindArgs) {
-                    if (arg != null && arg is ByteArray) {
-                        // Don't hold onto the real byte array longer than necessary.
-                        operation.bindArgs!!.add(arrayOf<Byte>())
-                    } else {
-                        operation.bindArgs!!.add(arg)
-                    }
+                    it
                 }
             }
             operation.cookie = newOperationCookieLocked(index)
@@ -1265,7 +1255,7 @@ class SQLiteConnection private constructor(
         var endTime: Long = 0
         var kind: String? = null
         var sql: String? = null
-        var bindArgs: ArrayList<Any?>? = null
+        var bindArgs: List<Any?>? = null
         var finished: Boolean = false
         var exception: Exception? = null
         var cookie: Int = 0
@@ -1456,7 +1446,7 @@ class SQLiteConnection private constructor(
             else -> Cursor.FIELD_TYPE_STRING
         }
 
-        private fun isCacheable(statementType: Int): Boolean = statementType == SQLiteStatementType.STATEMENT_UPDATE ||
+        private fun isCacheable(statementType: SQLiteStatementType): Boolean = statementType == SQLiteStatementType.STATEMENT_UPDATE ||
                 statementType == SQLiteStatementType.STATEMENT_SELECT
 
         private fun trimSqlForDisplay(sql: String?): String {

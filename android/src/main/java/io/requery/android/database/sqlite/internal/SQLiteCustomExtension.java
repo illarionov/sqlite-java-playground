@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.requery.android.database.sqlite;
+package io.requery.android.database.sqlite.internal;
 
 /**
  * Describes a SQLite extension entry point.

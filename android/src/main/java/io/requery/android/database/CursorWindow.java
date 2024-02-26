@@ -20,7 +20,7 @@ package io.requery.android.database;
 import android.database.CharArrayBuffer;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteException;
-import io.requery.android.database.sqlite.SQLiteClosable;
+import io.requery.android.database.sqlite.internal.SQLiteClosable;
 
 /**
  * A buffer containing multiple cursor rows.
