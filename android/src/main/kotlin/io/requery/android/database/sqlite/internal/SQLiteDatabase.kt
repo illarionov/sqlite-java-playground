@@ -683,7 +683,7 @@ internal class SQLiteDatabase private constructor(
         { db, masterQuery, query ->
             supportQuery.bindTo(query)
             cursorFactory?.newCursor(db, masterQuery, query) ?: SQLiteCursor(
-                masterQuery,
+                checkNotNull(masterQuery),
                 query
             )
         },
