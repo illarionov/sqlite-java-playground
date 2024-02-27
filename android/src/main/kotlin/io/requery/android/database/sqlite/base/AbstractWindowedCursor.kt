@@ -3,6 +3,7 @@ package io.requery.android.database.sqlite.base
 import android.database.CharArrayBuffer
 import android.database.Cursor
 import android.database.StaleDataException
+import io.requery.android.database.sqlite.internal.interop.Sqlite3WindowPtr
 
 /**
  * A base class for Cursors that store their data in [android.database.CursorWindow]s.
@@ -24,11 +25,13 @@ import android.database.StaleDataException
  * (because it is owned by the cursor) and set to null.
  *
  */
-internal abstract class AbstractWindowedCursor : AbstractCursor() {
+internal abstract class AbstractWindowedCursor<WP : Sqlite3WindowPtr>(
+    private val windowCtor: (name: String?) -> CursorWindow<WP>,
+) : AbstractCursor() {
     /**
      * The cursor window owned by this cursor.
      */
-    protected var _window: CursorWindow? = null
+    protected var _window: CursorWindow<WP>? = null
 
     override fun getBlob(column: Int): ByteArray {
         checkPosition()
@@ -87,7 +90,7 @@ internal abstract class AbstractWindowedCursor : AbstractCursor() {
         }
     }
 
-    open var window: CursorWindow?
+    open var window: CursorWindow<WP>?
         get() = _window
         /**
          * Sets a new cursor window for the cursor to use.
@@ -135,7 +138,7 @@ internal abstract class AbstractWindowedCursor : AbstractCursor() {
      */
     protected fun clearOrCreateWindow(name: String?) {
         _window?.clear() ?: run {
-            _window = CursorWindow(name)
+            _window = windowCtor(name)
         }
     }
 

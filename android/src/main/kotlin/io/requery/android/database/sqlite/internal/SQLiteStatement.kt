@@ -2,6 +2,7 @@ package io.requery.android.database.sqlite.internal
 
 import android.database.sqlite.SQLiteDatabaseCorruptException
 import androidx.sqlite.db.SupportSQLiteStatement
+import io.requery.android.database.sqlite.internal.interop.Sqlite3WindowPtr
 
 /**
  * Represents a statement that can be executed against a database.  The statement
@@ -12,11 +13,11 @@ import androidx.sqlite.db.SupportSQLiteStatement
  * This class is not thread-safe.
  *
  */
-internal class SQLiteStatement(
-    db: SQLiteDatabase,
+internal class SQLiteStatement<WP: Sqlite3WindowPtr>(
+    db: SQLiteDatabase<*, *, WP>,
     sql: String,
     bindArgs: List<Any?> = emptyList<Unit>(),
-) : SQLiteProgram(db, sql, bindArgs, null), SupportSQLiteStatement {
+) : SQLiteProgram<WP>(db, sql, bindArgs, null), SupportSQLiteStatement {
     /**
      * Execute this SQL statement, if it is not a SELECT / INSERT / DELETE / UPDATE, for example
      * CREATE / DROP table, view, trigger, index etc.

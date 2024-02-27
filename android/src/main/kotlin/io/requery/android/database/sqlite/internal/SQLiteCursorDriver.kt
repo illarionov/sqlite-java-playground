@@ -1,12 +1,15 @@
 package io.requery.android.database.sqlite.internal
 
 import android.database.Cursor
+import io.requery.android.database.sqlite.internal.interop.Sqlite3ConnectionPtr
+import io.requery.android.database.sqlite.internal.interop.Sqlite3StatementPtr
+import io.requery.android.database.sqlite.internal.interop.Sqlite3WindowPtr
 
 /**
  * A driver for SQLiteCursors that is used to create them and gets notified
  * by the cursors it creates on significant events in their lifetimes.
  */
-internal interface SQLiteCursorDriver {
+internal interface SQLiteCursorDriver<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr, WP : Sqlite3WindowPtr> {
     /**
      * Executes the query returning a Cursor over the result set.
      *
@@ -14,7 +17,7 @@ internal interface SQLiteCursorDriver {
      * null if standard SQLiteCursors should be returned.
      * @return a Cursor over the result set
      */
-    fun query(factory: SQLiteDatabase.CursorFactory?, bindArgs: List<Any?>): Cursor
+    fun query(factory: SQLiteDatabase.CursorFactory<CP, SP, WP>?, bindArgs: List<Any?>): Cursor
 
     /**
      * Called by a SQLiteCursor when it is released.

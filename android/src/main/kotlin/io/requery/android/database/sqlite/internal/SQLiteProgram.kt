@@ -2,6 +2,7 @@ package io.requery.android.database.sqlite.internal
 
 import androidx.core.os.CancellationSignal
 import androidx.sqlite.db.SupportSQLiteProgram
+import io.requery.android.database.sqlite.internal.interop.Sqlite3WindowPtr
 
 /**
  * A base class for compiled SQLite programs.
@@ -10,8 +11,8 @@ import androidx.sqlite.db.SupportSQLiteProgram
  * This class is not thread-safe.
  *
  */
-internal abstract class SQLiteProgram internal constructor(
-    val database: SQLiteDatabase,
+internal abstract class SQLiteProgram<WP: Sqlite3WindowPtr> internal constructor(
+    val database: SQLiteDatabase<*, *, WP>,
     sql: String,
     bindArgs: List<Any?>,
     cancellationSignalForPrepare: CancellationSignal?
@@ -52,7 +53,7 @@ internal abstract class SQLiteProgram internal constructor(
         bindArgs.forEachIndexed { index, value -> _bindArgs[index] = value }
     }
 
-    protected val session: SQLiteSession
+    protected val session: SQLiteSession<*, *, WP>
         get() = database.threadSession
 
     protected val connectionFlags: Int

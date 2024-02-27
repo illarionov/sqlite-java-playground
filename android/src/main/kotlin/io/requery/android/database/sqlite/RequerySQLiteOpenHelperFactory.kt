@@ -20,6 +20,13 @@ import androidx.sqlite.db.SupportSQLiteOpenHelper
 import io.requery.android.database.sqlite.base.DatabaseErrorHandler
 import io.requery.android.database.sqlite.internal.RequerySqliteOpenHelper
 import io.requery.android.database.sqlite.internal.SQLiteDatabase
+import io.requery.android.database.sqlite.internal.interop.GraalNativeBindings
+import io.requery.android.database.sqlite.internal.interop.GraalWindowBindings
+import io.requery.android.database.sqlite.internal.interop.SqlOpenHelperNativeBindings
+import io.requery.android.database.sqlite.internal.interop.SqlOpenHelperWindowBindings
+import io.requery.android.database.sqlite.internal.interop.Sqlite3ConnectionPtr
+import io.requery.android.database.sqlite.internal.interop.Sqlite3StatementPtr
+import io.requery.android.database.sqlite.internal.interop.Sqlite3WindowPtr
 
 /**
  * Implements [SupportSQLiteOpenHelper.Factory] using the SQLite implementation shipped in
@@ -29,40 +36,48 @@ public class RequerySQLiteOpenHelperFactory(
     private val configurationOptions: List<ConfigurationOptions> = emptyList()
 ) : SupportSQLiteOpenHelper.Factory {
     override fun create(configuration: SupportSQLiteOpenHelper.Configuration): SupportSQLiteOpenHelper {
+        val bindings = GraalNativeBindings()
+        val windowBingins = GraalWindowBindings()
+
         return CallbackSQLiteOpenHelper(
             configuration.context,
             configuration.name,
             configuration.callback,
-            configurationOptions
+            configurationOptions,
+            bindings,
+            windowBingins,
         )
     }
 
-    private class CallbackSQLiteOpenHelper(
+    private class CallbackSQLiteOpenHelper<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr, WP : Sqlite3WindowPtr>(
         context: Context,
         name: String?,
         cb: SupportSQLiteOpenHelper.Callback,
-        ops: Iterable<ConfigurationOptions>
-    ) : RequerySqliteOpenHelper(
+        ops: Iterable<ConfigurationOptions>,
+        bindings: SqlOpenHelperNativeBindings<CP, SP, WP>,
+        windowBindings: SqlOpenHelperWindowBindings<WP>,
+    ) : RequerySqliteOpenHelper<CP, SP, WP>(
         context = context,
         databaseName = name,
         factory = null,
         version = cb.version,
-        errorHandler = CallbackDatabaseErrorHandler(cb)
+        errorHandler = CallbackDatabaseErrorHandler(cb),
+        bindings, windowBindings
     ) {
         private val callback: SupportSQLiteOpenHelper.Callback = cb
         private val configurationOptions = ops
 
-        override fun onConfigure(db: SQLiteDatabase) = callback.onConfigure(db)
+        override fun onConfigure(db: SQLiteDatabase<CP, SP, WP>) = callback.onConfigure(db)
 
-        override fun onCreate(db: SQLiteDatabase) = callback.onCreate(db)
+        override fun onCreate(db: SQLiteDatabase<CP, SP, WP>) = callback.onCreate(db)
 
-        override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) =
+        override fun onUpgrade(db: SQLiteDatabase<CP, SP, WP>, oldVersion: Int, newVersion: Int) =
             callback.onUpgrade(db, oldVersion, newVersion)
 
-        override fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int): Unit =
+        override fun onDowngrade(db: SQLiteDatabase<CP, SP, WP>, oldVersion: Int, newVersion: Int): Unit =
             callback.onDowngrade(db, oldVersion, newVersion)
 
-        override fun onOpen(db: SQLiteDatabase) = callback.onOpen(db)
+        override fun onOpen(db: SQLiteDatabase<CP, SP, WP>) = callback.onOpen(db)
 
         override fun createConfiguration(path: String, openFlags: Int): SQLiteDatabaseConfiguration {
             var config = super.createConfiguration(path, openFlags)
@@ -78,7 +93,7 @@ public class RequerySQLiteOpenHelperFactory(
     private class CallbackDatabaseErrorHandler(
         private val callback: SupportSQLiteOpenHelper.Callback
     ) : DatabaseErrorHandler {
-        override fun onCorruption(dbObj: SQLiteDatabase) = callback.onCorruption(dbObj)
+        override fun onCorruption(dbObj: SQLiteDatabase<*, *, *>) = callback.onCorruption(dbObj)
     }
 
     interface ConfigurationOptions {

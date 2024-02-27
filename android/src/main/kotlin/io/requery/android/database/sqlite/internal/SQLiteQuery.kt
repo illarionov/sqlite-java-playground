@@ -5,6 +5,7 @@ import android.database.sqlite.SQLiteException
 import android.util.Log
 import androidx.core.os.CancellationSignal
 import io.requery.android.database.sqlite.base.CursorWindow
+import io.requery.android.database.sqlite.internal.interop.Sqlite3WindowPtr
 
 /**
  * Represents a query that reads the resulting rows into a [SQLiteQuery].
@@ -14,12 +15,12 @@ import io.requery.android.database.sqlite.base.CursorWindow
  * This class is not thread-safe.
  *
  */
-internal class SQLiteQuery(
-    db: SQLiteDatabase,
+internal class SQLiteQuery<WP: Sqlite3WindowPtr>(
+    db: SQLiteDatabase<*, *, WP>,
     query: String,
     bindArgs: List<Any?>,
     private val mCancellationSignal: CancellationSignal?
-) : SQLiteProgram(db, query, bindArgs, mCancellationSignal) {
+) : SQLiteProgram<WP>(db, query, bindArgs, mCancellationSignal) {
     /**
      * Reads rows into a buffer.
      *
@@ -36,12 +37,12 @@ internal class SQLiteQuery(
      * @throws OperationCanceledException if the operation was canceled.
      */
     fun fillWindow(
-        window: CursorWindow,
+        window: CursorWindow<WP>,
         startPos: Int,
         requiredPos: Int,
         countAllRows: Boolean
     ): Int = useReference {
-        window.useReference {
+        window.useReference<Int> {
             try {
                 session.executeForCursorWindow(
                     sql, bindArgs,

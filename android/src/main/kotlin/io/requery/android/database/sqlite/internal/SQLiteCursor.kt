@@ -4,6 +4,9 @@ import android.util.Log
 import android.util.SparseIntArray
 import io.requery.android.database.sqlite.base.AbstractWindowedCursor
 import io.requery.android.database.sqlite.base.CursorWindow
+import io.requery.android.database.sqlite.internal.interop.Sqlite3ConnectionPtr
+import io.requery.android.database.sqlite.internal.interop.Sqlite3StatementPtr
+import io.requery.android.database.sqlite.internal.interop.Sqlite3WindowPtr
 import kotlin.math.max
 
 /**
@@ -12,12 +15,13 @@ import kotlin.math.max
  * SQLiteCursor is not internally synchronized so code using a SQLiteCursor from multiple
  * threads should perform its own synchronization when using the SQLiteCursor.
  */
-internal class SQLiteCursor(
+internal class SQLiteCursor<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr, WP : Sqlite3WindowPtr>(
     /** The compiled query this cursor came from  */
-    private val driver: SQLiteCursorDriver,
+    private val driver: SQLiteCursorDriver<CP, SP, WP>,
     /** The query object for the cursor  */
-    private val query: SQLiteQuery
-) : AbstractWindowedCursor() {
+    private val query: SQLiteQuery<WP>,
+    private val windowCtor: (name: String?) -> CursorWindow<WP>,
+) : AbstractWindowedCursor<WP>(windowCtor) {
     /** The names of the columns in the rows  */
     private val columns: List<String> = query.columnNames
 
@@ -37,7 +41,7 @@ internal class SQLiteCursor(
     /**
      * Get the database that this cursor is associated with.
      */
-    val database: SQLiteDatabase
+    val database: SQLiteDatabase<*, *, WP>
         get() = query.database
 
     override fun onMove(oldPosition: Int, newPosition: Int): Boolean {
@@ -172,7 +176,7 @@ internal class SQLiteCursor(
         }
     }
 
-    override var window: CursorWindow?
+    override var window: CursorWindow<WP>?
         get() = super.window
         set(value) {
             super.window = value

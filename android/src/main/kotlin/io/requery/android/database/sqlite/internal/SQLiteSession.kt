@@ -3,6 +3,10 @@ package io.requery.android.database.sqlite.internal
 import android.database.sqlite.SQLiteTransactionListener
 import androidx.core.os.CancellationSignal
 import io.requery.android.database.sqlite.base.CursorWindow
+import io.requery.android.database.sqlite.internal.interop.SqlOpenHelperNativeBindings
+import io.requery.android.database.sqlite.internal.interop.Sqlite3ConnectionPtr
+import io.requery.android.database.sqlite.internal.interop.Sqlite3StatementPtr
+import io.requery.android.database.sqlite.internal.interop.Sqlite3WindowPtr
 
 /**
  * Provides a single client the ability to use a database.
@@ -137,10 +141,10 @@ import io.requery.android.database.sqlite.base.CursorWindow
  * triggers may call custom SQLite functions that perform additional queries.
  *
  */
-internal class SQLiteSession(
-    private val connectionPool: SQLiteConnectionPool,
+internal class SQLiteSession<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr, WP : Sqlite3WindowPtr>(
+    private val connectionPool: SQLiteConnectionPool<CP, SP, WP>,
 ) {
-    private var connection: SQLiteConnection? = null
+    private var connection: SQLiteConnection<CP, SP, WP>? = null
     private var connectionFlags = 0
     private var connectionUseCount = 0
     private var transactionStack: Transaction? = null
@@ -656,7 +660,7 @@ internal class SQLiteSession(
     fun executeForCursorWindow(
         sql: String,
         bindArgs: List<Any?>,
-        window: CursorWindow,
+        window: CursorWindow<WP>,
         startPos: Int,
         requiredPos: Int,
         countAllRows: Boolean,
@@ -734,7 +738,7 @@ internal class SQLiteSession(
         sql: String?,
         connectionFlags: Int,
         cancellationSignal: CancellationSignal?
-    ): SQLiteConnection {
+    ): SQLiteConnection<CP, SP, WP> {
         val connection = connection ?: run {
             assert(connectionUseCount == 0)
             val newConnection = connectionPool.acquireConnection(sql, connectionFlags, cancellationSignal)
@@ -762,7 +766,7 @@ internal class SQLiteSession(
         sql: String?,
         connectionFlags: Int,
         cancellationSignal: CancellationSignal?,
-        block: SQLiteConnection.() -> R
+        block: SQLiteConnection<CP, SP, WP>.() -> R
     ) : R {
         val connection = acquireConnection(sql, connectionFlags, cancellationSignal) // might throw
         return try {

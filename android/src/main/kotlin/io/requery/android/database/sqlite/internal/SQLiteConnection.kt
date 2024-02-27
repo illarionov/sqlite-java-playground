@@ -12,7 +12,17 @@ import androidx.collection.LruCache
 import androidx.core.os.CancellationSignal
 import io.requery.android.database.sqlite.base.CursorWindow
 import io.requery.android.database.sqlite.SQLiteDatabaseConfiguration
-import io.requery.android.database.sqlite.SQLiteFunction
+import io.requery.android.database.sqlite.internal.SQLiteDatabase.Companion.ENABLE_WRITE_AHEAD_LOGGING
+import io.requery.android.database.sqlite.internal.SQLiteDebug.DEBUG_SQL_STATEMENTS
+import io.requery.android.database.sqlite.internal.SQLiteDebug.DEBUG_SQL_TIME
+import io.requery.android.database.sqlite.internal.SQLiteStatementType.STATEMENT_SELECT
+import io.requery.android.database.sqlite.internal.SQLiteStatementType.STATEMENT_UPDATE
+import io.requery.android.database.sqlite.internal.interop.SqlOpenHelperNativeBindings
+import io.requery.android.database.sqlite.internal.interop.SqlOpenHelperWindowBindings
+import io.requery.android.database.sqlite.internal.interop.Sqlite3ConnectionPtr
+import io.requery.android.database.sqlite.internal.interop.Sqlite3StatementPtr
+import io.requery.android.database.sqlite.internal.interop.Sqlite3WindowPtr
+import io.requery.android.database.sqlite.internal.interop.isNotNull
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.regex.Pattern
@@ -60,9 +70,11 @@ import java.util.regex.Pattern
  * triggers may call custom SQLite functions that perform additional queries.
  *
  */
-internal class SQLiteConnection private constructor(
-    private val pool: SQLiteConnectionPool,
+internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr, WP : Sqlite3WindowPtr> private constructor(
+    private val pool: SQLiteConnectionPool<CP ,SP, WP>,
     configuration: SQLiteDatabaseConfiguration,
+    private val bindings: SqlOpenHelperNativeBindings<CP, SP, WP>,
+    private val windowBindings: SqlOpenHelperWindowBindings<WP>,
     private val connectionId: Int,
     internal val isPrimaryConnection: Boolean,
 ) : CancellationSignal.OnCancelListener {
@@ -77,7 +89,7 @@ internal class SQLiteConnection private constructor(
     private val recentOperations = OperationLog()
 
     // The native SQLiteConnection pointer.  (FOR INTERNAL USE ONLY)
-    private var connectionPtr: Long = 0
+    private var connectionPtr: CP = bindings.nullPtr()
 
     private var onlyAllowReadOnlyOperations = false
 
@@ -93,7 +105,7 @@ internal class SQLiteConnection private constructor(
 
     @Throws(Throwable::class)
     protected fun finalize() {
-        if (connectionPtr != 0L) {
+        if (connectionPtr.isNotNull()) {
             pool.onConnectionLeaked()
         }
 
@@ -108,18 +120,19 @@ internal class SQLiteConnection private constructor(
     }
 
     private fun open() {
-        connectionPtr = nativeOpen(
-            configuration.path,  // remove the wal flag as its a custom flag not supported by sqlite3_open_v2
-            configuration.openFlags and SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING.inv(),
-            configuration.label,
-            SQLiteDebug.DEBUG_SQL_STATEMENTS, SQLiteDebug.DEBUG_SQL_TIME
+        connectionPtr = bindings.nativeOpen(
+            path = configuration.path,
+            openFlags = configuration.openFlags and ENABLE_WRITE_AHEAD_LOGGING.inv(),
+            label = configuration.label,
+            enableTrace = DEBUG_SQL_STATEMENTS,
+            enableProfile = DEBUG_SQL_TIME
         )
 
         setPageSize()
         setForeignKeyModeFromConfiguration()
         setJournalSizeLimit()
         setAutoCheckpointInterval()
-        if (!nativeHasCodec()) {
+        if (!bindings.nativeHasCodec()) {
             setWalModeFromConfiguration()
             setLocaleFromConfiguration()
         }
@@ -128,12 +141,12 @@ internal class SQLiteConnection private constructor(
         val functionCount = configuration.functions.size
         for (i in 0 until functionCount) {
             val function = configuration.functions[i]
-            nativeRegisterFunction(connectionPtr, function)
+            bindings.nativeRegisterFunction(connectionPtr, function)
         }
 
         // Register custom extensions
         for (extension in configuration.customExtensions) {
-            nativeLoadExtension(connectionPtr, extension.path, extension.entryPoint)
+            bindings.nativeLoadExtension(connectionPtr, extension.path, extension.entryPoint)
         }
     }
 
@@ -143,12 +156,12 @@ internal class SQLiteConnection private constructor(
         }
         closeGuard.close()
 
-        if (connectionPtr != 0L) {
+        if (connectionPtr.isNotNull()) {
             val cookie = recentOperations.beginOperation("close", null)
             try {
                 preparedStatementCache.evictAll()
-                nativeClose(connectionPtr)
-                connectionPtr = 0
+                bindings.nativeClose(connectionPtr)
+                connectionPtr = bindings.nullPtr()
             } finally {
                 recentOperations.endOperation(cookie)
             }
@@ -197,7 +210,7 @@ internal class SQLiteConnection private constructor(
 
     private fun setWalModeFromConfiguration() {
         if (!configuration.isInMemoryDb && !isReadOnlyConnection) {
-            if ((configuration.openFlags and SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING) != 0) {
+            if ((configuration.openFlags and ENABLE_WRITE_AHEAD_LOGGING) != 0) {
                 setJournalMode("WAL")
                 setSyncMode(SQLiteGlobal.wALSyncMode)
             } else {
@@ -261,7 +274,7 @@ internal class SQLiteConnection private constructor(
     private fun setLocaleFromConfiguration() {
         // Register the localized collators.
         val newLocale = configuration.locale.toString()
-        nativeRegisterLocalizedCollators(connectionPtr, newLocale)
+        bindings.nativeRegisterLocalizedCollators(connectionPtr, newLocale)
 
         // If the database is read-only, we cannot modify the android metadata table
         // or existing indexes.
@@ -298,7 +311,7 @@ internal class SQLiteConnection private constructor(
     }
 
     fun enableLocalizedCollators() {
-        if (nativeHasCodec()) {
+        if (bindings.nativeHasCodec()) {
             setLocaleFromConfiguration()
         }
     }
@@ -309,14 +322,14 @@ internal class SQLiteConnection private constructor(
 
         // Register Functions
         newConfiguration.functions.filter { it !in this.configuration.functions }.forEach {
-            nativeRegisterFunction(connectionPtr, it)
+            bindings.nativeRegisterFunction(connectionPtr, it)
         }
 
         // Remember what changed.
         val foreignKeyModeChanged = (newConfiguration.foreignKeyConstraintsEnabled
                 != this.configuration.foreignKeyConstraintsEnabled)
         val walModeChanged = ((newConfiguration.openFlags xor this.configuration.openFlags)
-                and SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING) != 0
+                and ENABLE_WRITE_AHEAD_LOGGING) != 0
         val localeChanged = newConfiguration.locale != this.configuration.locale
 
         // Update configuration parameters.
@@ -382,14 +395,15 @@ internal class SQLiteConnection private constructor(
     fun prepare(sql: String): SQLiteStatementInfo {
         val cookie = recentOperations.beginOperation("prepare", sql)
         try {
+            // TODO: inline func
             val statement = acquirePreparedStatement(sql)
             try {
-                val columnCount = nativeGetColumnCount(connectionPtr, statement.statementPtr)
+                val columnCount = bindings.nativeGetColumnCount(connectionPtr, statement.statementPtr)
                 return SQLiteStatementInfo(
                     numParameters = statement.numParameters,
                     readOnly = statement.readOnly,
                     columnNames = List(columnCount) {
-                        checkNotNull(nativeGetColumnName(connectionPtr, statement.statementPtr, it)) {
+                        checkNotNull(bindings.nativeGetColumnName(connectionPtr, statement.statementPtr, it)) {
                             "Column $it not found"
                         }
                     }
@@ -430,7 +444,7 @@ internal class SQLiteConnection private constructor(
                 applyBlockGuardPolicy(statement)
                 attachCancellationSignal(cancellationSignal)
                 try {
-                    nativeExecute(connectionPtr, statement.statementPtr)
+                    bindings.nativeExecute(connectionPtr, statement.statementPtr)
                 } finally {
                     detachCancellationSignal(cancellationSignal)
                 }
@@ -472,7 +486,7 @@ internal class SQLiteConnection private constructor(
                 applyBlockGuardPolicy(statement)
                 attachCancellationSignal(cancellationSignal)
                 try {
-                    return nativeExecuteForLong(connectionPtr, statement.statementPtr)
+                    return bindings.nativeExecuteForLong(connectionPtr, statement.statementPtr)
                 } finally {
                     detachCancellationSignal(cancellationSignal)
                 }
@@ -504,7 +518,7 @@ internal class SQLiteConnection private constructor(
         sql: String,
         bindArgs: List<Any?> = listOf(),
         cancellationSignal: CancellationSignal? = null
-    ): String {
+    ): String? {
         val cookie = recentOperations.beginOperation("executeForString", sql, bindArgs)
         try {
             val statement = acquirePreparedStatement(sql)
@@ -514,7 +528,7 @@ internal class SQLiteConnection private constructor(
                 applyBlockGuardPolicy(statement)
                 attachCancellationSignal(cancellationSignal)
                 try {
-                    return nativeExecuteForString(connectionPtr, statement.statementPtr)
+                    return bindings.nativeExecuteForString(connectionPtr, statement.statementPtr)
                 } finally {
                     detachCancellationSignal(cancellationSignal)
                 }
@@ -548,11 +562,7 @@ internal class SQLiteConnection private constructor(
         cancellationSignal: CancellationSignal? = null
     ): Int {
         var changedRows = 0
-        val cookie = recentOperations.beginOperation(
-            "executeForChangedRowCount",
-            sql,
-            bindArgs
-        )
+        val cookie = recentOperations.beginOperation("executeForChangedRowCount", sql, bindArgs)
         try {
             val statement = acquirePreparedStatement(sql)
             try {
@@ -561,7 +571,7 @@ internal class SQLiteConnection private constructor(
                 applyBlockGuardPolicy(statement)
                 attachCancellationSignal(cancellationSignal)
                 try {
-                    changedRows = nativeExecuteForChangedRowCount(connectionPtr, statement.statementPtr)
+                    changedRows = bindings.nativeExecuteForChangedRowCount(connectionPtr, statement.statementPtr)
                     return changedRows
                 } finally {
                     detachCancellationSignal(cancellationSignal)
@@ -610,7 +620,7 @@ internal class SQLiteConnection private constructor(
                 applyBlockGuardPolicy(statement)
                 attachCancellationSignal(cancellationSignal)
                 try {
-                    return nativeExecuteForLastInsertedRowId(connectionPtr, statement.statementPtr)
+                    return bindings.nativeExecuteForLastInsertedRowId(connectionPtr, statement.statementPtr)
                 } finally {
                     detachCancellationSignal(cancellationSignal)
                 }
@@ -650,7 +660,7 @@ internal class SQLiteConnection private constructor(
     fun executeForCursorWindow(
         sql: String,
         bindArgs: List<Any?> = listOf(),
-        window: CursorWindow,
+        window: CursorWindow<WP>,
         startPos: Int = 0,
         requiredPos: Int = 0,
         countAllRows: Boolean = false,
@@ -670,13 +680,13 @@ internal class SQLiteConnection private constructor(
                     applyBlockGuardPolicy(statement)
                     attachCancellationSignal(cancellationSignal)
                     try {
-                        val result = nativeExecuteForCursorWindow(
-                            connectionPtr,
-                            statement.statementPtr,
-                            window.mWindowPtr,
-                            startPos,
-                            requiredPos,
-                            countAllRows
+                        val result = bindings.nativeExecuteForCursorWindow(
+                            connectionPtr = connectionPtr,
+                            statementPtr = statement.statementPtr,
+                            winPtr = window.windowPtr,
+                            startPos = startPos,
+                            requiredPos = requiredPos,
+                            countAllRows = countAllRows
                         )
                         actualPos = (result shr 32).toInt()
                         countedRows = result.toInt()
@@ -708,7 +718,7 @@ internal class SQLiteConnection private constructor(
         }
     }
 
-    private fun acquirePreparedStatement(sql: String): PreparedStatement {
+    private fun acquirePreparedStatement(sql: String): PreparedStatement<SP> {
         var statement = preparedStatementCache[sql]
         var skipCache = false
         if (statement != null) {
@@ -721,16 +731,16 @@ internal class SQLiteConnection private constructor(
             skipCache = true
         }
 
-        val statementPtr = nativePrepareStatement(connectionPtr, sql)
+        val statementPtr = bindings.nativePrepareStatement(connectionPtr, sql)
         try {
             val statementType = SQLiteStatementType.getSqlStatementType(sql)
             val putInCache = !skipCache && isCacheable(statementType)
             statement = PreparedStatement(
                 sql = sql,
                 statementPtr = statementPtr,
-                numParameters = nativeGetParameterCount(connectionPtr, statementPtr),
+                numParameters = bindings.nativeGetParameterCount(connectionPtr, statementPtr),
                 type = statementType,
-                readOnly = nativeIsReadOnly(connectionPtr, statementPtr),
+                readOnly = bindings.nativeIsReadOnly(connectionPtr, statementPtr),
             )
             if (putInCache) {
                 preparedStatementCache.put(sql, statement)
@@ -740,7 +750,7 @@ internal class SQLiteConnection private constructor(
             // Finalize the statement if an exception occurred and we did not add
             // it to the cache.  If it is already in the cache, then leave it there.
             if (statement == null || !statement.inCache) {
-                nativeFinalizeStatement(connectionPtr, statementPtr)
+                bindings.nativeFinalizeStatement(connectionPtr, statementPtr)
             }
             throw ex
         }
@@ -748,11 +758,11 @@ internal class SQLiteConnection private constructor(
         return statement
     }
 
-    private fun releasePreparedStatement(statement: PreparedStatement) {
+    private fun releasePreparedStatement(statement: PreparedStatement<SP>) {
         statement.inUse = false
         if (statement.inCache) {
             try {
-                nativeResetStatementAndClearBindings(connectionPtr, statement.statementPtr)
+                bindings.nativeResetStatementAndClearBindings(connectionPtr, statement.statementPtr)
             } catch (ex: SQLiteException) {
                 // The statement could not be reset due to an error.  Remove it from the cache.
                 // When remove() is called, the cache will invoke its entryRemoved() callback,
@@ -773,8 +783,8 @@ internal class SQLiteConnection private constructor(
         }
     }
 
-    private fun finalizePreparedStatement(statement: PreparedStatement?) {
-        nativeFinalizeStatement(connectionPtr, statement!!.statementPtr)
+    private fun finalizePreparedStatement(statement: PreparedStatement<SP>) {
+        bindings.nativeFinalizeStatement(connectionPtr, statement.statementPtr)
     }
 
     private fun attachCancellationSignal(cancellationSignal: CancellationSignal?) {
@@ -787,14 +797,13 @@ internal class SQLiteConnection private constructor(
         cancellationSignalAttachCount += 1
         if (cancellationSignalAttachCount == 1) {
             // Reset cancellation flag before executing the statement.
-            nativeResetCancel(connectionPtr, true /*cancelable*/)
+            bindings.nativeResetCancel(connectionPtr, cancelable = true)
 
             // After this point, onCancel() may be called concurrently.
             cancellationSignal.setOnCancelListener(this)
         }
     }
 
-    @SuppressLint("Assert")
     private fun detachCancellationSignal(cancellationSignal: CancellationSignal?) {
         if (cancellationSignal == null) {
             return
@@ -808,7 +817,7 @@ internal class SQLiteConnection private constructor(
             cancellationSignal.setOnCancelListener(null)
 
             // Reset cancellation flag after executing the statement.
-            nativeResetCancel(connectionPtr, false /*cancelable*/)
+            bindings.nativeResetCancel(connectionPtr, false /*cancelable*/)
         }
     }
 
@@ -817,9 +826,9 @@ internal class SQLiteConnection private constructor(
     // However, it will only be called between calls to attachCancellationSignal and
     // detachCancellationSignal, while a statement is executing.  We can safely assume
     // that the SQLite connection is still alive.
-    override fun onCancel() = nativeCancel(connectionPtr)
+    override fun onCancel() = bindings.nativeCancel(connectionPtr)
 
-    private fun bindArguments(statement: PreparedStatement, bindArgs: List<Any?>) {
+    private fun bindArguments(statement: PreparedStatement<SP>, bindArgs: List<Any?>) {
         if (bindArgs.size != statement.numParameters) {
             throw SQLiteBindOrColumnIndexOutOfRangeException(
                 "Expected ${statement.numParameters} bind arguments but $${bindArgs.size} were provided."
@@ -829,44 +838,44 @@ internal class SQLiteConnection private constructor(
         val statementPtr = statement.statementPtr
         bindArgs.forEachIndexed { i, arg ->
             when (getTypeOfObject(arg)) {
-                Cursor.FIELD_TYPE_NULL -> nativeBindNull(
+                Cursor.FIELD_TYPE_NULL -> bindings.nativeBindNull(
                     connectionPtr = connectionPtr,
                     statementPtr = statementPtr,
                     index = i + 1
                 )
 
-                Cursor.FIELD_TYPE_INTEGER -> nativeBindLong(
+                Cursor.FIELD_TYPE_INTEGER -> bindings.nativeBindLong(
                     connectionPtr = connectionPtr,
                     statementPtr = statementPtr,
                     index = i + 1,
                     value = (arg as Number).toLong()
                 )
 
-                Cursor.FIELD_TYPE_FLOAT -> nativeBindDouble(
+                Cursor.FIELD_TYPE_FLOAT -> bindings.nativeBindDouble(
                     connectionPtr = connectionPtr,
                     statementPtr = statementPtr,
                     index = i + 1,
                     value = (arg as Number).toDouble()
                 )
 
-                Cursor.FIELD_TYPE_BLOB -> nativeBindBlob(
+                Cursor.FIELD_TYPE_BLOB -> bindings.nativeBindBlob(
                     connectionPtr = connectionPtr,
                     statementPtr = statementPtr,
                     index = i + 1,
                     value = arg as ByteArray
                 )
 
-                Cursor.FIELD_TYPE_STRING -> if (arg is Boolean) {
+                Cursor.FIELD_TYPE_STRING -> when (arg) {
                     // Provide compatibility with legacy applications which may pass
                     // Boolean values in bind args.
-                    nativeBindLong(
+                    is Boolean -> bindings.nativeBindLong(
                         connectionPtr = connectionPtr,
                         statementPtr = statementPtr,
                         index = i + 1,
                         value = (if (arg) 1 else 0).toLong()
                     )
-                } else {
-                    nativeBindString(
+
+                    else -> bindings.nativeBindString(
                         connectionPtr = connectionPtr,
                         statementPtr = statementPtr,
                         index = i + 1,
@@ -874,15 +883,15 @@ internal class SQLiteConnection private constructor(
                     )
                 }
 
-                else -> if (arg is Boolean) {
-                    nativeBindLong(
+                else -> when (arg) {
+                    is Boolean -> bindings.nativeBindLong(
                         connectionPtr = connectionPtr,
                         statementPtr = statementPtr,
                         index = i + 1,
                         value = (if (arg) 1 else 0).toLong()
                     )
-                } else {
-                    nativeBindString(
+
+                    else -> bindings.nativeBindString(
                         connectionPtr = connectionPtr,
                         statementPtr = statementPtr,
                         index = i + 1,
@@ -893,7 +902,7 @@ internal class SQLiteConnection private constructor(
         }
     }
 
-    private fun throwIfStatementForbidden(statement: PreparedStatement) {
+    private fun throwIfStatementForbidden(statement: PreparedStatement<*>) {
         if (onlyAllowReadOnlyOperations && !statement.readOnly) {
             throw SQLiteException(
                 "Cannot execute this statement because it might modify the database but the connection is read-only."
@@ -901,7 +910,7 @@ internal class SQLiteConnection private constructor(
         }
     }
 
-    private fun applyBlockGuardPolicy(statement: PreparedStatement) {
+    private fun applyBlockGuardPolicy(statement: PreparedStatement<*>) {
         if (!configuration.isInMemoryDb && SQLiteDebug.DEBUG_SQL_LOG) {
             // don't have access to the policy, so just log
             if (Looper.myLooper() == Looper.getMainLooper()) {
@@ -914,42 +923,6 @@ internal class SQLiteConnection private constructor(
         }
     }
 
-    /**
-     * Dumps debugging information about this connection.
-     *
-     * @param printer The printer to receive the dump, not null.
-     * @param verbose True to dump more verbose information.
-     */
-    fun dump(printer: Printer, verbose: Boolean) = dumpUnsafe(printer, verbose)
-
-    /**
-     * Dumps debugging information about this connection, in the case where the
-     * caller might not actually own the connection.
-     *
-     * This function is written so that it may be called by a thread that does not
-     * own the connection.  We need to be very careful because the connection state is
-     * not synchronized.
-     *
-     * At worst, the method may return stale or slightly wrong data, however
-     * it should not crash.  This is ok as it is only used for diagnostic purposes.
-     *
-     * @param printer The printer to receive the dump, not null.
-     * @param verbose True to dump more verbose information.
-     */
-    fun dumpUnsafe(printer: Printer, verbose: Boolean) {
-        printer.println("Connection #$connectionId:")
-        if (verbose) {
-            printer.println("  connectionPtr: 0x" + java.lang.Long.toHexString(connectionPtr))
-        }
-        printer.println("  isPrimaryConnection: " + isPrimaryConnection)
-        printer.println("  onlyAllowReadOnlyOperations: $onlyAllowReadOnlyOperations")
-
-        recentOperations.dump(printer, verbose)
-
-        if (verbose) {
-            preparedStatementCache.dump(printer)
-        }
-    }
 
     /**
      * Describes the currently executing operation, in the case where the
@@ -974,7 +947,7 @@ internal class SQLiteConnection private constructor(
      */
     fun collectDbStats(dbStatsList: ArrayList<SQLiteDebug.DbStats>) {
         // Get information about the main database.
-        val lookaside = nativeGetDbLookaside(connectionPtr)
+        val lookaside = bindings.nativeGetDbLookaside(connectionPtr)
         var pageCount: Long = 0
         var pageSize: Long = 0
         try {
@@ -988,7 +961,7 @@ internal class SQLiteConnection private constructor(
         // Get information about attached databases.
         // We ignore the first row in the database list because it corresponds to
         // the main database which we have already described.
-        val window = CursorWindow("collectDbStats")
+        val window = CursorWindow("collectDbStats", windowBindings)
         try {
             executeForCursorWindow(
                 sql = "PRAGMA database_list;",
@@ -1055,19 +1028,19 @@ internal class SQLiteConnection private constructor(
      * resource disposal because all native statement objects must be freed before
      * the native database object can be closed.  So no finalizers here.
      */
-    private data class PreparedStatement(
+    private data class PreparedStatement<SP: Sqlite3StatementPtr>(
         // The SQL from which the statement was prepared.
         val sql: String,
 
         // The native sqlite3_stmt object pointer.
         // Lifetime is managed explicitly by the connection.
-        val statementPtr: Long = 0,
+        val statementPtr: SP,
 
         // The number of parameters that the prepared statement has.
         val numParameters: Int = 0,
 
         // The statement type.
-        val type: SQLiteStatementType = SQLiteStatementType.STATEMENT_SELECT,
+        val type: SQLiteStatementType = STATEMENT_SELECT,
 
         // True if the statement is read-only.
         val readOnly: Boolean = false,
@@ -1082,12 +1055,12 @@ internal class SQLiteConnection private constructor(
         var inUse: Boolean = false,
     )
 
-    private inner class PreparedStatementCache(size: Int) : LruCache<String, PreparedStatement>(size) {
+    private inner class PreparedStatementCache(size: Int) : LruCache<String, PreparedStatement<SP>>(size) {
         override fun entryRemoved(
             evicted: Boolean,
             key: String,
-            oldValue: PreparedStatement,
-            newValue: PreparedStatement?
+            oldValue: PreparedStatement<SP>,
+            newValue: PreparedStatement<SP>?
         ) {
             oldValue.inCache = false
             if (!oldValue.inUse) {
@@ -1103,8 +1076,7 @@ internal class SQLiteConnection private constructor(
                 for ((sql, statement) in cache) {
                     if (statement.inCache) { // might be false due to a race with entryRemoved
                         printer.println(
-                            "    " + i + ": statementPtr=0x"
-                                    + java.lang.Long.toHexString(statement.statementPtr)
+                            "    " + i + ": statementPtr=${statement.statementPtr}"
                                     + ", numParameters=" + statement.numParameters
                                     + ", type=" + statement.type
                                     + ", readOnly=" + statement.readOnly
@@ -1124,31 +1096,32 @@ internal class SQLiteConnection private constructor(
         private var index = 0
         private var generation = 0
 
-        fun beginOperation(kind: String?, sql: String?, bindArgs: List<Any?> = emptyList()): Int = synchronized(operations) {
-            val index = (index + 1) % MAX_RECENT_OPERATIONS
-            var operation = operations[index]
-            if (operation == null) {
-                operation = Operation()
-                operations[index] = operation
-            } else {
-                operation.finished = false
-                operation.exception = null
-            }
-            operation.startTime = System.currentTimeMillis()
-            operation.kind = kind
-            operation.sql = sql
-            operation.bindArgs = bindArgs.map {
-                if (it is ByteArray) {
-                    // Don't hold onto the real byte array longer than necessary.
-                    arrayOf<Byte>()
+        fun beginOperation(kind: String?, sql: String?, bindArgs: List<Any?> = emptyList()): Int =
+            synchronized(operations) {
+                val index = (index + 1) % MAX_RECENT_OPERATIONS
+                var operation = operations[index]
+                if (operation == null) {
+                    operation = Operation()
+                    operations[index] = operation
                 } else {
-                    it
+                    operation.finished = false
+                    operation.exception = null
                 }
+                operation.startTime = System.currentTimeMillis()
+                operation.kind = kind
+                operation.sql = sql
+                operation.bindArgs = bindArgs.map {
+                    if (it is ByteArray) {
+                        // Don't hold onto the real byte array longer than necessary.
+                        arrayOf<Byte>()
+                    } else {
+                        it
+                    }
+                }
+                operation.cookie = newOperationCookieLocked(index)
+                this.index = index
+                return operation.cookie
             }
-            operation.cookie = newOperationCookieLocked(index)
-            this.index = index
-            return operation.cookie
-        }
 
         fun failOperation(cookie: Int, ex: Exception?) = synchronized(operations) {
             val operation = getOperationLocked(cookie)
@@ -1317,94 +1290,21 @@ internal class SQLiteConnection private constructor(
 
         private val TRIM_SQL_PATTERN: Pattern = Pattern.compile("[\\s]*\\n+[\\s]*")
 
-        private external fun nativeOpen(
-            path: String, openFlags: Int, label: String,
-            enableTrace: Boolean, enableProfile: Boolean
-        ): Long
-
-        private external fun nativeClose(connectionPtr: Long)
-        private external fun nativeRegisterFunction(
-            connectionPtr: Long,
-            function: SQLiteFunction
-        )
-
-        private external fun nativeRegisterLocalizedCollators(connectionPtr: Long, locale: String)
-        private external fun nativePrepareStatement(connectionPtr: Long, sql: String): Long
-        private external fun nativeFinalizeStatement(connectionPtr: Long, statementPtr: Long)
-        private external fun nativeGetParameterCount(connectionPtr: Long, statementPtr: Long): Int
-        private external fun nativeIsReadOnly(connectionPtr: Long, statementPtr: Long): Boolean
-        private external fun nativeGetColumnCount(connectionPtr: Long, statementPtr: Long): Int
-        private external fun nativeGetColumnName(
-            connectionPtr: Long, statementPtr: Long,
-            index: Int
-        ): String?
-
-        private external fun nativeBindNull(
-            connectionPtr: Long, statementPtr: Long,
-            index: Int
-        )
-
-        private external fun nativeBindLong(
-            connectionPtr: Long, statementPtr: Long,
-            index: Int, value: Long
-        )
-
-        private external fun nativeBindDouble(
-            connectionPtr: Long, statementPtr: Long,
-            index: Int, value: Double
-        )
-
-        private external fun nativeBindString(
-            connectionPtr: Long, statementPtr: Long,
-            index: Int, value: String
-        )
-
-        private external fun nativeBindBlob(
-            connectionPtr: Long, statementPtr: Long,
-            index: Int, value: ByteArray
-        )
-
-        private external fun nativeResetStatementAndClearBindings(
-            connectionPtr: Long, statementPtr: Long
-        )
-
-        private external fun nativeExecute(connectionPtr: Long, statementPtr: Long)
-        private external fun nativeExecuteForLong(connectionPtr: Long, statementPtr: Long): Long
-        private external fun nativeExecuteForString(connectionPtr: Long, statementPtr: Long): String
-        private external fun nativeExecuteForBlobFileDescriptor(
-            connectionPtr: Long, statementPtr: Long
-        ): Int
-
-        private external fun nativeExecuteForChangedRowCount(connectionPtr: Long, statementPtr: Long): Int
-        private external fun nativeExecuteForLastInsertedRowId(
-            connectionPtr: Long, statementPtr: Long
-        ): Long
-
-        private external fun nativeExecuteForCursorWindow(
-            connectionPtr: Long, statementPtr: Long, winPtr: Long,
-            startPos: Int, requiredPos: Int, countAllRows: Boolean
-        ): Long
-
-        private external fun nativeGetDbLookaside(connectionPtr: Long): Int
-        private external fun nativeCancel(connectionPtr: Long)
-        private external fun nativeResetCancel(connectionPtr: Long, cancelable: Boolean)
-
-        private external fun nativeHasCodec(): Boolean
-        private external fun nativeLoadExtension(connectionPtr: Long, file: String, proc: String)
-
-        fun hasCodec(): Boolean {
-            return nativeHasCodec()
-        }
-
         // Called by SQLiteConnectionPool only.
-        fun open(
-            pool: SQLiteConnectionPool,
+        fun <CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr, WP : Sqlite3WindowPtr> open(
+            pool: SQLiteConnectionPool<CP, SP, WP>,
             configuration: SQLiteDatabaseConfiguration,
+            bindings: SqlOpenHelperNativeBindings<CP, SP, WP>,
+            windowBindings: SqlOpenHelperWindowBindings<WP>,
             connectionId: Int, primaryConnection: Boolean
-        ): SQLiteConnection {
+        ): SQLiteConnection<CP, SP, WP> {
             val connection = SQLiteConnection(
-                pool, configuration,
-                connectionId, primaryConnection
+                pool = pool,
+                configuration = configuration,
+                bindings = bindings,
+                windowBindings = windowBindings,
+                connectionId = connectionId,
+                isPrimaryConnection = primaryConnection
             )
             try {
                 connection.open()
@@ -1415,11 +1315,11 @@ internal class SQLiteConnection private constructor(
             }
         }
 
-        private fun canonicalizeSyncMode(value: String): String = when (value) {
+        private fun canonicalizeSyncMode(value: String?): String = when (value) {
             "0" -> "OFF"
             "1" -> "NORMAL"
             "2" -> "FULL"
-            else -> value
+            else -> value.toString()
         }
 
         /**
@@ -1447,8 +1347,8 @@ internal class SQLiteConnection private constructor(
             else -> Cursor.FIELD_TYPE_STRING
         }
 
-        private fun isCacheable(statementType: SQLiteStatementType): Boolean = statementType == SQLiteStatementType.STATEMENT_UPDATE ||
-                statementType == SQLiteStatementType.STATEMENT_SELECT
+        private fun isCacheable(statementType: SQLiteStatementType): Boolean = statementType == STATEMENT_UPDATE ||
+                statementType == STATEMENT_SELECT
 
         private fun trimSqlForDisplay(sql: String?): String {
             return TRIM_SQL_PATTERN.matcher(sql ?: "").replaceAll(" ")

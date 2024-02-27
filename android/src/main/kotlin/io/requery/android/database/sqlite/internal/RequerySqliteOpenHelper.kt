@@ -6,6 +6,11 @@ import android.util.Log
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import io.requery.android.database.sqlite.base.DatabaseErrorHandler
 import io.requery.android.database.sqlite.SQLiteDatabaseConfiguration
+import io.requery.android.database.sqlite.internal.interop.SqlOpenHelperNativeBindings
+import io.requery.android.database.sqlite.internal.interop.SqlOpenHelperWindowBindings
+import io.requery.android.database.sqlite.internal.interop.Sqlite3ConnectionPtr
+import io.requery.android.database.sqlite.internal.interop.Sqlite3StatementPtr
+import io.requery.android.database.sqlite.internal.interop.Sqlite3WindowPtr
 
 /**
  * A helper class to manage database creation and version management.
@@ -32,14 +37,16 @@ import io.requery.android.database.sqlite.SQLiteDatabaseConfiguration
  *
  */
 @Suppress("unused")
-internal abstract class RequerySqliteOpenHelper(
+internal abstract class RequerySqliteOpenHelper<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr, WP : Sqlite3WindowPtr>(
     private val context: Context,
     override val databaseName: String?,
-    private val factory: SQLiteDatabase.CursorFactory?,
+    private val factory: SQLiteDatabase.CursorFactory<CP, SP, WP>?,
     private val version: Int,
-    private val errorHandler: DatabaseErrorHandler? = null
+    private val errorHandler: DatabaseErrorHandler? = null,
+    private val bindings: SqlOpenHelperNativeBindings<CP, SP, WP>,
+    private val windowBindings: SqlOpenHelperWindowBindings<WP>,
 ) : SupportSQLiteOpenHelper {
-    private var database: SQLiteDatabase? = null
+    private var database: SQLiteDatabase<CP, SP, WP>? = null
     private var isInitializing = false
     private var enableWriteAheadLogging = false
 
@@ -104,7 +111,7 @@ internal abstract class RequerySqliteOpenHelper(
         }
     }
 
-    override val writableDatabase: SQLiteDatabase
+    override val writableDatabase: SQLiteDatabase<CP, SP, WP>
         /**
          * Create and/or open a database that will be used for reading and writing.
          * The first time this is called, the database will be opened and
@@ -130,7 +137,7 @@ internal abstract class RequerySqliteOpenHelper(
             getDatabaseLocked(true)
         }
 
-    override val readableDatabase: SQLiteDatabase
+    override val readableDatabase: SQLiteDatabase<CP, SP, WP>
         /**
          * Create and/or open a database.  This will be the same object returned by
          * [.getWritableDatabase] unless some problem, such as a full disk,
@@ -154,7 +161,7 @@ internal abstract class RequerySqliteOpenHelper(
             getDatabaseLocked(false)
         }
 
-    private fun getDatabaseLocked(writable: Boolean): SQLiteDatabase {
+    private fun getDatabaseLocked(writable: Boolean): SQLiteDatabase<CP, SP, WP> {
         database?.let { db ->
             if (!db.isOpen) {
                 // Darn!  The user closed the database by calling mDatabase.close().
@@ -177,18 +184,18 @@ internal abstract class RequerySqliteOpenHelper(
                     db.reopenReadWrite()
                 }
             } else if (databaseName == null) {
-                db = SQLiteDatabase.create(null)
+                db = SQLiteDatabase.create(factory = null, bindings, windowBindings)
             } else {
                 try {
                     val path = context.getDatabasePath(databaseName).path
                     if (DEBUG_STRICT_READONLY && !writable) {
                         val configuration = createConfiguration(path, SQLiteDatabase.OPEN_READONLY)
-                        db = SQLiteDatabase.openDatabase(configuration, factory, errorHandler)
+                        db = SQLiteDatabase.openDatabase(configuration, factory, errorHandler, bindings, windowBindings)
                     } else {
                         var flags = if (enableWriteAheadLogging) SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING else 0
                         flags = flags or SQLiteDatabase.CREATE_IF_NECESSARY
                         val configuration = createConfiguration(path, flags)
-                        db = SQLiteDatabase.openDatabase(configuration, factory, errorHandler)
+                        db = SQLiteDatabase.openDatabase(configuration, factory, errorHandler, bindings, windowBindings)
                     }
                 } catch (ex: SQLiteException) {
                     if (writable) {
@@ -197,7 +204,7 @@ internal abstract class RequerySqliteOpenHelper(
                     Log.e(TAG, "Couldn't open $databaseName for writing (will try read-only):", ex)
                     val path = context.getDatabasePath(databaseName).path
                     val configuration = createConfiguration(path, SQLiteDatabase.OPEN_READONLY)
-                    db = SQLiteDatabase.openDatabase(configuration, factory, errorHandler)
+                    db = SQLiteDatabase.openDatabase(configuration, factory, errorHandler, bindings, windowBindings)
                 }
             }
 
@@ -278,7 +285,7 @@ internal abstract class RequerySqliteOpenHelper(
      *
      * @param db The database.
      */
-    open fun onConfigure(db: SQLiteDatabase) {}
+    open fun onConfigure(db: SQLiteDatabase<CP, SP, WP>) {}
 
     /**
      * Called when the database is created for the first time. This is where the
@@ -286,7 +293,7 @@ internal abstract class RequerySqliteOpenHelper(
      *
      * @param db The database.
      */
-    abstract fun onCreate(db: SQLiteDatabase)
+    abstract fun onCreate(db: SQLiteDatabase<CP, SP, WP>)
 
     /**
      * Called when the database needs to be upgraded. The implementation
@@ -310,7 +317,7 @@ internal abstract class RequerySqliteOpenHelper(
      * @param oldVersion The old database version.
      * @param newVersion The new database version.
      */
-    abstract fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int)
+    abstract fun onUpgrade(db: SQLiteDatabase<CP, SP, WP>, oldVersion: Int, newVersion: Int)
 
     /**
      * Called when the database needs to be downgraded. This is strictly similar to
@@ -329,7 +336,7 @@ internal abstract class RequerySqliteOpenHelper(
      * @param oldVersion The old database version.
      * @param newVersion The new database version.
      */
-    open fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+    open fun onDowngrade(db: SQLiteDatabase<CP, SP, WP>, oldVersion: Int, newVersion: Int) {
         throw SQLiteException("Can't downgrade database from version $oldVersion to $newVersion")
     }
 
@@ -347,7 +354,7 @@ internal abstract class RequerySqliteOpenHelper(
      *
      * @param db The database.
      */
-    open fun onOpen(db: SQLiteDatabase) {}
+    open fun onOpen(db: SQLiteDatabase<CP, SP, WP>) {}
 
     /**
      * Called before the database is opened. Provides the [SQLiteDatabaseConfiguration]
