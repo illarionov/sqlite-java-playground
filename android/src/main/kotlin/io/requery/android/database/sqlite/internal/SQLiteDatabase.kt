@@ -11,23 +11,30 @@ import android.os.Looper
 import android.util.EventLog
 import android.util.Log
 import android.util.Pair
-import android.util.Printer
 import androidx.annotation.IntDef
 import androidx.core.os.CancellationSignal
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteQuery
 import androidx.sqlite.db.SupportSQLiteStatement
+import io.requery.android.database.sqlite.OpenFlags
+import io.requery.android.database.sqlite.OpenFlags.Companion.CREATE_IF_NECESSARY
+import io.requery.android.database.sqlite.OpenFlags.Companion.ENABLE_WRITE_AHEAD_LOGGING
+import io.requery.android.database.sqlite.OpenFlags.Companion.OPEN_CREATE
+import io.requery.android.database.sqlite.OpenFlags.Companion.OPEN_READONLY
 import io.requery.android.database.sqlite.base.DatabaseErrorHandler
 import io.requery.android.database.sqlite.base.DefaultDatabaseErrorHandler
 import io.requery.android.database.sqlite.internal.SQLiteCursor
 import io.requery.android.database.sqlite.SQLiteDatabaseConfiguration
 import io.requery.android.database.sqlite.base.CursorWindow
+import io.requery.android.database.sqlite.clear
 import io.requery.android.database.sqlite.internal.SQLiteProgram.Companion.bindAllArgsAsStrings
 import io.requery.android.database.sqlite.internal.interop.SqlOpenHelperNativeBindings
 import io.requery.android.database.sqlite.internal.interop.SqlOpenHelperWindowBindings
 import io.requery.android.database.sqlite.internal.interop.Sqlite3ConnectionPtr
 import io.requery.android.database.sqlite.internal.interop.Sqlite3StatementPtr
 import io.requery.android.database.sqlite.internal.interop.Sqlite3WindowPtr
+import io.requery.android.database.sqlite.contains
+import io.requery.android.database.sqlite.or
 import java.io.File
 import java.io.FileFilter
 import java.io.IOException
@@ -130,14 +137,6 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
     )
     @Retention(AnnotationRetention.SOURCE)
     annotation class ConflictAlgorithm
-
-    /** Integer flag definition for the database open options  */
-    @IntDef(
-        flag = true,
-        value = [OPEN_READONLY, OPEN_READWRITE, OPEN_CREATE, OPEN_URI, OPEN_NOMUTEX, OPEN_FULLMUTEX, OPEN_SHAREDCACHE, OPEN_PRIVATECACHE, CREATE_IF_NECESSARY, ENABLE_WRITE_AHEAD_LOGGING]
-    )
-    @Retention(AnnotationRetention.SOURCE)
-    annotation class OpenFlags
 
     @Throws(Throwable::class)
     protected fun finalize() = dispose(true)
@@ -416,7 +415,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
 
         // Reopen the database in read-write mode.
         val oldOpenFlags = configurationLocked.openFlags
-        configurationLocked.openFlags = (configurationLocked.openFlags and OPEN_READONLY.inv())
+        configurationLocked.openFlags = (configurationLocked.openFlags clear OPEN_READONLY)
         try {
             pool.reconfigure(configurationLocked)
             Unit
@@ -427,9 +426,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
     }
 
     private fun open() = try {
-        if (!configurationLocked.isInMemoryDb
-            && (configurationLocked.openFlags and OPEN_CREATE) != 0
-        ) {
+        if (!configurationLocked.isInMemoryDb && configurationLocked.openFlags.contains(OPEN_CREATE)) {
             ensureFile(configurationLocked.path)
         }
         try {
@@ -1124,7 +1121,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
         get() = synchronized(lock) { isReadOnlyLocked }
 
     private val isReadOnlyLocked: Boolean
-        get() = (configurationLocked.openFlags and OPEN_READONLY) == OPEN_READONLY
+        get() = configurationLocked.openFlags.contains(OPEN_READONLY)
 
     /**
      * Returns true if the database is in-memory db.
@@ -1350,7 +1347,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
      */
     override fun enableWriteAheadLogging(): Boolean = synchronized(lock) {
         val pool = requireConnectionPoolLocked()
-        if ((configurationLocked.openFlags and ENABLE_WRITE_AHEAD_LOGGING) != 0) {
+        if (configurationLocked.openFlags.contains(ENABLE_WRITE_AHEAD_LOGGING)) {
             return true
         }
 
@@ -1369,7 +1366,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
         try {
             pool.reconfigure(configurationLocked)
         } catch (ex: RuntimeException) {
-            configurationLocked.openFlags = configurationLocked.openFlags and ENABLE_WRITE_AHEAD_LOGGING.inv()
+            configurationLocked.openFlags = configurationLocked.openFlags.clear(ENABLE_WRITE_AHEAD_LOGGING)
             throw ex
         }
         return true
@@ -1386,11 +1383,11 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
      */
     override fun disableWriteAheadLogging() = synchronized(lock) {
         val pool = requireConnectionPoolLocked()
-        if ((configurationLocked.openFlags and ENABLE_WRITE_AHEAD_LOGGING) == 0) {
+        if (configurationLocked.openFlags.contains(ENABLE_WRITE_AHEAD_LOGGING)) {
             return
         }
 
-        configurationLocked.openFlags = configurationLocked.openFlags and ENABLE_WRITE_AHEAD_LOGGING.inv()
+        configurationLocked.openFlags = configurationLocked.openFlags clear ENABLE_WRITE_AHEAD_LOGGING
         try {
             pool.reconfigure(configurationLocked)
         } catch (ex: RuntimeException) {
@@ -1409,7 +1406,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
         get() {
             synchronized(lock) {
                 requireConnectionPoolLocked()
-                return (configurationLocked.openFlags and ENABLE_WRITE_AHEAD_LOGGING) != 0
+                return configurationLocked.openFlags.contains(ENABLE_WRITE_AHEAD_LOGGING)
             }
         }
 
@@ -1630,36 +1627,6 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
         private val CONFLICT_VALUES =
             arrayOf("", " OR ROLLBACK ", " OR ABORT ", " OR FAIL ", " OR IGNORE ", " OR REPLACE ")
 
-        /** Open flag to open in the database in read only mode  */
-        const val OPEN_READONLY: Int = 0x00000001
-
-        /** Open flag to open in the database in read/write mode  */
-        const val OPEN_READWRITE: Int = 0x00000002
-
-        /** Open flag to create the database if it does not exist  */
-        const val OPEN_CREATE: Int = 0x00000004
-
-        /** Open flag to support URI filenames  */
-        const val OPEN_URI: Int = 0x00000040
-
-        /** Open flag opens the database in multi-thread threading mode  */
-        const val OPEN_NOMUTEX: Int = 0x00008000
-
-        /** Open flag opens the database in serialized threading mode  */
-        const val OPEN_FULLMUTEX: Int = 0x00010000
-
-        /** Open flag opens the database in shared cache mode  */
-        const val OPEN_SHAREDCACHE: Int = 0x00020000
-
-        /** Open flag opens the database in private cache mode  */
-        const val OPEN_PRIVATECACHE: Int = 0x00040000
-
-        /** Open flag equivalent to [.OPEN_READWRITE] | [.OPEN_CREATE]  */
-        const val CREATE_IF_NECESSARY: Int = OPEN_READWRITE or OPEN_CREATE
-
-        /** Open flag to enable write-ahead logging  */ // custom flag remove for sqlite3_open_v2
-        const val ENABLE_WRITE_AHEAD_LOGGING: Int = 0x20000000
-
         /**
          * Absolute max value that can be set by [.setMaxSqlCacheSize].
          *
@@ -1716,11 +1683,10 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
          * @throws SQLiteException if the database cannot be opened
          */
         @JvmStatic
-        @JvmOverloads
         internal fun <CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr, WP : Sqlite3WindowPtr, > openDatabase(
             path: String,
             factory: CursorFactory<CP, SP, WP>?,
-            @OpenFlags flags: Int,
+            flags: OpenFlags,
             errorHandler: DatabaseErrorHandler? = null,
             bindings: SqlOpenHelperNativeBindings<CP, SP, WP>,
             windowBindings: SqlOpenHelperWindowBindings<WP>,

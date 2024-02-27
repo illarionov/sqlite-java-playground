@@ -4,6 +4,10 @@ import android.content.Context
 import android.database.sqlite.SQLiteException
 import android.util.Log
 import androidx.sqlite.db.SupportSQLiteOpenHelper
+import io.requery.android.database.sqlite.OpenFlags
+import io.requery.android.database.sqlite.OpenFlags.Companion.CREATE_IF_NECESSARY
+import io.requery.android.database.sqlite.OpenFlags.Companion.ENABLE_WRITE_AHEAD_LOGGING
+import io.requery.android.database.sqlite.OpenFlags.Companion.OPEN_READONLY
 import io.requery.android.database.sqlite.base.DatabaseErrorHandler
 import io.requery.android.database.sqlite.SQLiteDatabaseConfiguration
 import io.requery.android.database.sqlite.internal.interop.SqlOpenHelperNativeBindings
@@ -11,6 +15,7 @@ import io.requery.android.database.sqlite.internal.interop.SqlOpenHelperWindowBi
 import io.requery.android.database.sqlite.internal.interop.Sqlite3ConnectionPtr
 import io.requery.android.database.sqlite.internal.interop.Sqlite3StatementPtr
 import io.requery.android.database.sqlite.internal.interop.Sqlite3WindowPtr
+import io.requery.android.database.sqlite.or
 
 /**
  * A helper class to manage database creation and version management.
@@ -189,11 +194,11 @@ internal abstract class RequerySqliteOpenHelper<CP : Sqlite3ConnectionPtr, SP : 
                 try {
                     val path = context.getDatabasePath(databaseName).path
                     if (DEBUG_STRICT_READONLY && !writable) {
-                        val configuration = createConfiguration(path, SQLiteDatabase.OPEN_READONLY)
+                        val configuration = createConfiguration(path, OPEN_READONLY)
                         db = SQLiteDatabase.openDatabase(configuration, factory, errorHandler, bindings, windowBindings)
                     } else {
-                        var flags = if (enableWriteAheadLogging) SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING else 0
-                        flags = flags or SQLiteDatabase.CREATE_IF_NECESSARY
+                        var flags = if (enableWriteAheadLogging) ENABLE_WRITE_AHEAD_LOGGING else OpenFlags(0)
+                        flags = flags or CREATE_IF_NECESSARY
                         val configuration = createConfiguration(path, flags)
                         db = SQLiteDatabase.openDatabase(configuration, factory, errorHandler, bindings, windowBindings)
                     }
@@ -203,7 +208,7 @@ internal abstract class RequerySqliteOpenHelper<CP : Sqlite3ConnectionPtr, SP : 
                     }
                     Log.e(TAG, "Couldn't open $databaseName for writing (will try read-only):", ex)
                     val path = context.getDatabasePath(databaseName).path
-                    val configuration = createConfiguration(path, SQLiteDatabase.OPEN_READONLY)
+                    val configuration = createConfiguration(path, OPEN_READONLY)
                     db = SQLiteDatabase.openDatabase(configuration, factory, errorHandler, bindings, windowBindings)
                 }
             }
@@ -367,7 +372,7 @@ internal abstract class RequerySqliteOpenHelper<CP : Sqlite3ConnectionPtr, SP : 
      */
     protected open fun createConfiguration(
         path: String,
-        @SQLiteDatabase.OpenFlags openFlags: Int
+        openFlags: OpenFlags,
     ): SQLiteDatabaseConfiguration = SQLiteDatabaseConfiguration(path, openFlags)
 
     companion object {

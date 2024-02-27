@@ -79,7 +79,7 @@ public class RequerySQLiteOpenHelperFactory(
 
         override fun onOpen(db: SQLiteDatabase<CP, SP, WP>) = callback.onOpen(db)
 
-        override fun createConfiguration(path: String, openFlags: Int): SQLiteDatabaseConfiguration {
+        override fun createConfiguration(path: String, openFlags: OpenFlags): SQLiteDatabaseConfiguration {
             var config = super.createConfiguration(path, openFlags)
 
             configurationOptions.forEach { option ->

@@ -15,6 +15,7 @@
  */
 package io.requery.android.database.sqlite
 
+import io.requery.android.database.sqlite.OpenFlags
 import io.requery.android.database.sqlite.internal.SQLiteDatabase
 import java.util.Locale
 import java.util.regex.Pattern
@@ -46,8 +47,7 @@ public class SQLiteDatabaseConfiguration {
     /**
      * The flags used to open the database.
      */
-    @SQLiteDatabase.OpenFlags
-    var openFlags: Int = 0
+    var openFlags: OpenFlags = OpenFlags.EMPTY
 
     /**
      * The maximum size of the prepared statement cache for each database connection.
@@ -90,7 +90,7 @@ public class SQLiteDatabaseConfiguration {
      */
     constructor(
         path: String = MEMORY_DB_PATH,
-        @SQLiteDatabase.OpenFlags openFlags: Int
+        openFlags: OpenFlags
     ) {
         this.path = path
         this.openFlags = openFlags
@@ -112,7 +112,7 @@ public class SQLiteDatabaseConfiguration {
      */
     constructor(
         path: String,
-        @SQLiteDatabase.OpenFlags openFlags: Int,
+        openFlags: OpenFlags,
         functions: List<SQLiteFunction>,
         extensions: List<SQLiteCustomExtension>
     ) : this(path, openFlags) {

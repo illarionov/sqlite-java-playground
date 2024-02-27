@@ -4,12 +4,15 @@ import android.os.SystemClock
 import android.util.Log
 import androidx.core.os.CancellationSignal
 import androidx.core.os.OperationCanceledException
+import io.requery.android.database.sqlite.OpenFlags.Companion.ENABLE_WRITE_AHEAD_LOGGING
 import io.requery.android.database.sqlite.SQLiteDatabaseConfiguration
+import io.requery.android.database.sqlite.contains
 import io.requery.android.database.sqlite.internal.interop.SqlOpenHelperNativeBindings
 import io.requery.android.database.sqlite.internal.interop.SqlOpenHelperWindowBindings
 import io.requery.android.database.sqlite.internal.interop.Sqlite3ConnectionPtr
 import io.requery.android.database.sqlite.internal.interop.Sqlite3StatementPtr
 import io.requery.android.database.sqlite.internal.interop.Sqlite3WindowPtr
+import io.requery.android.database.sqlite.xor
 import java.io.Closeable
 import java.util.WeakHashMap
 import java.util.concurrent.atomic.AtomicBoolean
@@ -172,9 +175,8 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
      */
     fun reconfigure(configuration: SQLiteDatabaseConfiguration): Unit = synchronized(lock) {
         throwIfClosedLocked()
-        val walModeChanged = (
-                (configuration.openFlags xor this.configuration.openFlags) and SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING
-                ) != 0
+        val walModeChanged = (configuration.openFlags xor this.configuration.openFlags)
+            .contains(ENABLE_WRITE_AHEAD_LOGGING)
         if (walModeChanged) {
             // WAL mode can only be changed if there are no acquired connections
             // because we need to close all but the primary connection first.
@@ -865,7 +867,7 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
 
     private fun setMaxConnectionPoolSizeLocked() {
         maxConnectionPoolSize = if (!bindings.nativeHasCodec()
-            && (configuration.openFlags and SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING) != 0
+            && configuration.openFlags.contains(ENABLE_WRITE_AHEAD_LOGGING)
         ) {
             SQLiteGlobal.wALConnectionPoolSize
         } else {

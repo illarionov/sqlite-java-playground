@@ -10,9 +10,12 @@ import android.util.Log
 import android.util.Printer
 import androidx.collection.LruCache
 import androidx.core.os.CancellationSignal
+import io.requery.android.database.sqlite.OpenFlags.Companion.ENABLE_WRITE_AHEAD_LOGGING
+import io.requery.android.database.sqlite.OpenFlags.Companion.OPEN_READONLY
 import io.requery.android.database.sqlite.base.CursorWindow
 import io.requery.android.database.sqlite.SQLiteDatabaseConfiguration
-import io.requery.android.database.sqlite.internal.SQLiteDatabase.Companion.ENABLE_WRITE_AHEAD_LOGGING
+import io.requery.android.database.sqlite.clear
+import io.requery.android.database.sqlite.contains
 import io.requery.android.database.sqlite.internal.SQLiteDebug.DEBUG_SQL_STATEMENTS
 import io.requery.android.database.sqlite.internal.SQLiteDebug.DEBUG_SQL_TIME
 import io.requery.android.database.sqlite.internal.SQLiteStatementType.STATEMENT_SELECT
@@ -23,6 +26,7 @@ import io.requery.android.database.sqlite.internal.interop.Sqlite3ConnectionPtr
 import io.requery.android.database.sqlite.internal.interop.Sqlite3StatementPtr
 import io.requery.android.database.sqlite.internal.interop.Sqlite3WindowPtr
 import io.requery.android.database.sqlite.internal.interop.isNotNull
+import io.requery.android.database.sqlite.xor
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.regex.Pattern
@@ -82,7 +86,7 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
 
     private val configuration = SQLiteDatabaseConfiguration(configuration)
 
-    private val isReadOnlyConnection = configuration.openFlags and SQLiteDatabase.OPEN_READONLY != 0
+    private val isReadOnlyConnection = configuration.openFlags.contains(OPEN_READONLY)
     private val preparedStatementCache = PreparedStatementCache(this.configuration.maxSqlCacheSize)
 
     // The recent operations log.
@@ -122,7 +126,7 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
     private fun open() {
         connectionPtr = bindings.nativeOpen(
             path = configuration.path,
-            openFlags = configuration.openFlags and ENABLE_WRITE_AHEAD_LOGGING.inv(),
+            openFlags = (configuration.openFlags clear ENABLE_WRITE_AHEAD_LOGGING).mask,
             label = configuration.label,
             enableTrace = DEBUG_SQL_STATEMENTS,
             enableProfile = DEBUG_SQL_TIME
@@ -210,7 +214,7 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
 
     private fun setWalModeFromConfiguration() {
         if (!configuration.isInMemoryDb && !isReadOnlyConnection) {
-            if ((configuration.openFlags and ENABLE_WRITE_AHEAD_LOGGING) != 0) {
+            if (configuration.openFlags.contains(ENABLE_WRITE_AHEAD_LOGGING)) {
                 setJournalMode("WAL")
                 setSyncMode(SQLiteGlobal.wALSyncMode)
             } else {
@@ -328,8 +332,7 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
         // Remember what changed.
         val foreignKeyModeChanged = (newConfiguration.foreignKeyConstraintsEnabled
                 != this.configuration.foreignKeyConstraintsEnabled)
-        val walModeChanged = ((newConfiguration.openFlags xor this.configuration.openFlags)
-                and ENABLE_WRITE_AHEAD_LOGGING) != 0
+        val walModeChanged = (newConfiguration.openFlags xor this.configuration.openFlags).contains(ENABLE_WRITE_AHEAD_LOGGING)
         val localeChanged = newConfiguration.locale != this.configuration.locale
 
         // Update configuration parameters.
