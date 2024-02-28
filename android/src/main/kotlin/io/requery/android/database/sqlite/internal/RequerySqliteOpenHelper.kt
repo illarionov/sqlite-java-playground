@@ -4,10 +4,10 @@ import android.content.Context
 import android.database.sqlite.SQLiteException
 import android.util.Log
 import androidx.sqlite.db.SupportSQLiteOpenHelper
-import io.requery.android.database.sqlite.OpenFlags
-import io.requery.android.database.sqlite.OpenFlags.Companion.CREATE_IF_NECESSARY
-import io.requery.android.database.sqlite.OpenFlags.Companion.ENABLE_WRITE_AHEAD_LOGGING
-import io.requery.android.database.sqlite.OpenFlags.Companion.OPEN_READONLY
+import io.requery.android.database.sqlite.RequeryOpenFlags
+import io.requery.android.database.sqlite.RequeryOpenFlags.Companion.CREATE_IF_NECESSARY
+import io.requery.android.database.sqlite.RequeryOpenFlags.Companion.ENABLE_WRITE_AHEAD_LOGGING
+import io.requery.android.database.sqlite.RequeryOpenFlags.Companion.OPEN_READONLY
 import io.requery.android.database.sqlite.base.DatabaseErrorHandler
 import io.requery.android.database.sqlite.SQLiteDatabaseConfiguration
 import io.requery.android.database.sqlite.internal.interop.SqlOpenHelperNativeBindings
@@ -197,7 +197,7 @@ internal abstract class RequerySqliteOpenHelper<CP : Sqlite3ConnectionPtr, SP : 
                         val configuration = createConfiguration(path, OPEN_READONLY)
                         db = SQLiteDatabase.openDatabase(configuration, factory, errorHandler, bindings, windowBindings)
                     } else {
-                        var flags = if (enableWriteAheadLogging) ENABLE_WRITE_AHEAD_LOGGING else OpenFlags(0)
+                        var flags = if (enableWriteAheadLogging) ENABLE_WRITE_AHEAD_LOGGING else RequeryOpenFlags(0)
                         flags = flags or CREATE_IF_NECESSARY
                         val configuration = createConfiguration(path, flags)
                         db = SQLiteDatabase.openDatabase(configuration, factory, errorHandler, bindings, windowBindings)
@@ -372,7 +372,7 @@ internal abstract class RequerySqliteOpenHelper<CP : Sqlite3ConnectionPtr, SP : 
      */
     protected open fun createConfiguration(
         path: String,
-        openFlags: OpenFlags,
+        openFlags: RequeryOpenFlags,
     ): SQLiteDatabaseConfiguration = SQLiteDatabaseConfiguration(path, openFlags)
 
     companion object {

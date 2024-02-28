@@ -13,12 +13,9 @@ import ru.pixnews.wasm.host.plus
 import ru.pixnews.wasm.host.sqlite3.Sqlite3ExecCallback
 
 class SqliteBasicDemo0(
-    private val sqliteBindings: SqliteBindings,
-    callbackStore: Sqlite3CallbackStore,
+    private val api: Sqlite3CApi,
     private val log: Logger = Logger.getLogger(SqliteBasicDemo1::class.simpleName)
 ) {
-    private val api = Sqlite3CApi(sqliteBindings, callbackStore)
-    private val memory = sqliteBindings.memoryBindings
 
     fun run() {
         printVersion()
@@ -42,7 +39,7 @@ class SqliteBasicDemo0(
     }
 
     private fun pringWasmEnumJson(): String? {
-        return sqliteBindings.sqlite3WasmEnumJson.also {
+        return api.sqliteBindings.sqlite3WasmEnumJson.also {
             log.info { "wasm: $it" }
         }
     }

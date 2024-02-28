@@ -61,11 +61,11 @@ tasks.withType<JavaExec>().configureEach {
 }
 
 dependencies {
-    implementation(libs.graalvm.polyglot.polyglot)
-    implementation(libs.graalvm.polyglot.wasm)
+    api(libs.graalvm.polyglot.polyglot)
+    api(libs.graalvm.polyglot.wasm)
     compileOnly(libs.graalvm.wasm.language)
-    implementation(project(":sqlite3-wasm"))
-    implementation(project(":host"))
+    api(project(":sqlite3-wasm"))
+    api(project(":host"))
 }
 dependencies {
     testImplementation("junit:junit:4.13.2")

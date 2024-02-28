@@ -1,29 +1,34 @@
 package io.requery.android.database.sqlite.internal.interop
 
 import io.requery.android.database.sqlite.SQLiteFunction
+import org.example.app.sqlite3.Sqlite3CApi
+import ru.pixnews.wasm.host.WasmPtr
+import ru.pixnews.wasm.host.isSqlite3Null
+import ru.pixnews.wasm.host.sqlite3.Sqlite3Db
+import ru.pixnews.wasm.host.sqlite3.Sqlite3Statement
 
 @JvmInline
 value class GraalSqlite3ConnectionPtr(
-    val ptr: Long
+    val ptr: WasmPtr<Sqlite3Db>
 ) : Sqlite3ConnectionPtr {
-    override fun isNull(): Boolean = ptr == 0L
+    override fun isNull(): Boolean = ptr.isSqlite3Null()
 }
 
 @JvmInline
 value class GraalSqlite3StatementPtr(
-    val ptr: Long
+    val ptr: WasmPtr<Sqlite3Statement>
 ) : Sqlite3StatementPtr {
-    override fun isNull(): Boolean = ptr == 0L
+    override fun isNull(): Boolean = ptr.isSqlite3Null()
 }
 @JvmInline
 value class Graallite3WindowPtr(
-    val ptr: Long
+    val ptr: WasmPtr<Void>
 ) : Sqlite3WindowPtr {
-    override fun isNull(): Boolean = ptr == 0L
+    override fun isNull(): Boolean = ptr.isSqlite3Null()
 }
 
 class GraalNativeBindings(
-
+    private val sqlite3Api: Sqlite3CApi,
 ) : SqlOpenHelperNativeBindings<GraalSqlite3ConnectionPtr, GraalSqlite3StatementPtr, Graallite3WindowPtr> {
     override fun <T : Sqlite3Ptr> nullPtr(): T {
         TODO("Not yet implemented")
@@ -36,10 +41,24 @@ class GraalNativeBindings(
         enableTrace: Boolean,
         enableProfile: Boolean
     ): GraalSqlite3ConnectionPtr {
+
+        TODO("Not yet implemented")
+    }
+
+    override fun nativeRegisterLocalizedCollators(connectionPtr: GraalSqlite3ConnectionPtr, locale: String) {
+        TODO("Not yet implemented")
+    }
+
+    override fun nativeRegisterFunction(connectionPtr: GraalSqlite3ConnectionPtr, function: SQLiteFunction) {
+        TODO("Not yet implemented")
+    }
+
+    override fun nativeClose(connectionPtr: GraalSqlite3ConnectionPtr) {
         TODO("Not yet implemented")
     }
 
     override fun nativeHasCodec(): Boolean {
+
         TODO("Not yet implemented")
     }
 
@@ -203,15 +222,4 @@ class GraalNativeBindings(
         TODO("Not yet implemented")
     }
 
-    override fun nativeRegisterLocalizedCollators(connectionPtr: GraalSqlite3ConnectionPtr, locale: String) {
-        TODO("Not yet implemented")
-    }
-
-    override fun nativeRegisterFunction(connectionPtr: GraalSqlite3ConnectionPtr, function: SQLiteFunction) {
-        TODO("Not yet implemented")
-    }
-
-    override fun nativeClose(connectionPtr: GraalSqlite3ConnectionPtr) {
-        TODO("Not yet implemented")
-    }
 }

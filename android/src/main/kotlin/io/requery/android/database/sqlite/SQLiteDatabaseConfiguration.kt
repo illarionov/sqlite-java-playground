@@ -46,7 +46,7 @@ public class SQLiteDatabaseConfiguration {
     /**
      * The flags used to open the database.
      */
-    var openFlags: OpenFlags = OpenFlags.EMPTY
+    var openFlags: RequeryOpenFlags = RequeryOpenFlags.EMPTY
 
     /**
      * The maximum size of the prepared statement cache for each database connection.
@@ -89,7 +89,7 @@ public class SQLiteDatabaseConfiguration {
      */
     constructor(
         path: String = MEMORY_DB_PATH,
-        openFlags: OpenFlags
+        openFlags: RequeryOpenFlags
     ) {
         this.path = path
         this.openFlags = openFlags
@@ -111,7 +111,7 @@ public class SQLiteDatabaseConfiguration {
      */
     constructor(
         path: String,
-        openFlags: OpenFlags,
+        openFlags: RequeryOpenFlags,
         functions: List<SQLiteFunction>,
         extensions: List<SQLiteCustomExtension>
     ) : this(path, openFlags) {

@@ -1,31 +1,92 @@
 package org.example.app.sqlite3
 
+import java.net.URL
+import java.time.Clock
 import org.example.app.bindings.SqliteBindings
 import org.example.app.bindings.SqliteMemoryBindings
+import org.example.app.ext.functionTable
+import org.example.app.ext.withWasmContext
+import org.example.app.host.Host
+import org.example.app.host.emscripten.EmscriptenEnvBindings
+import org.example.app.host.preview1.WasiSnapshotPreview1Bindngs
+import org.example.app.sqlite3.callback.SQLITE3_CALLBACK_MANAGER_MODULE_NAME
+import org.example.app.sqlite3.callback.SQLITE3_EXEC_CB_FUNCTION_NAME
 import org.example.app.sqlite3.callback.Sqlite3CallbackStore
 import org.example.app.sqlite3.callback.Sqlite3CallbackStore.Sqlite3ExecCallbackId
+import org.example.app.sqlite3.callback.setupSqliteCallbacksWasmModule
+import org.graalvm.polyglot.Context
+import org.graalvm.polyglot.Engine
+import org.graalvm.polyglot.Source
 import org.graalvm.polyglot.Value
+import org.graalvm.wasm.WasmFunctionInstance
 import ru.pixnews.sqlite3.wasm.Sqlite3Exception
+import ru.pixnews.sqlite3.wasm.Sqlite3OpenFlags
 import ru.pixnews.sqlite3.wasm.Sqlite3Result
+import ru.pixnews.sqlite3.wasm.Sqlite3Wasm
 import ru.pixnews.wasm.host.sqlite3.Sqlite3Db
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.WasmPtr
 import ru.pixnews.wasm.host.WasmPtr.Companion.WASM_SIZEOF_PTR
 import ru.pixnews.wasm.host.WasmPtr.Companion.sqlite3Null
+import ru.pixnews.wasm.host.filesystem.FileSystem
+import ru.pixnews.wasm.host.functiontable.IndirectFunctionTableIndex
 import ru.pixnews.wasm.host.isSqlite3Null
 import ru.pixnews.wasm.host.sqlite3.Sqlite3ExecCallback
 
-class Sqlite3CApi(
-    private val bindings: SqliteBindings,
+fun Sqlite3CApi(
+    graalvmEngine: Engine = Engine.create("wasm"),
+    sqlite3Url: URL = Sqlite3Wasm.Emscripten.sqlite3_346_o2
+) : Sqlite3CApi {
+    val callbackStore = Sqlite3CallbackStore()
+    val host = Host(
+        systemEnvProvider = System::getenv,
+        commandArgsProvider = ::emptyList,
+        fileSystem = FileSystem(),
+        clock = Clock.systemDefaultZone(),
+    )
+    val graalContext: Context = Context.newBuilder("wasm")
+        .engine(graalvmEngine)
+        .allowAllAccess(true)
+        .build()
+    graalContext.initialize("wasm")
+
+    graalContext.withWasmContext { instanceContext ->
+        EmscriptenEnvBindings.setupEnvBindings(instanceContext, host)
+        WasiSnapshotPreview1Bindngs.setupWasiSnapshotPreview1Bindngs(instanceContext, host)
+        setupSqliteCallbacksWasmModule(instanceContext, callbackStore)
+    }
+
+    val sqliteSource: Source = Source.newBuilder("wasm", sqlite3Url).build()
+
+    graalContext.eval(sqliteSource)
+
+    // XXX: replace with globals?
+    val sqliteExecFuncInstance = graalContext
+        .getBindings("wasm")
+        .getMember(SQLITE3_CALLBACK_MANAGER_MODULE_NAME)
+        .getMember(SQLITE3_EXEC_CB_FUNCTION_NAME)
+        .`as`(WasmFunctionInstance::class.java)
+
+    val sqlite3ExecCbFuncId = graalContext.withWasmContext { wasmContext ->
+        val sqlite3ExecCbFuncId = wasmContext.functionTable.grow(1, sqliteExecFuncInstance)
+        IndirectFunctionTableIndex(sqlite3ExecCbFuncId)
+    }
+
+    val bindings = SqliteBindings(graalContext, sqlite3ExecCbFuncId)
+    return Sqlite3CApi(bindings, callbackStore)
+}
+
+class Sqlite3CApi internal constructor(
+    val sqliteBindings: SqliteBindings,
     val callbackStore: Sqlite3CallbackStore,
 ) {
-    private val memory: SqliteMemoryBindings = bindings.memoryBindings
+    private val memory: SqliteMemoryBindings = sqliteBindings.memoryBindings
 
     val version: Sqlite3Version
         get() = Sqlite3Version(
-            bindings.sqlite3Version,
-            bindings.sqlite3VersionNumber,
-            bindings.sqlite3SourceId,
+            sqliteBindings.sqlite3Version,
+            sqliteBindings.sqlite3VersionNumber,
+            sqliteBindings.sqlite3SourceId,
         )
 
     data class Sqlite3Version(
@@ -44,7 +105,7 @@ class Sqlite3CApi(
             ppDb = memory.allocOrThrow(WASM_SIZEOF_PTR)
             pFileName = memory.allocNullTerminatedString(filename)
 
-            val result: Value = bindings.sqlite3_open.execute(pFileName.addr, ppDb.addr)
+            val result: Value = sqliteBindings.sqlite3_open.execute(pFileName.addr, ppDb.addr)
 
             pDb = memory.readAddr(ppDb)
             result.throwOnSqliteError("sqlite3_open() failed", pDb)
@@ -59,31 +120,68 @@ class Sqlite3CApi(
         }
     }
 
+    fun sqlite3OpenV2(
+        filename: String,
+        flags: Sqlite3OpenFlags,
+        vfsName: String?
+    ) : WasmPtr<Sqlite3Db> {
+        var ppDb: WasmPtr<WasmPtr<Sqlite3Db>> = sqlite3Null()
+        var pFileName: WasmPtr<Byte> = sqlite3Null()
+        var pVfsName: WasmPtr<Byte> = sqlite3Null()
+        var pDb: WasmPtr<Sqlite3Db> = sqlite3Null()
+        try {
+            ppDb = memory.allocOrThrow(WASM_SIZEOF_PTR)
+            pFileName = memory.allocNullTerminatedString(filename)
+             if (vfsName != null) {
+                pVfsName = memory.allocNullTerminatedString(vfsName)
+            }
+
+            val result: Value = sqliteBindings.sqlite3_open_v2.execute(
+                pFileName.addr,
+                ppDb.addr,
+                flags.mask,
+                pVfsName
+            )
+
+            pDb = memory.readAddr(ppDb)
+            result.throwOnSqliteError("sqlite3_open_v2() failed", pDb)
+
+            return pDb
+        } catch (e: Throwable) {
+            sqlite3Close(pDb)
+            throw e
+        } finally {
+            memory.freeSilent(ppDb)
+            memory.freeSilent(pFileName)
+            memory.freeSilent(pVfsName)
+        }
+    }
+
     fun sqlite3Close(
         sqliteDb: WasmPtr<Sqlite3Db>
     ) {
         // TODO: __dbCleanupMap.cleanup(pDb)
-        bindings.sqlite3_close_v2.execute(sqliteDb.addr)
+        sqliteBindings.sqlite3_close_v2.execute(sqliteDb.addr)
             .throwOnSqliteError("sqlite3_close_v2() failed", sqliteDb)
     }
 
     fun sqlite3ErrMsg(
         sqliteDb: WasmPtr<Sqlite3Db>
     ): String? {
-        val p = bindings.sqlite3_errmsg.execute(sqliteDb.addr)
+        val p = sqliteBindings.sqlite3_errmsg.execute(sqliteDb.addr)
         return memory.readNullTerminatedString(p)
     }
 
     fun sqlite3ErrCode(
         sqliteDb: WasmPtr<Sqlite3Db>
     ): Int {
-        return bindings.sqlite3_errcode.execute(sqliteDb.addr).asInt()
+        return sqliteBindings.sqlite3_errcode.execute(sqliteDb.addr).asInt()
     }
 
     fun sqlite3ExtendedErrCode(
         sqliteDb: WasmPtr<Sqlite3Db>
     ): Int {
-        return bindings.sqlite3_extended_errcode.execute(sqliteDb.addr).asInt()
+        return sqliteBindings.sqlite3_extended_errcode.execute(sqliteDb.addr).asInt()
     }
 
     fun sqlite3Exec(
@@ -103,7 +201,7 @@ class Sqlite3CApi(
             pSql = memory.allocNullTerminatedString(sql)
             pzErrMsg = memory.allocOrThrow(WASM_SIZEOF_PTR)
 
-            val errNo = bindings.sqlite3Exec(
+            val errNo = sqliteBindings.sqlite3Exec(
                 sqliteDb = sqliteDb,
                 pSql = pSql,
                 callbackId = pCallbackId,

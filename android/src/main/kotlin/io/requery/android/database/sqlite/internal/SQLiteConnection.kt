@@ -10,8 +10,8 @@ import android.util.Log
 import android.util.Printer
 import androidx.collection.LruCache
 import androidx.core.os.CancellationSignal
-import io.requery.android.database.sqlite.OpenFlags.Companion.ENABLE_WRITE_AHEAD_LOGGING
-import io.requery.android.database.sqlite.OpenFlags.Companion.OPEN_READONLY
+import io.requery.android.database.sqlite.RequeryOpenFlags.Companion.ENABLE_WRITE_AHEAD_LOGGING
+import io.requery.android.database.sqlite.RequeryOpenFlags.Companion.OPEN_READONLY
 import io.requery.android.database.sqlite.base.CursorWindow
 import io.requery.android.database.sqlite.SQLiteDatabaseConfiguration
 import io.requery.android.database.sqlite.clear

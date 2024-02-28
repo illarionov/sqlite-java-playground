@@ -11,16 +11,15 @@ import android.os.Looper
 import android.util.EventLog
 import android.util.Log
 import android.util.Pair
-import androidx.annotation.IntDef
 import androidx.core.os.CancellationSignal
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteQuery
 import androidx.sqlite.db.SupportSQLiteStatement
-import io.requery.android.database.sqlite.OpenFlags
-import io.requery.android.database.sqlite.OpenFlags.Companion.CREATE_IF_NECESSARY
-import io.requery.android.database.sqlite.OpenFlags.Companion.ENABLE_WRITE_AHEAD_LOGGING
-import io.requery.android.database.sqlite.OpenFlags.Companion.OPEN_CREATE
-import io.requery.android.database.sqlite.OpenFlags.Companion.OPEN_READONLY
+import io.requery.android.database.sqlite.RequeryOpenFlags
+import io.requery.android.database.sqlite.RequeryOpenFlags.Companion.CREATE_IF_NECESSARY
+import io.requery.android.database.sqlite.RequeryOpenFlags.Companion.ENABLE_WRITE_AHEAD_LOGGING
+import io.requery.android.database.sqlite.RequeryOpenFlags.Companion.OPEN_CREATE
+import io.requery.android.database.sqlite.RequeryOpenFlags.Companion.OPEN_READONLY
 import io.requery.android.database.sqlite.base.DatabaseErrorHandler
 import io.requery.android.database.sqlite.base.DefaultDatabaseErrorHandler
 import io.requery.android.database.sqlite.internal.SQLiteCursor
@@ -67,12 +66,13 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
     // Thread-local for database sessions that belong to this database.
     // Each thread has its own database session.
     // INVARIANT: Immutable.
-    private val _threadSession: ThreadLocal<SQLiteSession<CP, SP, WP>> = object : ThreadLocal<SQLiteSession<CP, SP, WP>>() {
-        override fun initialValue(): SQLiteSession<CP, SP, WP> {
-            val pool = synchronized(lock) { requireConnectionPoolLocked() }
-            return SQLiteSession(pool)
+    private val _threadSession: ThreadLocal<SQLiteSession<CP, SP, WP>> =
+        object : ThreadLocal<SQLiteSession<CP, SP, WP>>() {
+            override fun initialValue(): SQLiteSession<CP, SP, WP> {
+                val pool = synchronized(lock) { requireConnectionPoolLocked() }
+                return SQLiteSession(pool)
+            }
         }
-    }
 
     // Error handler to be used when SQLite returns corruption errors.
     // INVARIANT: Immutable.
@@ -102,7 +102,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
     // INVARIANT: Guarded by mLock.
     private val configurationLocked = configuration
 
-    private val cursorWindowCtor: (String?) -> CursorWindow<WP> =  { name -> CursorWindow(name, windowBindings) }
+    private val cursorWindowCtor: (String?) -> CursorWindow<WP> = { name -> CursorWindow(name, windowBindings) }
 
     // The connection pool for the database, null when closed.
     // The pool itself is thread-safe, but the reference to it can only be acquired
@@ -174,7 +174,8 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
      * @return The connection flags.
      */
     fun getThreadDefaultConnectionFlags(readOnly: Boolean): Int {
-        var flags = if (readOnly) SQLiteConnectionPool.CONNECTION_FLAG_READ_ONLY else SQLiteConnectionPool.CONNECTION_FLAG_PRIMARY_CONNECTION_AFFINITY
+        var flags =
+            if (readOnly) SQLiteConnectionPool.CONNECTION_FLAG_READ_ONLY else SQLiteConnectionPool.CONNECTION_FLAG_PRIMARY_CONNECTION_AFFINITY
         if (isMainThread) {
             flags = flags or SQLiteConnectionPool.CONNECTION_FLAG_INTERACTIVE
         }
@@ -410,7 +411,6 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
         configurationLocked.openFlags = (configurationLocked.openFlags clear OPEN_READONLY)
         try {
             pool.reconfigure(configurationLocked)
-            Unit
         } catch (ex: RuntimeException) {
             configurationLocked.openFlags = oldOpenFlags
             throw ex
@@ -595,8 +595,9 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
         limit: String?,
         cancellationSignal: CancellationSignal? = null
     ): Cursor = useReference {
-        val sql =
-            SQLiteQueryBuilder.buildQueryString(distinct, table, columns, selection, groupBy, having, orderBy, limit)
+        val sql = SQLiteQueryBuilder.buildQueryString(
+            distinct, table, columns, selection, groupBy, having, orderBy, limit
+        )
         rawQueryWithFactory(cursorFactory, sql, selectionArgs, cancellationSignal)
     }
 
@@ -723,7 +724,8 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
         selectionArgs: List<Any?> = listOf(),
         cancellationSignal: CancellationSignal? = null
     ): Cursor = useReference {
-        val driver: SQLiteCursorDriver<CP, SP, WP> = SQLiteDirectCursorDriver(this, sql, cancellationSignal, cursorWindowCtor)
+        val driver: SQLiteCursorDriver<CP, SP, WP> =
+            SQLiteDirectCursorDriver(this, sql, cancellationSignal, cursorWindowCtor)
         return driver.query(cursorFactory ?: this.cursorFactory, selectionArgs)
     }
 
@@ -895,7 +897,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
      * @return the number of rows affected
      */
     internal fun update(table: String?, values: ContentValues, whereClause: String?, whereArgs: List<String?>): Int {
-        return updateWithOnConflict(table, values, whereClause, whereArgs, ConflictAlgorithm.CONFLICT_NONE)
+        return update(table, values, whereClause, whereArgs, ConflictAlgorithm.CONFLICT_NONE)
     }
 
     /**
@@ -918,96 +920,40 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
         values: ContentValues,
         whereClause: String?,
         whereArgs: Array<out Any?>?
-    ): Int = useReference {
-        require(values.size() != 0) { "Empty values" }
+    ): Int = update(
+        table,
+        values,
+        whereClause,
+        whereArgs?.asList() ?: emptyList(),
+        ConflictAlgorithm.entitiesMap.getValue(conflictAlgorithm))
 
-        val sql = StringBuilder(120)
-        sql.append("UPDATE ")
-        sql.append(ConflictAlgorithm.entitiesMap.getValue(conflictAlgorithm).sql)
-        sql.append(table)
-        sql.append(" SET ")
-
-        // move all bind args to one array
-        val setValuesSize = values.size()
-        val bindArgsSize = if ((whereArgs == null)) setValuesSize else (setValuesSize + whereArgs.size)
-        val bindArgs = arrayOfNulls<Any>(bindArgsSize)
-        var i = 0
-        for ((key, value) in values.valueSet()) {
-            sql.append(if ((i > 0)) "," else "")
-            sql.append(key)
-            bindArgs[i++] = value
-            sql.append("=?")
-        }
-        if (whereArgs != null) {
-            i = setValuesSize
-            while (i < bindArgsSize) {
-                bindArgs[i] = whereArgs[i - setValuesSize]
-                i++
-            }
-        }
-        if (whereClause?.isNotEmpty() == true) {
-            sql.append(" WHERE ")
-            sql.append(whereClause)
-        }
-
-        return SQLiteStatement(
-            this,
-            sql.toString(),
-            bindArgs.toList()
-        ).use(SQLiteStatement<*>::executeUpdateDelete)
-    }
-
-    /**
-     * Convenience method for updating rows in the database.
-     *
-     * @param table the table to update in
-     * @param values a map from column names to new column values. null is a
-     * valid value that will be translated to NULL.
-     * @param whereClause the optional WHERE clause to apply when updating.
-     * Passing null will update all rows.
-     * @param whereArgs You may include ?s in the where clause, which
-     * will be replaced by the values from whereArgs. The values
-     * will be bound as Strings.
-     * @param conflictAlgorithm for update conflict resolver
-     * @return the number of rows affected
-     */
-    fun updateWithOnConflict(
+    private fun update(
         table: String?,
         values: ContentValues,
         whereClause: String?,
-        whereArgs: List<String?>,
+        whereArgs: List<Any?>,
         conflictAlgorithm: ConflictAlgorithm,
     ): Int = useReference {
         require(values.size() != 0) { "Empty values" }
 
-        // TODO: verbose
-        val sql = StringBuilder(120)
-        sql.append("UPDATE ")
-        sql.append(conflictAlgorithm.sql)
-        sql.append(table)
-        sql.append(" SET ")
+        val sql = buildString {
+            append("UPDATE ")
+            append(conflictAlgorithm.sql)
+            append(table)
+            append(" SET ")
 
-        // move all bind args to one array
-        val bindArgs = ArrayList<Any?>(values.size() + whereArgs.size)
-        var i = 0
-        for ((key, value) in values.valueSet()) {
-            sql.append(if ((i > 0)) "," else "")
-            sql.append(key)
-            sql.append("=?")
-            bindArgs[i++] = value
-        }
-        bindArgs.addAll(whereArgs)
+            values.keySet().joinTo(this) { "$it=?" }
 
-        if (whereClause?.isNotEmpty() == true) {
-            sql.append(" WHERE ")
-            sql.append(whereClause)
+            whereClause?.let {
+                if (it.isNotEmpty()) {
+                    append(" WHERE ")
+                    append(it)
+                }
+            }
         }
 
-        return SQLiteStatement(
-            this,
-            sql.toString(),
-            bindArgs
-        ).use(SQLiteStatement<*>::executeUpdateDelete)
+        val bindArgs = values.valueSet().map(Map.Entry<*, *>::value) + whereArgs
+        return SQLiteStatement(this, sql, bindArgs).use(SQLiteStatement<*>::executeUpdateDelete)
     }
 
     /**
@@ -1534,7 +1480,6 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
      * Passing null will count all rows for the given table
      * @return the number of rows in the table filtered by the selection
      */
-    @JvmOverloads
     fun queryNumEntries(table: String, selection: String? = null, selectionArgs: List<String> = listOf()): Long {
         val s = if (selection?.isNotEmpty() == true) " where $selection" else ""
         return longForQuery("select count(*) from $table$s", selectionArgs)
@@ -1587,7 +1532,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
             get() = Looper.getMainLooper().isCurrentThread
 
         /**
-         * Open the database according to the flags [OpenFlags]
+         * Open the database according to the flags [RequeryOpenFlags]
          *
          *
          * Sets the locale of the database to the  the system's current locale.
@@ -1607,7 +1552,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
          * @throws SQLiteException if the database cannot be opened
          */
         /**
-         * Open the database according to the flags [OpenFlags]
+         * Open the database according to the flags [RequeryOpenFlags]
          *
          *
          * Sets the locale of the database to the  the system's current locale.
@@ -1621,10 +1566,10 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
          * @throws SQLiteException if the database cannot be opened
          */
         @JvmStatic
-        internal fun <CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr, WP : Sqlite3WindowPtr, > openDatabase(
+        internal fun <CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr, WP : Sqlite3WindowPtr> openDatabase(
             path: String,
             factory: CursorFactory<CP, SP, WP>?,
-            flags: OpenFlags,
+            flags: RequeryOpenFlags,
             errorHandler: DatabaseErrorHandler? = null,
             bindings: SqlOpenHelperNativeBindings<CP, SP, WP>,
             windowBindings: SqlOpenHelperWindowBindings<WP>,
@@ -1669,7 +1614,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
         /**
          * Equivalent to openDatabase(file.getPath(), factory, CREATE_IF_NECESSARY).
          */
-        internal fun <CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr, WP : Sqlite3WindowPtr>openOrCreateDatabase(
+        internal fun <CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr, WP : Sqlite3WindowPtr> openOrCreateDatabase(
             file: File,
             factory: CursorFactory<CP, SP, WP>?,
             bindings: SqlOpenHelperNativeBindings<CP, SP, WP>,
@@ -1679,7 +1624,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
         /**
          * Equivalent to openDatabase(path, factory, CREATE_IF_NECESSARY).
          */
-        internal fun <CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr, WP : Sqlite3WindowPtr>openOrCreateDatabase(
+        internal fun <CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr, WP : Sqlite3WindowPtr> openOrCreateDatabase(
             path: String,
             factory: CursorFactory<CP, SP, WP>?,
             bindings: SqlOpenHelperNativeBindings<CP, SP, WP>,
@@ -1697,13 +1642,14 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
          * Equivalent to openDatabase(path, factory, CREATE_IF_NECESSARY, errorHandler).
          */
         @JvmStatic
-        internal fun <CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr, WP : Sqlite3WindowPtr>openOrCreateDatabase(
+        internal fun <CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr, WP : Sqlite3WindowPtr> openOrCreateDatabase(
             path: String,
             factory: CursorFactory<CP, SP, WP>,
             errorHandler: DatabaseErrorHandler?,
             bindings: SqlOpenHelperNativeBindings<CP, SP, WP>,
             windowBindings: SqlOpenHelperWindowBindings<WP>,
-        ): SQLiteDatabase<CP, SP, WP> = openDatabase(path, factory, CREATE_IF_NECESSARY, errorHandler, bindings, windowBindings)
+        ): SQLiteDatabase<CP, SP, WP> =
+            openDatabase(path, factory, CREATE_IF_NECESSARY, errorHandler, bindings, windowBindings)
 
         /**
          * Deletes a database including its journal file and other auxiliary files
@@ -1974,7 +1920,11 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
          * @return the row ID of the newly inserted row, or -1 if an error occurred
          */
         @Throws(SQLException::class)
-        fun SQLiteDatabase<*, *, *>.insertOrThrow(table: String?, nullColumnHack: String?, values: ContentValues?): Long {
+        fun SQLiteDatabase<*, *, *>.insertOrThrow(
+            table: String?,
+            nullColumnHack: String?,
+            values: ContentValues?
+        ): Long {
             return insertWithOnConflict(table, nullColumnHack, values, ConflictAlgorithm.CONFLICT_NONE)
         }
 
@@ -1993,7 +1943,11 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
          * the row.
          * @return the row ID of the newly inserted row, or -1 if an error occurred
          */
-        fun SQLiteDatabase<*, *, *>.replace(table: String?, nullColumnHack: String?, initialValues: ContentValues): Long {
+        fun SQLiteDatabase<*, *, *>.replace(
+            table: String?,
+            nullColumnHack: String?,
+            initialValues: ContentValues
+        ): Long {
             try {
                 return insertWithOnConflict(table, nullColumnHack, initialValues, ConflictAlgorithm.CONFLICT_REPLACE)
             } catch (e: SQLException) {

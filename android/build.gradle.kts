@@ -7,7 +7,7 @@ android {
     namespace = "ru.pixnews.sqlite.android"
     compileSdk = 34
     defaultConfig {
-        minSdk = 24
+        minSdk = 26
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
@@ -41,7 +41,7 @@ repositories {
 
 
 dependencies {
-    project(":graalvm")
+    implementation(project(":graalvm"))
     api("androidx.core:core:1.12.0")
     api("androidx.sqlite:sqlite:2.4.0")
 }

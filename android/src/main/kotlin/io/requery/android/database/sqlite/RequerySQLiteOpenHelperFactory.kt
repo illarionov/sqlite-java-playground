@@ -27,6 +27,7 @@ import io.requery.android.database.sqlite.internal.interop.SqlOpenHelperWindowBi
 import io.requery.android.database.sqlite.internal.interop.Sqlite3ConnectionPtr
 import io.requery.android.database.sqlite.internal.interop.Sqlite3StatementPtr
 import io.requery.android.database.sqlite.internal.interop.Sqlite3WindowPtr
+import org.example.app.sqlite3.Sqlite3CApi
 
 /**
  * Implements [SupportSQLiteOpenHelper.Factory] using the SQLite implementation shipped in
@@ -36,8 +37,9 @@ public class RequerySQLiteOpenHelperFactory(
     private val configurationOptions: List<ConfigurationOptions> = emptyList()
 ) : SupportSQLiteOpenHelper.Factory {
     override fun create(configuration: SupportSQLiteOpenHelper.Configuration): SupportSQLiteOpenHelper {
-        val bindings = GraalNativeBindings()
-        val windowBingins = GraalWindowBindings()
+        val api = Sqlite3CApi()
+        val bindings = GraalNativeBindings(api)
+        val windowBindins = GraalWindowBindings()
 
         return CallbackSQLiteOpenHelper(
             configuration.context,
@@ -45,7 +47,7 @@ public class RequerySQLiteOpenHelperFactory(
             configuration.callback,
             configurationOptions,
             bindings,
-            windowBingins,
+            windowBindins,
         )
     }
 
@@ -79,7 +81,7 @@ public class RequerySQLiteOpenHelperFactory(
 
         override fun onOpen(db: SQLiteDatabase<CP, SP, WP>) = callback.onOpen(db)
 
-        override fun createConfiguration(path: String, openFlags: OpenFlags): SQLiteDatabaseConfiguration {
+        override fun createConfiguration(path: String, openFlags: RequeryOpenFlags): SQLiteDatabaseConfiguration {
             var config = super.createConfiguration(path, openFlags)
 
             configurationOptions.forEach { option ->
