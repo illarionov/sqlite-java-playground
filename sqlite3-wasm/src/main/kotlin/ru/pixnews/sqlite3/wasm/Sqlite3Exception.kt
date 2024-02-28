@@ -2,9 +2,9 @@ package ru.pixnews.sqlite3.wasm
 
 class Sqlite3Exception(
     val sqliteErrorCode: Int,
-    val sqliteExetendedErrorCode: Int,
+    val sqliteExtendedErrorCode: Int,
     private val prefix: String? = null,
-    private val sqliteMsg: String? = null
+    val sqliteMsg: String? = null
 ) : RuntimeException(
     sqlite3ErrorMsg(sqliteErrorCode, sqliteErrorCode, prefix, sqliteMsg)
 ) {
