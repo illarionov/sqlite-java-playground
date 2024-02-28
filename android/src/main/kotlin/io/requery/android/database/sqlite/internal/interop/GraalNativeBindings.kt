@@ -1,7 +1,9 @@
 package io.requery.android.database.sqlite.internal.interop
 
+import android.database.sqlite.SQLiteException
 import io.requery.android.database.sqlite.SQLiteFunction
 import org.example.app.sqlite3.Sqlite3CApi
+import ru.pixnews.sqlite3.wasm.Sqlite3OpenFlags
 import ru.pixnews.wasm.host.WasmPtr
 import ru.pixnews.wasm.host.isSqlite3Null
 import ru.pixnews.wasm.host.sqlite3.Sqlite3Db
@@ -41,8 +43,17 @@ class GraalNativeBindings(
         enableTrace: Boolean,
         enableProfile: Boolean
     ): GraalSqlite3ConnectionPtr {
+        try {
+            val db = sqlite3Api.sqlite3OpenV2(
+                filename = path,
+                flags = Sqlite3OpenFlags(openFlags),
+                vfsName = null
+            )
 
-        TODO("Not yet implemented")
+
+        } catch (e: SQLiteException) {
+            // TODO
+        }
     }
 
     override fun nativeRegisterLocalizedCollators(connectionPtr: GraalSqlite3ConnectionPtr, locale: String) {
