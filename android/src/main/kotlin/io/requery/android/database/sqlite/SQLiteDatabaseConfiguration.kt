@@ -15,7 +15,6 @@
  */
 package io.requery.android.database.sqlite
 
-import io.requery.android.database.sqlite.OpenFlags
 import io.requery.android.database.sqlite.internal.SQLiteDatabase
 import java.util.Locale
 import java.util.regex.Pattern

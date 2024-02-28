@@ -130,14 +130,6 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
     val threadSession: SQLiteSession<CP, SP, WP>
         get() = _threadSession.get()!! // initialValue() throws if database closed
 
-
-    /** Conflict options integer enumeration definition  */
-    @IntDef(
-        CONFLICT_ABORT, CONFLICT_FAIL, CONFLICT_IGNORE, CONFLICT_NONE, CONFLICT_REPLACE, CONFLICT_ROLLBACK
-    )
-    @Retention(AnnotationRetention.SOURCE)
-    annotation class ConflictAlgorithm
-
     @Throws(Throwable::class)
     protected fun finalize() = dispose(true)
 
@@ -769,10 +761,10 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
     @Throws(SQLException::class)
     override fun insert(
         table: String,
-        @ConflictAlgorithm conflictAlgorithm: Int,
+        conflictAlgorithm: Int,
         values: ContentValues
     ): Long {
-        return insertWithOnConflict(table, null, values, conflictAlgorithm)
+        return insertWithOnConflict(table, null, values, ConflictAlgorithm.entitiesMap.getValue(conflictAlgorithm))
     }
 
     /**
@@ -799,11 +791,12 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
         table: String?,
         nullColumnHack: String?,
         initialValues: ContentValues?,
-        @ConflictAlgorithm conflictAlgorithm: Int
+        conflictAlgorithm: ConflictAlgorithm,
     ): Long = useReference {
+        // TODO: too verbose
         val sql = StringBuilder()
         sql.append("INSERT")
-        sql.append(CONFLICT_VALUES[conflictAlgorithm])
+        sql.append(conflictAlgorithm.sql)
         sql.append(" INTO ")
         sql.append(table)
         sql.append('(')
@@ -901,8 +894,8 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
      * will be bound as Strings.
      * @return the number of rows affected
      */
-    internal fun update(table: String?, values: ContentValues?, whereClause: String?, whereArgs: List<String?>): Int {
-        return updateWithOnConflict(table, values, whereClause, whereArgs, CONFLICT_NONE)
+    internal fun update(table: String?, values: ContentValues, whereClause: String?, whereArgs: List<String?>): Int {
+        return updateWithOnConflict(table, values, whereClause, whereArgs, ConflictAlgorithm.CONFLICT_NONE)
     }
 
     /**
@@ -921,7 +914,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
      */
     override fun update(
         table: String,
-        @ConflictAlgorithm conflictAlgorithm: Int,
+        conflictAlgorithm: Int,
         values: ContentValues,
         whereClause: String?,
         whereArgs: Array<out Any?>?
@@ -930,7 +923,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
 
         val sql = StringBuilder(120)
         sql.append("UPDATE ")
-        sql.append(CONFLICT_VALUES[conflictAlgorithm])
+        sql.append(ConflictAlgorithm.entitiesMap.getValue(conflictAlgorithm).sql)
         sql.append(table)
         sql.append(" SET ")
 
@@ -980,16 +973,17 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
      */
     fun updateWithOnConflict(
         table: String?,
-        values: ContentValues?,
+        values: ContentValues,
         whereClause: String?,
         whereArgs: List<String?>,
-        @ConflictAlgorithm conflictAlgorithm: Int,
+        conflictAlgorithm: ConflictAlgorithm,
     ): Int = useReference {
-        require(!(values == null || values.size() == 0)) { "Empty values" }
+        require(values.size() != 0) { "Empty values" }
 
+        // TODO: verbose
         val sql = StringBuilder(120)
         sql.append("UPDATE ")
-        sql.append(CONFLICT_VALUES[conflictAlgorithm])
+        sql.append(conflictAlgorithm.sql)
         sql.append(table)
         sql.append(" SET ")
 
@@ -1572,62 +1566,6 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
         private const val EVENT_DB_CORRUPT = 75004
 
         /**
-         * When a constraint violation occurs, an immediate ROLLBACK occurs,
-         * thus ending the current transaction, and the command aborts with a
-         * return code of SQLITE_CONSTRAINT. If no transaction is active
-         * (other than the implied transaction that is created on every command)
-         * then this algorithm works the same as ABORT.
-         */
-        const val CONFLICT_ROLLBACK: Int = 1
-
-        /**
-         * When a constraint violation occurs,no ROLLBACK is executed
-         * so changes from prior commands within the same transaction
-         * are preserved. This is the default behavior.
-         */
-        const val CONFLICT_ABORT: Int = 2
-
-        /**
-         * When a constraint violation occurs, the command aborts with a return
-         * code SQLITE_CONSTRAINT. But any changes to the database that
-         * the command made prior to encountering the constraint violation
-         * are preserved and are not backed out.
-         */
-        const val CONFLICT_FAIL: Int = 3
-
-        /**
-         * When a constraint violation occurs, the one row that contains
-         * the constraint violation is not inserted or changed.
-         * But the command continues executing normally. Other rows before and
-         * after the row that contained the constraint violation continue to be
-         * inserted or updated normally. No error is returned.
-         */
-        const val CONFLICT_IGNORE: Int = 4
-
-        /**
-         * When a UNIQUE constraint violation occurs, the pre-existing rows that
-         * are causing the constraint violation are removed prior to inserting
-         * or updating the current row. Thus the insert or update always occurs.
-         * The command continues executing normally. No error is returned.
-         * If a NOT NULL constraint violation occurs, the NULL value is replaced
-         * by the default value for that column. If the column has no default
-         * value, then the ABORT algorithm is used. If a CHECK constraint
-         * violation occurs then the IGNORE algorithm is used. When this conflict
-         * resolution strategy deletes rows in order to satisfy a constraint,
-         * it does not invoke delete triggers on those rows.
-         * This behavior might change in a future release.
-         */
-        const val CONFLICT_REPLACE: Int = 5
-
-        /**
-         * Use the following when no conflict action is specified.
-         */
-        const val CONFLICT_NONE: Int = 0
-
-        private val CONFLICT_VALUES =
-            arrayOf("", " OR ROLLBACK ", " OR ABORT ", " OR FAIL ", " OR IGNORE ", " OR REPLACE ")
-
-        /**
          * Absolute max value that can be set by [.setMaxSqlCacheSize].
          *
          * Each prepared-statement is between 1K - 6K, depending on the complexity of the
@@ -2012,7 +1950,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
          * @return the row ID of the newly inserted row, or -1 if an error occurred
          */
         fun SQLiteDatabase<*, *, *>.insert(table: String?, nullColumnHack: String?, values: ContentValues): Long = try {
-            insertWithOnConflict(table, nullColumnHack, values, CONFLICT_NONE)
+            insertWithOnConflict(table, nullColumnHack, values, ConflictAlgorithm.CONFLICT_NONE)
         } catch (e: SQLException) {
             Log.e(TAG, "Error inserting $values", e)
             -1
@@ -2037,7 +1975,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
          */
         @Throws(SQLException::class)
         fun SQLiteDatabase<*, *, *>.insertOrThrow(table: String?, nullColumnHack: String?, values: ContentValues?): Long {
-            return insertWithOnConflict(table, nullColumnHack, values, CONFLICT_NONE)
+            return insertWithOnConflict(table, nullColumnHack, values, ConflictAlgorithm.CONFLICT_NONE)
         }
 
         /**
@@ -2057,7 +1995,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
          */
         fun SQLiteDatabase<*, *, *>.replace(table: String?, nullColumnHack: String?, initialValues: ContentValues): Long {
             try {
-                return insertWithOnConflict(table, nullColumnHack, initialValues, CONFLICT_REPLACE)
+                return insertWithOnConflict(table, nullColumnHack, initialValues, ConflictAlgorithm.CONFLICT_REPLACE)
             } catch (e: SQLException) {
                 Log.e(TAG, "Error inserting $initialValues", e)
                 return -1
@@ -2085,8 +2023,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
             table: String?,
             nullColumnHack: String?,
             initialValues: ContentValues?,
-        ): Long = insertWithOnConflict(table, nullColumnHack, initialValues, CONFLICT_REPLACE)
-
+        ): Long = insertWithOnConflict(table, nullColumnHack, initialValues, ConflictAlgorithm.CONFLICT_REPLACE)
     }
 }
 
