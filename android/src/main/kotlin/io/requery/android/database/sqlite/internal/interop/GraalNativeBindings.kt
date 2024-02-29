@@ -71,17 +71,16 @@ class GraalNativeBindings(
 
     override fun nativeOpen(
         path: String,
-        openFlags: Int,
+        openFlags: Sqlite3OpenFlags,
         label: String,
         enableTrace: Boolean,
         enableProfile: Boolean
     ): GraalSqlite3ConnectionPtr {
         var db: WasmPtr<Sqlite3Db>? = null
-        val flags = Sqlite3OpenFlags(openFlags)
         try {
             db = sqlite3Api.sqlite3OpenV2(
                 filename = path,
-                flags = flags,
+                flags = openFlags,
                 vfsName = null
             )
 
@@ -89,7 +88,7 @@ class GraalNativeBindings(
             sqlite3Api.sqlite3CreateCollation(db, "localized", SQLITE_UTF8, localizedComparator)
 
             // Check that the database is really read/write when that is what we asked for.
-            if (flags.contains(SQLITE_OPEN_READWRITE)
+            if (openFlags.contains(SQLITE_OPEN_READWRITE)
                 && sqlite3Api.sqlite3DbReadonly(db, null) == Sqlite3CApi.Sqlite3DbReadonlyResult.READ_WRITE
             ) {
                 throw SQLiteCantOpenDatabaseException("Could not open the database in read/write mode.")
@@ -99,7 +98,7 @@ class GraalNativeBindings(
             sqlite3Api.sqlite3BusyTimeout(db, BUSY_TIMEOUT_MS)
 
             // Register wrapper object
-            connections.add(db, flags, path, label)
+            connections.add(db, openFlags, path, label)
 
             // Enable tracing and profiling if requested.
             if (enableTrace) {
@@ -140,10 +139,6 @@ class GraalNativeBindings(
             logger.i { "sqlite3_close(${connectionPtr}) failed: %d" }
             rethrowAndroidSqliteException(e, "Count not close db.")
         }
-    }
-
-    override fun nativeLoadExtension(connectionPtr: GraalSqlite3ConnectionPtr, file: String, proc: String) {
-        TODO("Not yet implemented")
     }
 
     override fun nativeResetCancel(connectionPtr: GraalSqlite3ConnectionPtr, cancelable: Boolean) {

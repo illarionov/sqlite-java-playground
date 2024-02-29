@@ -26,6 +26,7 @@ import io.requery.android.database.sqlite.internal.interop.Sqlite3ConnectionPtr
 import io.requery.android.database.sqlite.internal.interop.Sqlite3StatementPtr
 import io.requery.android.database.sqlite.internal.interop.Sqlite3WindowPtr
 import io.requery.android.database.sqlite.internal.interop.isNotNull
+import io.requery.android.database.sqlite.toSqliteOpenFlags
 import io.requery.android.database.sqlite.xor
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -126,7 +127,7 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
     private fun open() {
         connectionPtr = bindings.nativeOpen(
             path = configuration.path,
-            openFlags = (configuration.openFlags clear ENABLE_WRITE_AHEAD_LOGGING).mask,
+            openFlags = configuration.openFlags.toSqliteOpenFlags(),
             label = configuration.label,
             enableTrace = DEBUG_SQL_STATEMENTS,
             enableProfile = DEBUG_SQL_TIME
@@ -138,18 +139,6 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
         setAutoCheckpointInterval()
         setWalModeFromConfiguration()
         setLocaleFromConfiguration()
-
-        // Register functions
-        val functionCount = configuration.functions.size
-        for (i in 0 until functionCount) {
-            val function = configuration.functions[i]
-            bindings.nativeRegisterFunction(connectionPtr, function)
-        }
-
-        // Register custom extensions
-        for (extension in configuration.customExtensions) {
-            bindings.nativeLoadExtension(connectionPtr, extension.path, extension.entryPoint)
-        }
     }
 
     private fun dispose(finalized: Boolean) {
@@ -315,11 +304,6 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
     // Called by SQLiteConnectionPool only.
     fun reconfigure(newConfiguration: SQLiteDatabaseConfiguration) {
         onlyAllowReadOnlyOperations = false
-
-        // Register Functions
-        newConfiguration.functions.filter { it !in this.configuration.functions }.forEach {
-            bindings.nativeRegisterFunction(connectionPtr, it)
-        }
 
         // Remember what changed.
         val foreignKeyModeChanged = (newConfiguration.foreignKeyConstraintsEnabled

@@ -1,11 +1,11 @@
 package ru.pixnews.sqlite3.wasm
 
-import ru.pixnews.sqlite3.wasm.util.Sqlite3BitMaskExt as Sqlite3BitMaskExt1
+import ru.pixnews.sqlite3.wasm.util.Sqlite3BitMaskExt
 
 @JvmInline
 value class Sqlite3OpenFlags(
     override val mask: Int
-) : Sqlite3BitMaskExt1<Sqlite3OpenFlags> {
+) : Sqlite3BitMaskExt<Sqlite3OpenFlags> {
     override val newInstance: (Int) -> Sqlite3OpenFlags get() = ::Sqlite3OpenFlags
 
     companion object {

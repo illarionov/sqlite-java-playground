@@ -1,6 +1,7 @@
 package io.requery.android.database.sqlite.internal.interop
 
 import io.requery.android.database.sqlite.SQLiteFunction
+import ru.pixnews.sqlite3.wasm.Sqlite3OpenFlags
 
 interface SqlOpenHelperNativeBindings<
         CP : Sqlite3ConnectionPtr,
@@ -11,10 +12,9 @@ interface SqlOpenHelperNativeBindings<
     fun connectionStatementPtr(): SP
     fun connectionWindowPtr(): WP
 
-    // TODO: OpenFlags
     fun nativeOpen(
         path: String,
-        openFlags: Int,
+        openFlags: Sqlite3OpenFlags,
         label: String,
         enableTrace: Boolean,
         enableProfile: Boolean
@@ -154,11 +154,5 @@ interface SqlOpenHelperNativeBindings<
     fun nativeResetCancel(
         connectionPtr: CP,
         cancelable: Boolean
-    )
-
-    fun nativeLoadExtension(
-        connectionPtr: CP,
-        file: String,
-        proc: String
     )
 }

@@ -71,16 +71,6 @@ public class SQLiteDatabaseConfiguration {
     var foreignKeyConstraintsEnabled: Boolean = false
 
     /**
-     * The [SQLiteFunction]s to register.
-     */
-    val functions: MutableList<SQLiteFunction> = ArrayList()
-
-    /**
-     * The custom extensions to register.
-     */
-    val customExtensions: MutableList<SQLiteCustomExtension> = mutableListOf()
-
-    /**
      * Creates a database configuration with the required parameters for opening a
      * database and default values for all other parameters.
      *
@@ -98,25 +88,6 @@ public class SQLiteDatabaseConfiguration {
         // Set default values for optional parameters.
         maxSqlCacheSize = 25
         locale = Locale.getDefault()
-    }
-
-    /**
-     * Creates a database configuration with the required parameters for opening a
-     * database and default values for all other parameters.
-     *
-     * @param path The database path.
-     * @param openFlags Open flags for the database, such as [SQLiteDatabase.OPEN_READWRITE].
-     * @param functions custom functions to use.
-     * @param extensions custom extensions to use.
-     */
-    constructor(
-        path: String,
-        openFlags: RequeryOpenFlags,
-        functions: List<SQLiteFunction>,
-        extensions: List<SQLiteCustomExtension>
-    ) : this(path, openFlags) {
-        this.customExtensions.addAll(extensions)
-        this.functions.addAll(functions)
     }
 
     /**
@@ -147,10 +118,6 @@ public class SQLiteDatabaseConfiguration {
         maxSqlCacheSize = other.maxSqlCacheSize
         locale = other.locale
         foreignKeyConstraintsEnabled = other.foreignKeyConstraintsEnabled
-        customExtensions.clear()
-        customExtensions.addAll(other.customExtensions)
-        functions.clear()
-        functions.addAll(other.functions)
     }
 
     val isInMemoryDb: Boolean
