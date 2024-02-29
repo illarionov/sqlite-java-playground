@@ -1,6 +1,6 @@
 package ru.pixnews.sqlite3.wasm
 
-enum class Sqlite3TextEncodings(
+enum class Sqlite3TextEncoding(
     val id: Int
 ) {
    SQLITE_UTF8(1),
@@ -13,6 +13,6 @@ enum class Sqlite3TextEncodings(
    ;
 
    companion object {
-      val entriesMap: Map<Int, Sqlite3TextEncodings> = Sqlite3TextEncodings.entries.associateBy(Sqlite3TextEncodings::id)
+      val entriesMap: Map<Int, Sqlite3TextEncoding> = Sqlite3TextEncoding.entries.associateBy(Sqlite3TextEncoding::id)
    }
 }

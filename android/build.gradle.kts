@@ -42,6 +42,7 @@ repositories {
 
 dependencies {
     implementation(project(":graalvm"))
+    implementation("co.touchlab:kermit:2.0.3")
     api("androidx.core:core:1.12.0")
     api("androidx.sqlite:sqlite:2.4.0")
 }

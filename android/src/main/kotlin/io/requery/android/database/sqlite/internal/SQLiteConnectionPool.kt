@@ -340,23 +340,24 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
      * @throws IllegalStateException if the connection was not acquired
      * from this pool or if it has already been released.
      */
-    fun shouldYieldConnection(connection: SQLiteConnection<*, *, *>, connectionFlags: Int): Boolean = synchronized(lock) {
-        if (!acquiredConnections.containsKey(connection)) {
-            throw IllegalStateException(
-                "Cannot perform this operation "
-                        + "because the specified connection was not acquired "
-                        + "from this pool or has already been released."
-            )
+    fun shouldYieldConnection(connection: SQLiteConnection<*, *, *>, connectionFlags: Int): Boolean =
+        synchronized(lock) {
+            if (!acquiredConnections.containsKey(connection)) {
+                throw IllegalStateException(
+                    "Cannot perform this operation "
+                            + "because the specified connection was not acquired "
+                            + "from this pool or has already been released."
+                )
+            }
+            return if (isOpen) {
+                isSessionBlockingImportantConnectionWaitersLocked(
+                    holdingPrimaryConnection = connection.isPrimaryConnection,
+                    connectionFlags = connectionFlags
+                )
+            } else {
+                false
+            }
         }
-        return if (isOpen) {
-            isSessionBlockingImportantConnectionWaitersLocked(
-                holdingPrimaryConnection = connection.isPrimaryConnection,
-                connectionFlags = connectionFlags
-            )
-        } else {
-            false
-        }
-    }
 
     /**
      * Collects statistics about database connection memory usage.
@@ -379,7 +380,14 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
         primaryConnection: Boolean
     ): SQLiteConnection<CP, SP, WP> {
         val connectionId = nextConnectionId++
-        return SQLiteConnection.open(this, configuration, bindings, windowBindings, connectionId, primaryConnection) // might throw
+        return SQLiteConnection.open(
+            this,
+            configuration,
+            bindings,
+            windowBindings,
+            connectionId,
+            primaryConnection
+        ) // might throw
     }
 
     fun onConnectionLeaked() {
@@ -866,9 +874,7 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
     }
 
     private fun setMaxConnectionPoolSizeLocked() {
-        maxConnectionPoolSize = if (!bindings.nativeHasCodec()
-            && configuration.openFlags.contains(ENABLE_WRITE_AHEAD_LOGGING)
-        ) {
+        maxConnectionPoolSize = if (configuration.openFlags.contains(ENABLE_WRITE_AHEAD_LOGGING)) {
             SQLiteGlobal.wALConnectionPoolSize
         } else {
             // TODO: We don't actually need to restrict the connection pool size to 1
@@ -915,13 +921,6 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
         waiter.exception = null
         waiter.nonce += 1
         connectionWaiterPool = waiter
-    }
-
-    fun enableLocalizedCollators() = synchronized(lock) {
-        if (!acquiredConnections.isEmpty() || availablePrimaryConnection == null) {
-            throw IllegalStateException("Cannot enable localized collators while database is in use")
-        }
-        availablePrimaryConnection!!.enableLocalizedCollators()
     }
 
     override fun toString(): String = "SQLiteConnectionPool: ${configuration.path}"

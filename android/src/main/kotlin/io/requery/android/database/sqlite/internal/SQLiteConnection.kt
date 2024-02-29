@@ -75,7 +75,7 @@ import java.util.regex.Pattern
  *
  */
 internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr, WP : Sqlite3WindowPtr> private constructor(
-    private val pool: SQLiteConnectionPool<CP ,SP, WP>,
+    private val pool: SQLiteConnectionPool<CP, SP, WP>,
     configuration: SQLiteDatabaseConfiguration,
     private val bindings: SqlOpenHelperNativeBindings<CP, SP, WP>,
     private val windowBindings: SqlOpenHelperWindowBindings<WP>,
@@ -93,7 +93,7 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
     private val recentOperations = OperationLog()
 
     // The native SQLiteConnection pointer.  (FOR INTERNAL USE ONLY)
-    private var connectionPtr: CP = bindings.nullPtr()
+    private var connectionPtr: CP = bindings.connectionNullPtr()
 
     private var onlyAllowReadOnlyOperations = false
 
@@ -136,10 +136,8 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
         setForeignKeyModeFromConfiguration()
         setJournalSizeLimit()
         setAutoCheckpointInterval()
-        if (!bindings.nativeHasCodec()) {
-            setWalModeFromConfiguration()
-            setLocaleFromConfiguration()
-        }
+        setWalModeFromConfiguration()
+        setLocaleFromConfiguration()
 
         // Register functions
         val functionCount = configuration.functions.size
@@ -165,7 +163,7 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
             try {
                 preparedStatementCache.evictAll()
                 bindings.nativeClose(connectionPtr)
-                connectionPtr = bindings.nullPtr()
+                connectionPtr = bindings.connectionNullPtr()
             } finally {
                 recentOperations.endOperation(cookie)
             }
@@ -314,12 +312,6 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
         }
     }
 
-    fun enableLocalizedCollators() {
-        if (bindings.nativeHasCodec()) {
-            setLocaleFromConfiguration()
-        }
-    }
-
     // Called by SQLiteConnectionPool only.
     fun reconfigure(newConfiguration: SQLiteDatabaseConfiguration) {
         onlyAllowReadOnlyOperations = false
@@ -332,7 +324,8 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
         // Remember what changed.
         val foreignKeyModeChanged = (newConfiguration.foreignKeyConstraintsEnabled
                 != this.configuration.foreignKeyConstraintsEnabled)
-        val walModeChanged = (newConfiguration.openFlags xor this.configuration.openFlags).contains(ENABLE_WRITE_AHEAD_LOGGING)
+        val walModeChanged =
+            (newConfiguration.openFlags xor this.configuration.openFlags).contains(ENABLE_WRITE_AHEAD_LOGGING)
         val localeChanged = newConfiguration.locale != this.configuration.locale
 
         // Update configuration parameters.
@@ -1031,7 +1024,7 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
      * resource disposal because all native statement objects must be freed before
      * the native database object can be closed.  So no finalizers here.
      */
-    private data class PreparedStatement<SP: Sqlite3StatementPtr>(
+    private data class PreparedStatement<SP : Sqlite3StatementPtr>(
         // The SQL from which the statement was prepared.
         val sql: String,
 

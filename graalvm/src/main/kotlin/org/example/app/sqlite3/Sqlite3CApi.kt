@@ -22,6 +22,7 @@ import org.graalvm.wasm.WasmFunctionInstance
 import ru.pixnews.sqlite3.wasm.Sqlite3Exception
 import ru.pixnews.sqlite3.wasm.Sqlite3OpenFlags
 import ru.pixnews.sqlite3.wasm.Sqlite3Result
+import ru.pixnews.sqlite3.wasm.Sqlite3TextEncoding
 import ru.pixnews.sqlite3.wasm.Sqlite3Wasm
 import ru.pixnews.wasm.host.sqlite3.Sqlite3Db
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
@@ -31,7 +32,10 @@ import ru.pixnews.wasm.host.WasmPtr.Companion.sqlite3Null
 import ru.pixnews.wasm.host.filesystem.FileSystem
 import ru.pixnews.wasm.host.functiontable.IndirectFunctionTableIndex
 import ru.pixnews.wasm.host.isSqlite3Null
+import ru.pixnews.wasm.host.sqlite3.Sqlite3ComparatorCallbackRaw
 import ru.pixnews.wasm.host.sqlite3.Sqlite3ExecCallback
+import ru.pixnews.wasm.host.sqlite3.Sqlite3Profile
+import ru.pixnews.wasm.host.sqlite3.Sqlite3TraceCallback
 
 fun Sqlite3CApi(
     graalvmEngine: Engine = Engine.create("wasm"),
@@ -157,6 +161,15 @@ class Sqlite3CApi internal constructor(
         }
     }
 
+    fun sqlite3CreateCollation(
+        db: WasmPtr<Sqlite3Db>,
+        name: String,
+        encoding: Sqlite3TextEncoding,
+        comparator: Sqlite3ComparatorCallbackRaw,
+    ) {
+        // TODO
+    }
+
     fun sqlite3Close(
         sqliteDb: WasmPtr<Sqlite3Db>
     ) {
@@ -223,6 +236,38 @@ class Sqlite3CApi internal constructor(
         }
     }
 
+    fun sqlite3DbReadonly(
+        sqliteDb: WasmPtr<Sqlite3Db>,
+        dbName: String?,
+    ) : Sqlite3DbReadonlyResult {
+        // TODO
+        val id = 0
+        return Sqlite3DbReadonlyResult.fromId(id)
+    }
+
+    fun sqlite3BusyTimeout(
+        sqliteDb: WasmPtr<Sqlite3Db>,
+        ms: Int
+    ) {
+        val result= sqliteBindings.sqlite3_busy_timeout.execute(sqliteDb.addr, ms)
+        result.throwOnSqliteError("sqlite3BusyTimeout() failed", sqliteDb)
+    }
+
+    fun sqlite3Trace(
+        sqliteDb: WasmPtr<Sqlite3Db>,
+        callback: Sqlite3TraceCallback,
+    ) {
+        TODO()
+    }
+
+    fun sqlite3Profile(
+        sqliteDb: WasmPtr<Sqlite3Db>,
+        callback: Sqlite3Profile,
+    ) {
+        TODO()
+    }
+
+
     private fun Value.throwOnSqliteError(
         msgPrefix: String?,
         sqliteDb: WasmPtr<Sqlite3Db>,
@@ -240,6 +285,16 @@ class Sqlite3CApi internal constructor(
             }
 
             throw Sqlite3Exception(errNo, extendedErrCode, msgPrefix, errMsg)
+        }
+    }
+
+    enum class Sqlite3DbReadonlyResult(val id: Int) {
+        READ_ONLY(1),
+        READ_WRITE(0),
+        INVALID_NAME(-1);
+
+        companion object {
+            fun fromId(id: Int): Sqlite3DbReadonlyResult = entries.first { it.id == id }
         }
     }
 }

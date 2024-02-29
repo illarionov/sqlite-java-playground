@@ -18,13 +18,17 @@ import android.database.sqlite.SQLiteOutOfMemoryException
 import android.database.sqlite.SQLiteReadOnlyDatabaseException
 import android.database.sqlite.SQLiteTableLockedException
 import androidx.core.os.OperationCanceledException
+import co.touchlab.kermit.Logger
 import io.requery.android.database.sqlite.SQLiteFunction
 import org.example.app.sqlite3.Sqlite3CApi
 import ru.pixnews.sqlite3.wasm.Sqlite3Errno
 import ru.pixnews.sqlite3.wasm.Sqlite3Exception
 import ru.pixnews.sqlite3.wasm.Sqlite3OpenFlags
-import ru.pixnews.sqlite3.wasm.Sqlite3TextEncodings
+import ru.pixnews.sqlite3.wasm.Sqlite3OpenFlags.Companion.SQLITE_OPEN_READWRITE
+import ru.pixnews.sqlite3.wasm.Sqlite3TextEncoding.SQLITE_UTF8
+import ru.pixnews.sqlite3.wasm.util.contains
 import ru.pixnews.wasm.host.WasmPtr
+import ru.pixnews.wasm.host.WasmPtr.Companion.sqlite3Null
 import ru.pixnews.wasm.host.isSqlite3Null
 import ru.pixnews.wasm.host.sqlite3.Sqlite3Db
 import ru.pixnews.wasm.host.sqlite3.Sqlite3Statement
@@ -42,6 +46,7 @@ value class GraalSqlite3StatementPtr(
 ) : Sqlite3StatementPtr {
     override fun isNull(): Boolean = ptr.isSqlite3Null()
 }
+
 @JvmInline
 value class Graallite3WindowPtr(
     val ptr: WasmPtr<Void>
@@ -51,10 +56,18 @@ value class Graallite3WindowPtr(
 
 class GraalNativeBindings(
     private val sqlite3Api: Sqlite3CApi,
+    logger: Logger = Logger
 ) : SqlOpenHelperNativeBindings<GraalSqlite3ConnectionPtr, GraalSqlite3StatementPtr, Graallite3WindowPtr> {
-    override fun <T : Sqlite3Ptr> nullPtr(): T {
-        TODO("Not yet implemented")
-    }
+    private val logger = Logger.withTag("GraalNativeBindings")
+
+    private val localizedComparator = LocalizedComparator()
+    private val connections = Sqlite3ConnectionRegistry()
+
+    override fun connectionNullPtr(): GraalSqlite3ConnectionPtr = GraalSqlite3ConnectionPtr(sqlite3Null())
+
+    override fun connectionStatementPtr(): GraalSqlite3StatementPtr = GraalSqlite3StatementPtr(sqlite3Null())
+
+    override fun connectionWindowPtr(): Graallite3WindowPtr = Graallite3WindowPtr(sqlite3Null())
 
     override fun nativeOpen(
         path: String,
@@ -63,92 +76,70 @@ class GraalNativeBindings(
         enableTrace: Boolean,
         enableProfile: Boolean
     ): GraalSqlite3ConnectionPtr {
+        var db: WasmPtr<Sqlite3Db>? = null
+        val flags = Sqlite3OpenFlags(openFlags)
         try {
-            val db = sqlite3Api.sqlite3OpenV2(
+            db = sqlite3Api.sqlite3OpenV2(
                 filename = path,
-                flags = Sqlite3OpenFlags(openFlags),
+                flags = flags,
                 vfsName = null
             )
-            sqlite3Api.createCollation(db, "localized", Sqlite3TextEncodings.SQLITE_UTF8, localizedCOmparator)
 
+            // TODO: Why not in nativeRegisterLocalizedCollators()?
+            sqlite3Api.sqlite3CreateCollation(db, "localized", SQLITE_UTF8, localizedComparator)
 
+            // Check that the database is really read/write when that is what we asked for.
+            if (flags.contains(SQLITE_OPEN_READWRITE)
+                && sqlite3Api.sqlite3DbReadonly(db, null) == Sqlite3CApi.Sqlite3DbReadonlyResult.READ_WRITE
+            ) {
+                throw SQLiteCantOpenDatabaseException("Could not open the database in read/write mode.")
+            }
+
+            // Set the default busy handler to retry automatically before returning SQLITE_BUSY.
+            sqlite3Api.sqlite3BusyTimeout(db, BUSY_TIMEOUT_MS)
+
+            // Register wrapper object
+            connections.add(db, flags, path, label)
+
+            // Enable tracing and profiling if requested.
+            if (enableTrace) {
+                sqlite3Api.sqlite3Trace(db, ::sqliteTraceCallback)
+            }
+            if (enableProfile) {
+                sqlite3Api.sqlite3Profile(db, ::sqliteProfileCallback)
+            }
+            return GraalSqlite3ConnectionPtr(db)
         } catch (e: Sqlite3Exception) {
+            // TODO: unregister collation / trace callback / profile callback on close?
+            db?.let {
+                sqlite3Api.sqlite3Close(it)
+            }
             rethrowAndroidSqliteException(e)
-            // TODO
+        } catch (otherException: RuntimeException) {
+            db?.let {
+                sqlite3Api.sqlite3Close(it)
+            }
+            throw otherException
         }
-
-/*        err = sqlite3_create_collation(db, "localized", SQLITE_UTF8, 0, coll_localized);
-        if (err != SQLITE_OK) {
-                env->ReleaseStringUTFChars(pathStr, pathChars);
-            env->ReleaseStringUTFChars(labelStr, labelChars);
-            throw_sqlite3_exception_errcode(env, err, "Could not register collation");
-            sqlite3_close(db);
-            return 0;
-        }
-
-        // Check that the database is really read/write when that is what we asked for.
-        if ((openFlags & SQLITE_OPEN_READWRITE) && sqlite3_db_readonly(db, NULL)) {
-                env->ReleaseStringUTFChars(pathStr, pathChars);
-            env->ReleaseStringUTFChars(labelStr, labelChars);
-            throw_sqlite3_exception(env, db, "Could not open the database in read/write mode.");
-            sqlite3_close(db);
-            return 0;
-        }
-
-        // Set the default busy handler to retry automatically before returning SQLITE_BUSY.
-        err = sqlite3_busy_timeout(db, BUSY_TIMEOUT_MS);
-        if (err != SQLITE_OK) {
-                env->ReleaseStringUTFChars(pathStr, pathChars);
-            env->ReleaseStringUTFChars(labelStr, labelChars);
-            throw_sqlite3_exception(env, db, "Could not set busy timeout");
-            sqlite3_close(db);
-            return 0;
-        }
-
-        // Register custom Android functions.
-        #if 0
-        err = register_android_functions(db, UTF16_STORAGE);
-        if (err) {
-                env->ReleaseStringUTFChars(pathStr, pathChars);
-            env->ReleaseStringUTFChars(labelStr, labelChars);
-            throw_sqlite3_exception(env, db, "Could not register Android SQL functions.");
-            sqlite3_close(db);
-            return 0;
-        }
-        #endif
-
-        // Create wrapper object.
-        SQLiteConnection* connection = new SQLiteConnection(db, openFlags, pathChars, labelChars);
-        ALOGV("Opened connection %p with label '%s'", db, labelChars);
-        env->ReleaseStringUTFChars(pathStr, pathChars);
-        env->ReleaseStringUTFChars(labelStr, labelChars);
-
-        // Enable tracing and profiling if requested.
-        if (enableTrace) {
-            sqlite3_trace(db, &sqliteTraceCallback, connection);
-        }
-        if (enableProfile) {
-            sqlite3_profile(db, &sqliteProfileCallback, connection);
-        }
-
-        return reinterpret_cast<jlong>(connection);*/
     }
 
     override fun nativeRegisterLocalizedCollators(connectionPtr: GraalSqlite3ConnectionPtr, locale: String) {
-        TODO("Not yet implemented")
+        // empty
     }
 
     override fun nativeRegisterFunction(connectionPtr: GraalSqlite3ConnectionPtr, function: SQLiteFunction) {
-        TODO("Not yet implemented")
+        TODO("Not yet implemented sqlite3_create_function_v2")
     }
 
     override fun nativeClose(connectionPtr: GraalSqlite3ConnectionPtr) {
-        TODO("Not yet implemented")
-    }
-
-    override fun nativeHasCodec(): Boolean {
-
-        TODO("Not yet implemented")
+        connections.remove(connectionPtr.ptr)
+        try {
+            sqlite3Api.sqlite3Close(connectionPtr.ptr)
+        } catch (e: Sqlite3Exception) {
+            // This can happen if sub-objects aren't closed first.  Make sure the caller knows.
+            logger.i { "sqlite3_close(${connectionPtr}) failed: %d" }
+            rethrowAndroidSqliteException(e, "Count not close db.")
+        }
     }
 
     override fun nativeLoadExtension(connectionPtr: GraalSqlite3ConnectionPtr, file: String, proc: String) {
@@ -311,8 +302,67 @@ class GraalNativeBindings(
         TODO("Not yet implemented")
     }
 
+    private fun sqliteTraceCallback(db: WasmPtr<Sqlite3Db>, statement: String) {
+        val connection = connections.get(db)
+        logger.v { """${connection?.label ?: db.toString()}: "$statement"""" }
+    }
+
+    private fun sqliteProfileCallback(db: WasmPtr<Sqlite3Db>, statement: String, time: Long): Unit {
+        val connection = connections.get(db)
+        logger.v {
+            String.format(
+                """%s: "%s" took %0.3f ms """,
+                connection?.label ?: db.toString(),
+                statement,
+                time * 0.000001f,
+            )
+        }
+    }
+
+    class Sqlite3Connection(
+        val dbPtr: WasmPtr<Sqlite3Db>,
+        val openFlags: Sqlite3OpenFlags,
+        val path: String,
+        val label: String,
+        var isCancelled: Boolean = false
+    )
+
+    private class Sqlite3ConnectionRegistry {
+        private val map: MutableMap<WasmPtr<Sqlite3Db>, Sqlite3Connection> = mutableMapOf()
+
+        fun add(
+            dbPtr: WasmPtr<Sqlite3Db>,
+            openFlags: Sqlite3OpenFlags,
+            path: String,
+            label: String,
+        ): Sqlite3Connection {
+            val connection = Sqlite3Connection(dbPtr, openFlags, path, label, false)
+            val old = map.put(dbPtr, connection)
+            check(old == null) { "Connection $dbPtr already registered" }
+            return connection
+        }
+
+        fun get(ptr: WasmPtr<Sqlite3Db>): Sqlite3Connection? = map[ptr]
+
+        fun remove(ptr: WasmPtr<Sqlite3Db>): Sqlite3Connection? = map.remove(ptr)
+
+    }
+
     companion object {
-        private fun rethrowAndroidSqliteException(sqliteException: Sqlite3Exception, msg: String? = null) {
+        /* Busy timeout in milliseconds.
+        If another connection (possibly in another process) has the database locked for
+        longer than this amount of time then SQLite will generate a SQLITE_BUSY error.
+        The SQLITE_BUSY error is then raised as a SQLiteDatabaseLockedException.
+
+        In ordinary usage, busy timeouts are quite rare.  Most databases only ever
+        have a single open connection at a time unless they are using WAL.  When using
+        WAL, a timeout could occur if one connection is busy performing an auto-checkpoint
+        operation.  The busy timeout needs to be long enough to tolerate slow I/O write
+        operations but not so long as to cause the application to hang indefinitely if
+        there is a problem acquiring a database lock. */
+        const val BUSY_TIMEOUT_MS = 2500;
+
+        private fun rethrowAndroidSqliteException(sqliteException: Sqlite3Exception, msg: String? = null): Nothing {
             val errno = Sqlite3Errno.fromErrNoCode(sqliteException.sqliteExtendedErrorCode)
             val fullErMsg = buildString {
                 append(errno?.name ?: "UNKNOWN")

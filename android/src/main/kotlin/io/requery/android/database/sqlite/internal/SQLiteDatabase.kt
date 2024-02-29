@@ -1449,13 +1449,6 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
     }
 
     /**
-     * A callback interface for a custom sqlite3 function. This can be used to create a function
-     * that can be called from sqlite3 database triggers, or used in queries.
-     */
-
-    fun enableLocalizedCollators() = connectionPoolLocked!!.enableLocalizedCollators()
-
-    /**
      * Query the table for the number of rows in the table.
      * @param table the name of the table to query
      * @param selection A filter declaring which rows to return,

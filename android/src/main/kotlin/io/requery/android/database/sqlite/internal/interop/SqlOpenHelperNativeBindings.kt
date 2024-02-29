@@ -7,7 +7,9 @@ interface SqlOpenHelperNativeBindings<
         SP : Sqlite3StatementPtr,
         WP : Sqlite3WindowPtr> {
 
-    fun <T: Sqlite3Ptr> nullPtr(): T
+    fun connectionNullPtr(): CP
+    fun connectionStatementPtr(): SP
+    fun connectionWindowPtr(): WP
 
     // TODO: OpenFlags
     fun nativeOpen(
@@ -153,8 +155,6 @@ interface SqlOpenHelperNativeBindings<
         connectionPtr: CP,
         cancelable: Boolean
     )
-
-    fun nativeHasCodec(): Boolean
 
     fun nativeLoadExtension(
         connectionPtr: CP,

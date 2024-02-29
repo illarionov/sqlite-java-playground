@@ -1,7 +1,7 @@
 package ru.pixnews.wasm.host
 
 @JvmInline
-public value class WasmPtr<P: Any?>(
+public value class WasmPtr<out P: Any?>(
     val addr: Int
 ) {
     override fun toString(): String = "0x" + addr.toString(16)
