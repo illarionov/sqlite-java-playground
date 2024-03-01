@@ -23,7 +23,7 @@ fun Memory.readNullTerminatedString(offset: WasmPtr<Byte>): String {
         mem.write(b.toInt())
     } while (true)
 
-    return mem.toString(Charsets.UTF_8)
+    return mem.toString("UTF-8")
 }
 
 fun Memory.writeNullTerminatedString(

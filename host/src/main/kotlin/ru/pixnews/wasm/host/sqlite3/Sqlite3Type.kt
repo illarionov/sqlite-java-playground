@@ -24,3 +24,5 @@ typealias Sqlite3ComparatorCallbackRaw = (
 typealias Sqlite3TraceCallback = (db: WasmPtr<Sqlite3Db>, statement: String) -> Unit
 
 typealias Sqlite3Profile = (db: WasmPtr<Sqlite3Db>, statement: String, time: Long) -> Unit
+
+typealias Sqlite3ProgressHandlerCallback = (db: WasmPtr<Sqlite3Db>) -> Unit

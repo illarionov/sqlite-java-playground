@@ -24,11 +24,6 @@ interface SqlOpenHelperNativeBindings<
         connectionPtr: CP,
     )
 
-    fun nativeRegisterFunction(
-        connectionPtr: CP,
-        function: SQLiteFunction
-    )
-
     fun nativeRegisterLocalizedCollators(
         connectionPtr: CP,
         locale: String
