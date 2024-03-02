@@ -201,10 +201,6 @@ class GraalNativeBindings(
         requiredPos: Int,
         countAllRows: Boolean
     ): Long {
-        val connection = connections.get(connectionPtr.ptr) ?: run {
-            logger.i { "nativeExecuteForCursorWindow(${connectionPtr.ptr}): connection not open" }
-            return -1
-        }
         val window: NativeCursorWindow = winPtr.ptr ?: throw NullPointerException("NativeCursorWindow is null")
         val statement = statementPtr.ptr
 
@@ -266,7 +262,7 @@ class GraalNativeBindings(
                         logger.v { "Database locked, retrying" }
                         if (retryCount > 50) {
                             logger.e { "Bailing on database busy retry" }
-                            throwAndroidSqliteException(connection.dbPtr, "retrycount exceeded")
+                            throwAndroidSqliteException(connectionPtr.ptr, "retrycount exceeded")
                         } else {
                             // Sleep to give the thread holding the lock a chance to finish
                             Thread.sleep(1)
@@ -274,7 +270,7 @@ class GraalNativeBindings(
                         }
                     }
 
-                    else -> throwAndroidSqliteException(connection.dbPtr, "sqlite3Step() failed")
+                    else -> throwAndroidSqliteException(connectionPtr.ptr, "sqlite3Step() failed")
                 }
             }
         } catch (exception: Sqlite3Exception) {
@@ -454,17 +450,29 @@ class GraalNativeBindings(
         connectionPtr: GraalSqlite3ConnectionPtr,
         sql: String
     ): GraalSqlite3StatementPtr {
-
+        try {
+            val statementPtr = sqlite3Api.sqlite3PrepareV2(connectionPtr.ptr, sql)
+            logger.v { "Prepared statement $statementPtr on connection ${connectionPtr.ptr}" }
+            return GraalSqlite3StatementPtr(statementPtr)
+        } catch (sqliteException: Sqlite3Exception) {
+            sqliteException.rethrowAndroidSqliteException(", while compiling: $sql")
+        }
     }
-
 
     override fun nativeFinalizeStatement(
         connectionPtr: GraalSqlite3ConnectionPtr,
         statementPtr: GraalSqlite3StatementPtr
     ) {
-        TODO("Not yet implemented")
+        logger.v { "Finalized statement ${statementPtr.ptr} on connection ${connectionPtr.ptr}" }
+        // We ignore the result of sqlite3_finalize because it is really telling us about
+        // whether any errors occurred while executing the statement.  The statement itself
+        // is always finalized regardless.
+        try {
+            sqlite3Api.sqlite3Finalize(connectionPtr.ptr, statementPtr.ptr)
+        } catch (sqliteException: Sqlite3Exception) {
+            logger.v(sqliteException) { "sqlite3_finalize(${connectionPtr.ptr}, ${statementPtr.ptr}) failed" }
+        }
     }
-
 
     private fun executeNonQuery(
         db: GraalSqlite3ConnectionPtr,
@@ -650,7 +658,6 @@ class GraalNativeBindings(
         fun get(ptr: WasmPtr<Sqlite3Db>): Sqlite3Connection? = map[ptr]
 
         fun remove(ptr: WasmPtr<Sqlite3Db>): Sqlite3Connection? = map.remove(ptr)
-
     }
 
     private enum class CopyRowResult {

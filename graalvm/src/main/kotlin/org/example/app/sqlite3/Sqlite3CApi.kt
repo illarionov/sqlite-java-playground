@@ -38,6 +38,8 @@ import ru.pixnews.wasm.host.WasmPtr.Companion.sqlite3Null
 import ru.pixnews.wasm.host.filesystem.FileSystem
 import ru.pixnews.wasm.host.functiontable.IndirectFunctionTableIndex
 import ru.pixnews.wasm.host.isSqlite3Null
+import ru.pixnews.wasm.host.memory.write
+import ru.pixnews.wasm.host.plus
 import ru.pixnews.wasm.host.sqlite3.Sqlite3ComparatorCallbackRaw
 import ru.pixnews.wasm.host.sqlite3.Sqlite3ExecCallback
 import ru.pixnews.wasm.host.sqlite3.Sqlite3Profile
@@ -507,6 +509,45 @@ class Sqlite3CApi internal constructor(
         return sqliteBindings.sqlite3_bind_parameter_count.execute(statement.addr).asInt()
     }
 
+    fun sqlite3PrepareV2(
+        sqliteDb: WasmPtr<Sqlite3Db>,
+        sql: String
+    ): WasmPtr<Sqlite3Statement> {
+        var sqlBytesPtr: WasmPtr<Byte> = sqlite3Null()
+        var ppStatement: WasmPtr<WasmPtr<Sqlite3Statement>> = sqlite3Null()
+
+        try {
+            val sqlEncoded = sql.encodeToByteArray()
+            val nullTerminatedSqlSize = sqlEncoded.size + 1
+
+            sqlBytesPtr = memory.allocOrThrow(nullTerminatedSqlSize.toUInt())
+            ppStatement = memory.allocOrThrow(WASM_SIZEOF_PTR)
+
+            memory.memory.write(sqlBytesPtr, sqlEncoded)
+            memory.memory.writeByte(sqlBytesPtr + sqlEncoded.size, 0)
+
+            val result = sqliteBindings.sqlite3_prepare_v2.execute(
+                sqliteDb.addr,
+                sqlBytesPtr.addr,
+                nullTerminatedSqlSize,
+                ppStatement,
+                sqlite3Null<Unit>().addr
+            )
+            result.throwOnSqliteError("sqlite3_open_v2() failed", sqliteDb)
+            return memory.readAddr(ppStatement)
+        } finally {
+            memory.freeSilent(sqlBytesPtr)
+            memory.freeSilent(ppStatement)
+        }
+    }
+
+    fun sqlite3Finalize(
+        sqliteDatabase: WasmPtr<Sqlite3Db>,
+        statement: WasmPtr<Sqlite3Statement>
+    ) {
+        val errCode = sqliteBindings.sqlite3_finalize.execute(statement.addr)
+        errCode.throwOnSqliteError("sqlite3_finalize() failed", sqliteDatabase)
+    }
 
     enum class Sqlite3DbReadonlyResult(val id: Int) {
         READ_ONLY(1),
