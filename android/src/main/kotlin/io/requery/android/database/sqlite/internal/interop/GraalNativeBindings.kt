@@ -19,7 +19,8 @@ import android.database.sqlite.SQLiteReadOnlyDatabaseException
 import android.database.sqlite.SQLiteTableLockedException
 import androidx.core.os.OperationCanceledException
 import co.touchlab.kermit.Logger
-import io.requery.android.database.sqlite.base.CursorWindow
+import io.requery.android.database.sqlite.internal.interop.GraalNativeBindings.CopyRowResult.CPR_FULL
+import io.requery.android.database.sqlite.internal.interop.GraalNativeBindings.CopyRowResult.CPR_OK
 import org.example.app.sqlite3.Sqlite3CApi
 import ru.pixnews.sqlite3.wasm.Sqlite3ColumnType.Companion.SQLITE3_BLOB
 import ru.pixnews.sqlite3.wasm.Sqlite3ColumnType.Companion.SQLITE3_FLOAT
@@ -28,6 +29,9 @@ import ru.pixnews.sqlite3.wasm.Sqlite3ColumnType.Companion.SQLITE3_NULL
 import ru.pixnews.sqlite3.wasm.Sqlite3ColumnType.Companion.SQLITE3_TEXT
 import ru.pixnews.sqlite3.wasm.Sqlite3DbStatusParameter.Companion.SQLITE_DBSTATUS_LOOKASIDE_USED
 import ru.pixnews.sqlite3.wasm.Sqlite3Errno
+import ru.pixnews.sqlite3.wasm.Sqlite3Errno.SQLITE_DONE
+import ru.pixnews.sqlite3.wasm.Sqlite3Errno.SQLITE_OK
+import ru.pixnews.sqlite3.wasm.Sqlite3Errno.SQLITE_ROW
 import ru.pixnews.sqlite3.wasm.Sqlite3ErrorInfo
 import ru.pixnews.sqlite3.wasm.Sqlite3Exception
 import ru.pixnews.sqlite3.wasm.Sqlite3Exception.Companion.sqlite3ErrNoName
@@ -39,7 +43,6 @@ import ru.pixnews.wasm.host.WasmPtr
 import ru.pixnews.wasm.host.WasmPtr.Companion.sqlite3Null
 import ru.pixnews.wasm.host.isSqlite3Null
 import ru.pixnews.wasm.host.memory.encodedNullTerminatedStringLength
-import ru.pixnews.wasm.host.memory.encodedStringLength
 import ru.pixnews.wasm.host.sqlite3.Sqlite3Db
 import ru.pixnews.wasm.host.sqlite3.Sqlite3Statement
 
@@ -94,7 +97,6 @@ class GraalNativeBindings(
                 vfsName = null
             )
 
-            // TODO: Why not in nativeRegisterLocalizedCollators()?
             sqlite3Api.sqlite3CreateCollation(db, "localized", SQLITE_UTF8, localizedComparator)
 
             // Check that the database is really read/write when that is what we asked for.
@@ -179,7 +181,8 @@ class GraalNativeBindings(
             return -1
         }
         try {
-            val lookasideUsed = sqlite3Api.sqlite3DbStatus(connection.dbPtr,
+            val lookasideUsed = sqlite3Api.sqlite3DbStatus(
+                connection.dbPtr,
                 SQLITE_DBSTATUS_LOOKASIDE_USED,
                 false
             )
@@ -207,27 +210,31 @@ class GraalNativeBindings(
 
         val status = window.clear()
         if (status != 0) {
-            throwSqliteException("Failed to clear the cursor window")
+            throwAndroidSqliteException("Failed to clear the cursor window")
         }
 
         val numColumns = sqlite3Api.sqlite3ColumnCount(statement)
         if (window.setNumColumns(numColumns) != 0) {
-            throwSqliteException("Failed to set the cursor window column count")
+            throwAndroidSqliteException("Failed to set the cursor window column count")
         }
 
         var retryCount = 0
         var totalRows = 0
         var addedRows = 0
         var windowFull = false
+
+        @Suppress("NAME_SHADOWING")
+        var startPos = startPos
         try {
             while (!windowFull || countAllRows) {
                 val err = sqlite3Api.sqlite3Step(statement)
                 when (err) {
-                    Sqlite3Errno.SQLITE_DONE -> {
+                    SQLITE_DONE -> {
                         logger.v { "Processed all rows" }
                         break
                     }
-                    Sqlite3Errno.SQLITE_ROW -> {
+
+                    SQLITE_ROW -> {
                         logger.v { "Stepped statement $statement to row $totalRows" }
                         retryCount = 0;
                         totalRows += 1;
@@ -236,30 +243,46 @@ class GraalNativeBindings(
                         if (startPos >= totalRows || windowFull) {
                             continue;
                         }
-                        val cpr = copyRow(window, statement, numColumns, startPos, addedRows)
+                        var cpr = copyRow(window, statement, numColumns, startPos, addedRows)
 
+                        if (cpr == CPR_FULL && addedRows != 0 && startPos + addedRows <= requiredPos) {
+                            // We filled the window before we got to the one row that we really wanted.
+                            // Clear the window and start filling it again from here.
+                            window.clear();
+                            window.setNumColumns(numColumns);
+                            startPos += addedRows;
+                            addedRows = 0;
+                            cpr = copyRow(window, statement, numColumns, startPos, addedRows);
+                        }
+
+                        when (cpr) {
+                            CPR_OK -> addedRows += 1
+                            CPR_FULL -> windowFull = true
+                        }
                     }
+
                     Sqlite3Errno.SQLITE_LOCKED, Sqlite3Errno.SQLITE_BUSY -> {
                         // The table is locked, retry
                         logger.v { "Database locked, retrying" }
                         if (retryCount > 50) {
                             logger.e { "Bailing on database busy retry" }
-                            throwSqliteException(connection.dbPtr, "retrycount exceeded")
+                            throwAndroidSqliteException(connection.dbPtr, "retrycount exceeded")
                         } else {
                             // Sleep to give the thread holding the lock a chance to finish
                             Thread.sleep(1)
                             retryCount++;
                         }
                     }
-                    else -> throwSqliteException(connection.dbPtr, "sqlite3Step() failed")
+
+                    else -> throwAndroidSqliteException(connection.dbPtr, "sqlite3Step() failed")
                 }
             }
         } catch (exception: Sqlite3Exception) {
             exception.rethrowAndroidSqliteException("nativeExecuteForCursorWindow() failed")
         } finally {
             logger.v {
-                "Resetting statement ${statement} after fetching $totalRows rows and adding $addedRows rows" +
-                "to the window in ${window.size - window.freeSpace} bytes"
+                "Resetting statement $statement after fetching $totalRows rows and adding $addedRows rows" +
+                        "to the window in ${window.size - window.freeSpace} bytes"
             }
 
             val errCode = sqlite3Api.sqlite3Reset(statement) // TODO: check error code, may be SQLITE_BUSY
@@ -271,93 +294,72 @@ class GraalNativeBindings(
         }
 
         return (startPos.toLong().shr(32)).or(totalRows.toLong());
-
-/*
-
-        while (!gotException && (!windowFull || countAllRows)) {
-            if (err == SQLITE_ROW) {
-
-                CopyRowResult cpr = copyRow(env, window, statement, numColumns, startPos, addedRows);
-                if (cpr == CPR_FULL && addedRows && startPos + addedRows <= requiredPos) {
-                    // We filled the window before we got to the one row that we really wanted.
-                    // Clear the window and start filling it again from here.
-                    // TODO: Would be nicer if we could progressively replace earlier rows.
-                        window->clear();
-                    window->setNumColumns(numColumns);
-                    startPos += addedRows;
-                    addedRows = 0;
-                    cpr = copyRow(env, window, statement, numColumns, startPos, addedRows);
-                }
-
-                if (cpr == CPR_OK) {
-                    addedRows += 1;
-                } else if (cpr == CPR_FULL) {
-                    windowFull = true;
-                } else {
-                    gotException = true;
-                }
-                }
-        }
-
-        LOG_WINDOW("Resetting statement %p after fetching %d rows and adding %d rows"
-            "to the window in %d bytes",
-            statement, totalRows, addedRows, window->size() - window->freeSpace());
-        sqlite3_reset(statement);
-
-        // Report the total number of rows on request.
-        if (startPos > totalRows) {
-            ALOGE("startPos %d > actual rows %d", startPos, totalRows);
-        }
-        jlong result = jlong(startPos) << 32 | jlong(totalRows);
-        return result;*/
     }
-
-
 
     override fun nativeExecuteForLastInsertedRowId(
         connectionPtr: GraalSqlite3ConnectionPtr,
         statementPtr: GraalSqlite3StatementPtr
     ): Long {
-        TODO("Not yet implemented")
+        executeNonQuery(connectionPtr, statementPtr)
+
+        if (sqlite3Api.sqlite3Changes(connectionPtr.ptr) <= 0) {
+            return -1
+        }
+
+        return sqlite3Api.sqlite3LastInsertRowId(connectionPtr.ptr)
     }
 
     override fun nativeExecuteForChangedRowCount(
         connectionPtr: GraalSqlite3ConnectionPtr,
         statementPtr: GraalSqlite3StatementPtr
     ): Int {
-        TODO("Not yet implemented")
-    }
-
-    override fun nativeExecuteForBlobFileDescriptor(
-        connectionPtr: GraalSqlite3ConnectionPtr,
-        statementPtr: GraalSqlite3StatementPtr
-    ): Int {
-        TODO("Not yet implemented")
+        executeNonQuery(connectionPtr, statementPtr)
+        return sqlite3Api.sqlite3Changes(connectionPtr.ptr)
     }
 
     override fun nativeExecuteForString(
         connectionPtr: GraalSqlite3ConnectionPtr,
         statementPtr: GraalSqlite3StatementPtr
     ): String? {
-        TODO("Not yet implemented")
+        executeOneRowQuery(connectionPtr, statementPtr)
+
+        if (sqlite3Api.sqlite3ColumnCount(statementPtr.ptr) < 1) {
+            return null
+        }
+
+        return sqlite3Api.sqlite3ColumnText(statementPtr.ptr, 0)
     }
 
     override fun nativeExecuteForLong(
         connectionPtr: GraalSqlite3ConnectionPtr,
         statementPtr: GraalSqlite3StatementPtr
     ): Long {
-        TODO("Not yet implemented")
+        executeOneRowQuery(connectionPtr, statementPtr)
+        if (sqlite3Api.sqlite3ColumnCount(statementPtr.ptr) < 1) {
+            return -1
+        }
+
+        return sqlite3Api.sqlite3ColumnInt64(statementPtr.ptr, 0)
     }
 
-    override fun nativeExecute(connectionPtr: GraalSqlite3ConnectionPtr, statementPtr: GraalSqlite3StatementPtr) {
-        TODO("Not yet implemented")
+    override fun nativeExecute(
+        connectionPtr: GraalSqlite3ConnectionPtr,
+        statementPtr: GraalSqlite3StatementPtr
+    ) {
+        executeNonQuery(connectionPtr, statementPtr)
     }
 
     override fun nativeResetStatementAndClearBindings(
         connectionPtr: GraalSqlite3ConnectionPtr,
         statementPtr: GraalSqlite3StatementPtr
     ) {
-        TODO("Not yet implemented")
+        val err = sqlite3Api.sqlite3Reset(statementPtr.ptr)
+        if (err != SQLITE_OK) {
+            throwAndroidSqliteException(connectionPtr.ptr)
+        }
+        if (sqlite3Api.sqlite3ClearBindings(statementPtr.ptr) != SQLITE_OK) {
+            throwAndroidSqliteException(connectionPtr.ptr)
+        }
     }
 
     override fun nativeBindBlob(
@@ -366,7 +368,10 @@ class GraalNativeBindings(
         index: Int,
         value: ByteArray
     ) {
-        TODO("Not yet implemented")
+        val err = sqlite3Api.sqlite3BindBlobTTransient(statementPtr.ptr, index, value)
+        if (err != SQLITE_OK) {
+            throwAndroidSqliteException(connectionPtr.ptr)
+        }
     }
 
     override fun nativeBindString(
@@ -375,7 +380,10 @@ class GraalNativeBindings(
         index: Int,
         value: String
     ) {
-        TODO("Not yet implemented")
+        val err = sqlite3Api.sqlite3BindStringTransient(statementPtr.ptr, index, value)
+        if (err != SQLITE_OK) {
+            throwAndroidSqliteException(connectionPtr.ptr)
+        }
     }
 
     override fun nativeBindDouble(
@@ -384,7 +392,10 @@ class GraalNativeBindings(
         index: Int,
         value: Double
     ) {
-        TODO("Not yet implemented")
+        val err = sqlite3Api.sqlite3BindDouble(statementPtr.ptr, index, value)
+        if (err != SQLITE_OK) {
+            throwAndroidSqliteException(connectionPtr.ptr)
+        }
     }
 
     override fun nativeBindLong(
@@ -393,7 +404,10 @@ class GraalNativeBindings(
         index: Int,
         value: Long
     ) {
-        TODO("Not yet implemented")
+        val err = sqlite3Api.sqlite3BindLong(statementPtr.ptr, index, value)
+        if (err != SQLITE_OK) {
+            throwAndroidSqliteException(connectionPtr.ptr)
+        }
     }
 
     override fun nativeBindNull(
@@ -401,7 +415,10 @@ class GraalNativeBindings(
         statementPtr: GraalSqlite3StatementPtr,
         index: Int
     ) {
-        TODO("Not yet implemented")
+        val err = sqlite3Api.sqlite3BindNull(statementPtr.ptr, index)
+        if (err != SQLITE_OK) {
+            throwAndroidSqliteException(connectionPtr.ptr)
+        }
     }
 
     override fun nativeGetColumnName(
@@ -409,29 +426,37 @@ class GraalNativeBindings(
         statementPtr: GraalSqlite3StatementPtr,
         index: Int
     ): String? {
-        TODO("Not yet implemented")
+        return sqlite3Api.sqlite3ColumnName(statementPtr.ptr, index)
     }
 
     override fun nativeGetColumnCount(
         connectionPtr: GraalSqlite3ConnectionPtr,
         statementPtr: GraalSqlite3StatementPtr
     ): Int {
-        TODO("Not yet implemented")
+        return sqlite3Api.sqlite3ColumnCount(statementPtr.ptr)
     }
 
     override fun nativeIsReadOnly(
         connectionPtr: GraalSqlite3ConnectionPtr,
         statementPtr: GraalSqlite3StatementPtr
     ): Boolean {
-        TODO("Not yet implemented")
+        return sqlite3Api.sqlite3StmtReadonly(statementPtr.ptr)
     }
 
     override fun nativeGetParameterCount(
         connectionPtr: GraalSqlite3ConnectionPtr,
         statementPtr: GraalSqlite3StatementPtr
     ): Int {
-        TODO("Not yet implemented")
+        return sqlite3Api.sqlite3BindParameterCount(statementPtr.ptr)
     }
+
+    override fun nativePrepareStatement(
+        connectionPtr: GraalSqlite3ConnectionPtr,
+        sql: String
+    ): GraalSqlite3StatementPtr {
+
+    }
+
 
     override fun nativeFinalizeStatement(
         connectionPtr: GraalSqlite3ConnectionPtr,
@@ -440,11 +465,27 @@ class GraalNativeBindings(
         TODO("Not yet implemented")
     }
 
-    override fun nativePrepareStatement(
-        connectionPtr: GraalSqlite3ConnectionPtr,
-        sql: String
-    ): GraalSqlite3StatementPtr {
-        TODO("Not yet implemented")
+
+    private fun executeNonQuery(
+        db: GraalSqlite3ConnectionPtr,
+        statement: GraalSqlite3StatementPtr,
+    ): Unit {
+        val err = sqlite3Api.sqlite3Step(statement.ptr)
+        when (err) {
+            SQLITE_ROW -> throwAndroidSqliteException("Queries can be performed using SQLiteDatabase query or rawQuery methods only.")
+            SQLITE_DONE -> {}
+            else -> throwAndroidSqliteException(db.ptr)
+        }
+    }
+
+    private fun executeOneRowQuery(
+        database: GraalSqlite3ConnectionPtr,
+        statement: GraalSqlite3StatementPtr,
+    ) {
+        val err = sqlite3Api.sqlite3Step(statement.ptr)
+        if (err != SQLITE_ROW) {
+            throwAndroidSqliteException(database.ptr)
+        }
     }
 
     private fun sqliteTraceCallback(db: WasmPtr<Sqlite3Db>, statement: String) {
@@ -472,166 +513,116 @@ class GraalNativeBindings(
         return if (connection.isCancelled) 1 else 0
     }
 
-    private fun throwSqliteException(
+    private fun throwAndroidSqliteException(
         db: WasmPtr<Sqlite3Db>,
-        message: String?
+        message: String? = null
     ): Nothing {
         val errInfo = sqlite3Api.readSqliteErrorInfo(db)
-        throwSqliteException(errInfo, message)
+        throwAndroidSqliteException(errInfo, message)
     }
 
+    @Throws(Sqlite3Exception::class)
     private fun copyRow(
         window: NativeCursorWindow,
         statement: WasmPtr<Sqlite3Statement>,
         numColumns: Int,
         startPos: Int,
         addedRows: Int,
-    ) : CopyRowResult {
+    ): CopyRowResult {
         val status = window.allocRow()
         if (status != 0) {
             logger.i { "Failed allocating fieldDir at startPos $status row $addedRows" }
-            return CopyRowResult.CPR_FULL
+            return CPR_FULL
         }
-        var result = CopyRowResult.CPR_OK
-        for (columnNo in 0 until numColumns) {
-            val type = sqlite3Api.sqlite3ColumnType(statement, columnNo)
-            when (type) {
-                SQLITE3_TEXT -> {
-                    val text = sqlite3Api.sqlite3ColumnText(statement, columnNo)
-                    val putStatus = window.putString(addedRows, columnNo, text)
-                    if (putStatus != 0) {
-                        logger.v {
-                            "Failed allocating ${text.encodedNullTerminatedStringLength()} bytes for text " +
-                                "at ${startPos + addedRows},${columnNo}, error=$putStatus"
+        var result = CPR_OK
+        try {
+            for (columnNo in 0 until numColumns) {
+                val type = sqlite3Api.sqlite3ColumnType(statement, columnNo)
+                when (type) {
+                    SQLITE3_TEXT -> {
+                        val text = sqlite3Api.sqlite3ColumnText(statement, columnNo) ?: run {
+                            throwAndroidSqliteException("Null text at ${startPos + addedRows},${columnNo}")
                         }
-                        result = CopyRowResult.CPR_FULL;
-                        break;
+                        val putStatus = window.putString(addedRows, columnNo, text)
+                        if (putStatus != 0) {
+                            logger.v {
+                                "Failed allocating ${text.encodedNullTerminatedStringLength()} bytes for text " +
+                                        "at ${startPos + addedRows},${columnNo}, error=$putStatus"
+                            }
+                            result = CPR_FULL;
+                            break;
+                        }
+                        logger.v {
+                            "${startPos + addedRows},${columnNo} is TEXT with " +
+                                    "${text.encodedNullTerminatedStringLength()} bytes"
+                        }
                     }
-                    logger.v { "${startPos + addedRows},${columnNo} is TEXT with " +
-                            "${text.encodedNullTerminatedStringLength()} bytes" }
-                }
-                SQLITE3_INTEGER -> {
-                    val value = sqlite3Api.sqlite3ColumnInt64(statement, columnNo)
-                    val putStatus = window.putLong(addedRows, columnNo, value)
-                    if (putStatus != 0) {
-                        logger.v { "Failed allocating space for a long in column $columnNo, error=$putStatus" }
-                        result = CopyRowResult.CPR_FULL;
-                        break;
+
+                    SQLITE3_INTEGER -> {
+                        val value = sqlite3Api.sqlite3ColumnInt64(statement, columnNo)
+                        val putStatus = window.putLong(addedRows, columnNo, value)
+                        if (putStatus != 0) {
+                            logger.v { "Failed allocating space for a long in column $columnNo, error=$putStatus" }
+                            result = CPR_FULL;
+                            break;
+                        }
+                        logger.v { "${startPos + addedRows},${columnNo} is INTEGER $value" }
                     }
-                    logger.v { "${startPos + addedRows},${columnNo} is INTEGER $value" }
-                }
-                SQLITE3_FLOAT -> {
-                    val value = sqlite3Api.sqlite3ColumnDouble(statement, columnNo)
-                    val putStatus = window.putDouble(addedRows, columnNo, value)
-                    if (putStatus != 0) {
-                        logger.v { "Failed allocating space for a double in column $columnNo, error=$putStatus" }
-                        result = CopyRowResult.CPR_FULL;
-                        break;
+
+                    SQLITE3_FLOAT -> {
+                        val value = sqlite3Api.sqlite3ColumnDouble(statement, columnNo)
+                        val putStatus = window.putDouble(addedRows, columnNo, value)
+                        if (putStatus != 0) {
+                            logger.v { "Failed allocating space for a double in column $columnNo, error=$putStatus" }
+                            result = CPR_FULL;
+                            break;
+                        }
+                        logger.v { "${startPos + addedRows},${columnNo} is FLOAT $value" }
                     }
-                    logger.v { "${startPos + addedRows},${columnNo} is FLOAT $value" }
-                }
-                SQLITE3_BLOB -> {
-                    val value = sqlite3Api.sqlite3ColumnBlob(statement, columnNo)
-                    val putStatus = window.putBlob(addedRows, columnNo, value)
-                    if (putStatus != 0) {
-                        logger.v { "Failed allocating ${value.size} bytes for blob at " +
-                                "${startPos + addedRows},$columnNo, error=${putStatus}" }
-                        result = CopyRowResult.CPR_FULL;
-                        break;
+
+                    SQLITE3_BLOB -> {
+                        val value = sqlite3Api.sqlite3ColumnBlob(statement, columnNo)
+                        val putStatus = window.putBlob(addedRows, columnNo, value)
+                        if (putStatus != 0) {
+                            logger.v {
+                                "Failed allocating ${value.size} bytes for blob at " +
+                                        "${startPos + addedRows},$columnNo, error=${putStatus}"
+                            }
+                            result = CPR_FULL;
+                            break;
+                        }
+                        logger.v { "${startPos + addedRows},$columnNo is Blob with ${value.size} bytes" }
                     }
-                    logger.v { "${startPos + addedRows},$columnNo is Blob with ${value.size} bytes" }
-                }
-                SQLITE3_NULL -> {
-                    val putStatus = window.putNull(addedRows, columnNo)
-                    if (putStatus != 0) {
-                        logger.v { "Failed allocating space for a null in column ${columnNo}, error=${putStatus}" +
-                                "${startPos + addedRows},$columnNo, error=${putStatus}" }
-                        result = CopyRowResult.CPR_FULL;
-                        break;
+
+                    SQLITE3_NULL -> {
+                        val putStatus = window.putNull(addedRows, columnNo)
+                        if (putStatus != 0) {
+                            logger.v {
+                                "Failed allocating space for a null in column ${columnNo}, error=${putStatus}" +
+                                        "${startPos + addedRows},$columnNo, error=${putStatus}"
+                            }
+                            result = CPR_FULL;
+                            break;
+                        }
                     }
-                }
-                else -> {
-                    logger.e { "Unknown column type when filling database window" }
-                    throwSqliteException("Unknown column type when filling window")
+
+                    else -> {
+                        logger.e { "Unknown column type when filling database window" }
+                        throwAndroidSqliteException("Unknown column type when filling window")
+                    }
                 }
             }
+        } catch (e: Throwable) {
+            window.freeLastRow()
+            throw e
         }
 
-        if (result != CopyRowResult.CPR_OK) {
+        if (result != CPR_OK) {
             window.freeLastRow()
         }
+
         return result
     }
-
-//    static CopyRowResult copyRow(JNIEnv* env, CursorWindow* window,
-//    sqlite3_stmt* statement, int numColumns, int startPos, int addedRows) {
-//        // Allocate a new field directory for the row.
-//        status_t status = window->allocRow();
-//        if (status) {
-//            LOG_WINDOW("Failed allocating fieldDir at startPos %d row %d, error=%d",
-//                startPos, addedRows, status);
-//            return CPR_FULL;
-//        }
-//
-//        // Pack the row into the window.
-//        CopyRowResult result = CPR_OK;
-//        for (int i = 0; i < numColumns; i++) {
-//            int type = sqlite3_column_type(statement, i);
-//            if (type == SQLITE_TEXT) {
-//            } else if (type == SQLITE_INTEGER) {
-//                // INTEGER data
-
-//            } else if (type == SQLITE_FLOAT) {
-//                // FLOAT data
-//                double value = sqlite3_column_double(statement, i);
-//                status = window->putDouble(addedRows, i, value);
-//                if (status) {
-//                    LOG_WINDOW("Failed allocating space for a double in column %d, error=%d",
-//                        i, status);
-//                    result = CPR_FULL;
-//                    break;
-//                }
-//                LOG_WINDOW("%d,%d is FLOAT %lf", startPos + addedRows, i, value);
-//            } else if (type == SQLITE_BLOB) {
-//                // BLOB data
-//                const void* blob = sqlite3_column_blob(statement, i);
-//                size_t size = sqlite3_column_bytes(statement, i);
-//                status = window->putBlob(addedRows, i, blob, size);
-//                if (status) {
-//                    LOG_WINDOW("Failed allocating %u bytes for blob at %d,%d, error=%d",
-//                        size, startPos + addedRows, i, status);
-//                    result = CPR_FULL;
-//                    break;
-//                }
-//                LOG_WINDOW("%d,%d is Blob with %u bytes",
-//                    startPos + addedRows, i, size);
-//            } else if (type == SQLITE_NULL) {
-//                // NULL field
-//                status = window->putNull(addedRows, i);
-//                if (status) {
-//                    LOG_WINDOW("Failed allocating space for a null in column %d, error=%d",
-//                        i, status);
-//                    result = CPR_FULL;
-//                    break;
-//                }
-//
-//                LOG_WINDOW("%d,%d is NULL", startPos + addedRows, i);
-//            } else {
-//                // Unknown data
-//                ALOGE("Unknown column type when filling database window");
-//                throw_sqlite3_exception(env, "Unknown column type when filling window");
-//                result = CPR_ERROR;
-//                break;
-//            }
-//        }
-//
-//        // Free the last row if if was not successfully copied.
-//        if (result != CPR_OK) {
-//                window->freeLastRow();
-//        }
-//        return result;
-//    }
-
 
     class Sqlite3Connection(
         val dbPtr: WasmPtr<Sqlite3Db>,
@@ -661,10 +652,10 @@ class GraalNativeBindings(
         fun remove(ptr: WasmPtr<Sqlite3Db>): Sqlite3Connection? = map.remove(ptr)
 
     }
+
     private enum class CopyRowResult {
         CPR_OK,
         CPR_FULL,
-        CPR_ERROR,
     }
 
     companion object {
@@ -682,18 +673,18 @@ class GraalNativeBindings(
         const val BUSY_TIMEOUT_MS = 2500;
 
         private fun Sqlite3Exception.rethrowAndroidSqliteException(msg: String? = null): Nothing {
-            throwSqliteException(this.errorInfo, msg)
+            throwAndroidSqliteException(errorInfo, msg)
         }
 
-        private fun throwSqliteException(message: String?): Nothing = throwSqliteException(
+        private fun throwAndroidSqliteException(message: String?): Nothing = throwAndroidSqliteException(
             Sqlite3ErrorInfo(0, 0, null),
             message,
         )
 
-        private fun throwSqliteException(
+        private fun throwAndroidSqliteException(
             errorInfo: Sqlite3ErrorInfo,
             message: String?
-        ) : Nothing {
+        ): Nothing {
             val extendedErrNo = Sqlite3Errno.fromErrNoCode(errorInfo.sqliteErrorCode)
             val fullErMsg = if (errorInfo.sqliteMsg != null) {
                 buildString {
@@ -717,7 +708,7 @@ class GraalNativeBindings(
                 Sqlite3Errno.SQLITE_CORRUPT, Sqlite3Errno.SQLITE_NOTADB -> SQLiteDatabaseCorruptException(fullErMsg)
                 Sqlite3Errno.SQLITE_CONSTRAINT -> SQLiteConstraintException(fullErMsg)
                 Sqlite3Errno.SQLITE_ABORT -> SQLiteAbortException(fullErMsg)
-                Sqlite3Errno.SQLITE_DONE -> SQLiteDoneException(fullErMsg)
+                SQLITE_DONE -> SQLiteDoneException(fullErMsg)
                 Sqlite3Errno.SQLITE_FULL -> SQLiteFullException(fullErMsg)
                 Sqlite3Errno.SQLITE_MISUSE -> SQLiteMisuseException(fullErMsg)
                 Sqlite3Errno.SQLITE_PERM -> SQLiteAccessPermException(fullErMsg)

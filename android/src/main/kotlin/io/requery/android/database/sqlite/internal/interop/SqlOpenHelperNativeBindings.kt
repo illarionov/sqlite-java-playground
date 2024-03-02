@@ -1,6 +1,5 @@
 package io.requery.android.database.sqlite.internal.interop
 
-import io.requery.android.database.sqlite.SQLiteFunction
 import ru.pixnews.sqlite3.wasm.Sqlite3OpenFlags
 
 interface SqlOpenHelperNativeBindings<
@@ -113,11 +112,6 @@ interface SqlOpenHelperNativeBindings<
         connectionPtr: CP,
         statementPtr: SP,
     ): String?
-
-    fun nativeExecuteForBlobFileDescriptor(
-        connectionPtr: CP,
-        statementPtr: SP,
-    ): Int
 
     fun nativeExecuteForChangedRowCount(
         connectionPtr: CP,

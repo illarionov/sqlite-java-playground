@@ -1,5 +1,6 @@
 package ru.pixnews.sqlite3.wasm
 
+// TODO: remove?
 public sealed class Sqlite3Result<out T : Any> {
     public data class Success<out T : Any>(
         val value: T

@@ -22,6 +22,7 @@ import org.graalvm.polyglot.Value
 import org.graalvm.wasm.WasmFunctionInstance
 import ru.pixnews.sqlite3.wasm.Sqlite3ColumnType
 import ru.pixnews.sqlite3.wasm.Sqlite3DbStatusParameter
+import ru.pixnews.sqlite3.wasm.Sqlite3DestructorType.SQLITE_TRANSIENT
 import ru.pixnews.sqlite3.wasm.Sqlite3Errno
 import ru.pixnews.sqlite3.wasm.Sqlite3ErrorInfo
 import ru.pixnews.sqlite3.wasm.Sqlite3Exception
@@ -301,12 +302,12 @@ class Sqlite3CApi internal constructor(
     fun sqlite3ColumnText(
         statement: WasmPtr<Sqlite3Statement>,
         columnIndex: Int,
-    ): String {
+    ): String? {
         val ptr = sqliteBindings.sqlite3_column_text.execute(
             statement.addr,
             columnIndex,
         ).asWasmAddr<Byte>()
-        return checkNotNull(memory.readNullTerminatedString(ptr))
+        return memory.readNullTerminatedString(ptr)
     }
 
     fun sqlite3ColumnInt64(
@@ -393,6 +394,119 @@ class Sqlite3CApi internal constructor(
             throw Sqlite3Exception(errInfo, msgPrefix)
         }
     }
+
+    fun sqlite3Changes(sqliteDb: WasmPtr<Sqlite3Db>): Int {
+        return sqliteBindings.sqlite3_changes.execute(sqliteDb.addr).asInt()
+    }
+
+    fun sqlite3LastInsertRowId(
+        sqliteDb: WasmPtr<Sqlite3Db>
+    ): Long {
+        return sqliteBindings.sqlite3_last_insert_rowid.execute(sqliteDb.addr).asLong()
+    }
+
+    fun sqlite3ClearBindings(statement: WasmPtr<Sqlite3Statement>): Sqlite3Errno {
+        val errCode = sqliteBindings.sqlite3_clear_bindings.execute(statement).asInt()
+        return Sqlite3Errno.fromErrNoCode(errCode) ?: error("Unknown error code $errCode")
+    }
+
+    fun sqlite3BindBlobTTransient(
+        sqliteDb: WasmPtr<Sqlite3Statement>,
+        index: Int,
+        value: ByteArray,
+    ): Sqlite3Errno {
+        val pValue = memory.allocOrThrow<Byte>(value.size.toUInt())
+        memory.memory.write(pValue, value, 0, value.size)
+        val errCode = try {
+            sqliteBindings.sqlite3_bind_blob.execute(
+                sqliteDb.addr,
+                index,
+                pValue.addr,
+                value.size,
+                SQLITE_TRANSIENT // TODO: change to destructor?
+            ).asInt()
+        } finally {
+            memory.freeSilent(pValue)
+        }
+
+        return Sqlite3Errno.fromErrNoCode(errCode) ?: error("Unknown error code $errCode")
+    }
+
+    fun sqlite3BindStringTransient(
+        sqliteDb: WasmPtr<Sqlite3Statement>,
+        index: Int,
+        value: String
+    ): Sqlite3Errno {
+        val encoded = value.encodeToByteArray()
+        val size = encoded.size
+
+        val pValue = memory.allocOrThrow<Byte>(size.toUInt())
+        memory.memory.write(pValue, encoded, 0, size)
+        val errCode = try {
+            sqliteBindings.sqlite3_bind_text.execute(
+                sqliteDb.addr,
+                index,
+                pValue.addr,
+                size,
+                SQLITE_TRANSIENT // TODO: change to destructor?
+            ).asInt()
+        } finally {
+            memory.freeSilent(pValue)
+        }
+
+        return Sqlite3Errno.fromErrNoCode(errCode) ?: error("Unknown error code $errCode")
+    }
+
+    fun sqlite3BindDouble(
+        sqliteDb: WasmPtr<Sqlite3Statement>,
+        index: Int,
+        value: Double
+    ): Any {
+        val errCode = sqliteBindings.sqlite3_bind_double.execute(
+            sqliteDb.addr,
+            index,
+            value
+        ).asInt()
+        return Sqlite3Errno.fromErrNoCode(errCode) ?: error("Unknown error code $errCode")
+    }
+
+    fun sqlite3BindLong(
+        sqliteDb: WasmPtr<Sqlite3Statement>,
+        index: Int,
+        value: Long
+    ): Any {
+        val errCode = sqliteBindings.sqlite3_bind_int64.execute(
+            sqliteDb.addr,
+            index,
+            value
+        ).asInt()
+        return Sqlite3Errno.fromErrNoCode(errCode) ?: error("Unknown error code $errCode")
+    }
+
+    fun sqlite3BindNull(
+        sqliteDb: WasmPtr<Sqlite3Statement>,
+        index: Int,
+    ): Any {
+        val errCode = sqliteBindings.sqlite3_bind_int64.execute(sqliteDb.addr, index,).asInt()
+        return Sqlite3Errno.fromErrNoCode(errCode) ?: error("Unknown error code $errCode")
+    }
+
+    fun sqlite3ColumnName(
+        statement: WasmPtr<Sqlite3Statement>,
+        index: Int
+    ): String? {
+        val ptr = sqliteBindings.sqlite3_column_name.execute(statement.addr, index).asWasmAddr<Byte>()
+        return memory.readNullTerminatedString(ptr)
+    }
+
+    fun sqlite3StmtReadonly(statement: WasmPtr<Sqlite3Statement>): Boolean {
+        return sqliteBindings.sqlite3_stmt_readonly.execute(statement.addr).asInt() != 0
+    }
+
+    fun sqlite3BindParameterCount(statement: WasmPtr<Sqlite3Statement>): Int {
+        return sqliteBindings.sqlite3_bind_parameter_count.execute(statement.addr).asInt()
+    }
+
 
     enum class Sqlite3DbReadonlyResult(val id: Int) {
         READ_ONLY(1),
