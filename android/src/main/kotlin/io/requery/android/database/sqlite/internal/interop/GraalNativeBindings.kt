@@ -21,7 +21,10 @@ import androidx.core.os.OperationCanceledException
 import co.touchlab.kermit.Logger
 import io.requery.android.database.sqlite.base.CursorWindow
 import org.example.app.sqlite3.Sqlite3CApi
+import ru.pixnews.sqlite3.wasm.Sqlite3ColumnType.Companion.SQLITE3_BLOB
+import ru.pixnews.sqlite3.wasm.Sqlite3ColumnType.Companion.SQLITE3_FLOAT
 import ru.pixnews.sqlite3.wasm.Sqlite3ColumnType.Companion.SQLITE3_INTEGER
+import ru.pixnews.sqlite3.wasm.Sqlite3ColumnType.Companion.SQLITE3_NULL
 import ru.pixnews.sqlite3.wasm.Sqlite3ColumnType.Companion.SQLITE3_TEXT
 import ru.pixnews.sqlite3.wasm.Sqlite3DbStatusParameter.Companion.SQLITE_DBSTATUS_LOOKASIDE_USED
 import ru.pixnews.sqlite3.wasm.Sqlite3Errno
@@ -233,7 +236,7 @@ class GraalNativeBindings(
                         if (startPos >= totalRows || windowFull) {
                             continue;
                         }
-                        val cpr = copyRow(env, window, statement, numColumns, startPos, addedRows)
+                        val cpr = copyRow(window, statement, numColumns, startPos, addedRows)
 
                     }
                     Sqlite3Errno.SQLITE_LOCKED, Sqlite3Errno.SQLITE_BUSY -> {
@@ -495,11 +498,11 @@ class GraalNativeBindings(
             when (type) {
                 SQLITE3_TEXT -> {
                     val text = sqlite3Api.sqlite3ColumnText(statement, columnNo)
-                    val putStringStatus = window.putString(addedRows, columnNo, text)
-                    if (putStringStatus != 0) {
+                    val putStatus = window.putString(addedRows, columnNo, text)
+                    if (putStatus != 0) {
                         logger.v {
                             "Failed allocating ${text.encodedNullTerminatedStringLength()} bytes for text " +
-                                "at ${startPos + addedRows},${columnNo}, error=$putStringStatus"
+                                "at ${startPos + addedRows},${columnNo}, error=$putStatus"
                         }
                         result = CopyRowResult.CPR_FULL;
                         break;
@@ -508,7 +511,48 @@ class GraalNativeBindings(
                             "${text.encodedNullTerminatedStringLength()} bytes" }
                 }
                 SQLITE3_INTEGER -> {
-
+                    val value = sqlite3Api.sqlite3ColumnInt64(statement, columnNo)
+                    val putStatus = window.putLong(addedRows, columnNo, value)
+                    if (putStatus != 0) {
+                        logger.v { "Failed allocating space for a long in column $columnNo, error=$putStatus" }
+                        result = CopyRowResult.CPR_FULL;
+                        break;
+                    }
+                    logger.v { "${startPos + addedRows},${columnNo} is INTEGER $value" }
+                }
+                SQLITE3_FLOAT -> {
+                    val value = sqlite3Api.sqlite3ColumnDouble(statement, columnNo)
+                    val putStatus = window.putDouble(addedRows, columnNo, value)
+                    if (putStatus != 0) {
+                        logger.v { "Failed allocating space for a double in column $columnNo, error=$putStatus" }
+                        result = CopyRowResult.CPR_FULL;
+                        break;
+                    }
+                    logger.v { "${startPos + addedRows},${columnNo} is FLOAT $value" }
+                }
+                SQLITE3_BLOB -> {
+                    val value = sqlite3Api.sqlite3ColumnBlob(statement, columnNo)
+                    val putStatus = window.putBlob(addedRows, columnNo, value)
+                    if (putStatus != 0) {
+                        logger.v { "Failed allocating ${value.size} bytes for blob at " +
+                                "${startPos + addedRows},$columnNo, error=${putStatus}" }
+                        result = CopyRowResult.CPR_FULL;
+                        break;
+                    }
+                    logger.v { "${startPos + addedRows},$columnNo is Blob with ${value.size} bytes" }
+                }
+                SQLITE3_NULL -> {
+                    val putStatus = window.putNull(addedRows, columnNo)
+                    if (putStatus != 0) {
+                        logger.v { "Failed allocating space for a null in column ${columnNo}, error=${putStatus}" +
+                                "${startPos + addedRows},$columnNo, error=${putStatus}" }
+                        result = CopyRowResult.CPR_FULL;
+                        break;
+                    }
+                }
+                else -> {
+                    logger.e { "Unknown column type when filling database window" }
+                    throwSqliteException("Unknown column type when filling window")
                 }
             }
         }
@@ -534,33 +578,9 @@ class GraalNativeBindings(
 //        for (int i = 0; i < numColumns; i++) {
 //            int type = sqlite3_column_type(statement, i);
 //            if (type == SQLITE_TEXT) {
-//                // TEXT data
-//                const char* text = reinterpret_cast<const char*>(
-//                    sqlite3_column_text(statement, i));
-//                // SQLite does not include the NULL terminator in size, but does
-//                // ensure all strings are NULL terminated, so increase size by
-//                // one to make sure we store the terminator.
-//                size_t sizeIncludingNull = sqlite3_column_bytes(statement, i) + 1;
-//                status = window->putString(addedRows, i, text, sizeIncludingNull);
-//                if (status) {
-//                    LOG_WINDOW("Failed allocating %u bytes for text at %d,%d, error=%d",
-//                        sizeIncludingNull, startPos + addedRows, i, status);
-//                    result = CPR_FULL;
-//                    break;
-//                }
-//                LOG_WINDOW("%d,%d is TEXT with %u bytes",
-//                    startPos + addedRows, i, sizeIncludingNull);
 //            } else if (type == SQLITE_INTEGER) {
 //                // INTEGER data
-//                int64_t value = sqlite3_column_int64(statement, i);
-//                status = window->putLong(addedRows, i, value);
-//                if (status) {
-//                    LOG_WINDOW("Failed allocating space for a long in column %d, error=%d",
-//                        i, status);
-//                    result = CPR_FULL;
-//                    break;
-//                }
-//                LOG_WINDOW("%d,%d is INTEGER 0x%016llx", startPos + addedRows, i, value);
+
 //            } else if (type == SQLITE_FLOAT) {
 //                // FLOAT data
 //                double value = sqlite3_column_double(statement, i);

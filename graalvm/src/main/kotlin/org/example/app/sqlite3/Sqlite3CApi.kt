@@ -309,6 +309,41 @@ class Sqlite3CApi internal constructor(
         return checkNotNull(memory.readNullTerminatedString(ptr))
     }
 
+    fun sqlite3ColumnInt64(
+        statement: WasmPtr<Sqlite3Statement>,
+        columnIndex: Int,
+    ): Long {
+        return sqliteBindings.sqlite3_column_int64.execute(
+            statement.addr,
+            columnIndex,
+        ).asLong()
+    }
+
+    fun sqlite3ColumnDouble(
+        statement: WasmPtr<Sqlite3Statement>,
+        columnIndex: Int,
+    ): Double {
+        return sqliteBindings.sqlite3_column_double.execute(
+            statement.addr,
+            columnIndex,
+        ).asDouble()
+    }
+
+    fun sqlite3ColumnBlob(
+        statement: WasmPtr<Sqlite3Statement>,
+        columnIndex: Int,
+    ): ByteArray {
+        val ptr = sqliteBindings.sqlite3_column_text.execute(
+            statement.addr,
+            columnIndex,
+        ).asWasmAddr<Byte>()
+        val bytes = sqliteBindings.sqlite3_column_bytes.execute(
+            statement.addr,
+            columnIndex
+        ).asInt()
+        return memory.memory.readBytes(ptr, bytes)
+    }
+
     fun sqlite3Step(
         statement: WasmPtr<Sqlite3Statement>,
     ): Sqlite3Errno {

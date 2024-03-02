@@ -99,15 +99,9 @@ class NativeCursorWindow(
         return slot.fields[column]
     }
 
-    fun putBlob(row: Int, column: Int, value: ByteBuffer): Int {
+    fun putBlob(row: Int, column: Int, value: ByteArray): Int {
         check(!isReadOnly)
-
-        value.rewind()
-        val bytes = ByteArray(value.remaining())
-        value.get(bytes)
-        value.rewind()
-
-        return putField(row, column, Field.BlobField(bytes))
+        return putField(row, column, Field.BlobField(value))
     }
 
     fun putString(row: Int, column: Int, value: String): Int = putField(row, column, Field.StringField(value))
