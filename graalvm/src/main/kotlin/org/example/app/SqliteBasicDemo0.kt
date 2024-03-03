@@ -3,13 +3,10 @@ package org.example.app
 import java.util.logging.Logger
 import kotlin.time.measureTime
 import kotlin.time.measureTimedValue
-import org.example.app.bindings.SqliteBindings
 import org.example.app.sqlite3.Sqlite3CApi
-import org.example.app.sqlite3.callback.Sqlite3CallbackStore
 import ru.pixnews.sqlite3.wasm.Sqlite3Result
 import ru.pixnews.wasm.host.sqlite3.Sqlite3Db
 import ru.pixnews.wasm.host.WasmPtr
-import ru.pixnews.wasm.host.plus
 import ru.pixnews.wasm.host.sqlite3.Sqlite3ExecCallback
 
 class SqliteBasicDemo0(
@@ -33,13 +30,13 @@ class SqliteBasicDemo0(
 
     private fun printVersion() {
         val (version, resultDuration) = measureTimedValue {
-            api.version
+            api.sqlite3Version
         }
         log.info { "wasm: sqlite3_libversion_number = $version. duration: $resultDuration" }
     }
 
     private fun pringWasmEnumJson(): String? {
-        return api.sqliteBindings.sqlite3WasmEnumJson.also {
+        return api.sqlite3WasmEnumJson.also {
             log.info { "wasm: $it" }
         }
     }

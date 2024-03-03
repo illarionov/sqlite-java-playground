@@ -3,7 +3,7 @@ package ru.pixnews.wasm.sqlite3.chicory.bindings
 import com.dylibso.chicory.runtime.Instance
 import ru.pixnews.sqlite3.wasm.Sqlite3Errno
 import ru.pixnews.sqlite3.wasm.Sqlite3Exception
-import ru.pixnews.wasm.host.memory.readNullableNullTerminatedString
+import ru.pixnews.wasm.host.memory.readNullableZeroTerminatedString
 import ru.pixnews.wasm.host.sqlite3.Sqlite3Db
 import ru.pixnews.wasm.host.sqlite3.Sqlite3ExecCallback
 import ru.pixnews.wasm.host.WasmPtr
@@ -262,13 +262,13 @@ class SqliteBindings(
     val sqlite3Version: String
         get() {
             val resultPtr = sqlite3_libversion.apply()[0].asWasmAddr<Byte>()
-            return checkNotNull(memory.readNullableNullTerminatedString(resultPtr))
+            return checkNotNull(memory.readNullableZeroTerminatedString(resultPtr))
         }
 
     val sqlite3SourceId: String
         get() {
             val resultPtr = sqlite3_sourceid.apply()[0].asWasmAddr<Byte>()
-            return checkNotNull(memory.readNullableNullTerminatedString(resultPtr))
+            return checkNotNull(memory.readNullableZeroTerminatedString(resultPtr))
         }
 
     val sqlite3VersionNumber: Int
@@ -277,7 +277,7 @@ class SqliteBindings(
     val sqlite3WasmEnumJson: String?
         get() {
             val resultPtr = sqlite3_wasm_enum_json.apply()[0].asWasmAddr<Byte>()
-            return memory.readNullableNullTerminatedString(resultPtr)
+            return memory.readNullableZeroTerminatedString(resultPtr)
         }
 
     init {

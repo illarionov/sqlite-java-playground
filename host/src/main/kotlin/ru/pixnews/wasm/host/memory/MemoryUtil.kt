@@ -4,15 +4,15 @@ import java.io.ByteArrayOutputStream
 import ru.pixnews.wasm.host.WasmPtr
 import ru.pixnews.wasm.host.isSqlite3Null
 
-fun Memory.readNullableNullTerminatedString(offset: WasmPtr<Byte>): String? {
+fun Memory.readNullableZeroTerminatedString(offset: WasmPtr<Byte>): String? {
     return if (!offset.isSqlite3Null()) {
-        readNullTerminatedString(offset)
+        readZeroTerminatedString(offset)
     } else {
         null
     }
 }
 
-fun Memory.readNullTerminatedString(offset: WasmPtr<Byte>): String {
+fun Memory.readZeroTerminatedString(offset: WasmPtr<Byte>): String {
     check(offset.addr != 0)
     val mem = ByteArrayOutputStream()
     var l = offset.addr
@@ -26,7 +26,7 @@ fun Memory.readNullTerminatedString(offset: WasmPtr<Byte>): String {
     return mem.toString("UTF-8")
 }
 
-fun Memory.writeNullTerminatedString(
+fun Memory.writeZeroTerminatedString(
     offset: WasmPtr<*>,
     value: String,
 ): Int {

@@ -3,8 +3,8 @@ package ru.pixnews.wasm.sqlite3.chicory.bindings
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.wasm.types.Value
 import com.dylibso.chicory.wasm.types.ValueType
-import ru.pixnews.wasm.host.memory.readNullableNullTerminatedString
-import ru.pixnews.wasm.host.memory.writeNullTerminatedString
+import ru.pixnews.wasm.host.memory.readNullableZeroTerminatedString
+import ru.pixnews.wasm.host.memory.writeZeroTerminatedString
 import ru.pixnews.wasm.host.memory.writePtr
 import ru.pixnews.wasm.host.WasmPtr
 import ru.pixnews.wasm.sqlite3.chicory.ext.asValue
@@ -64,7 +64,7 @@ class SqliteMemoryBindings(
     fun allocNullTerminatedString(string: String): WasmPtr<Byte> {
         val bytes = string.encodeToByteArray()
         val mem = allocOrThrow<Byte>(bytes.size.toUInt() + 1U)
-        memory.writeNullTerminatedString(mem, string)
+        memory.writeZeroTerminatedString(mem, string)
         return mem
     }
 
@@ -76,7 +76,7 @@ class SqliteMemoryBindings(
         memory.writePtr(offset, addr.asWasmAddr<Unit>())
     }
 
-    fun readNullTerminatedString(offsetValue: WasmPtr<Byte>): String? = memory.readNullableNullTerminatedString(offsetValue)
+    fun readNullTerminatedString(offsetValue: WasmPtr<Byte>): String? = memory.readNullableZeroTerminatedString(offsetValue)
 
     private fun initEmscriptenStack() {
         emscripten_stack_init.apply()

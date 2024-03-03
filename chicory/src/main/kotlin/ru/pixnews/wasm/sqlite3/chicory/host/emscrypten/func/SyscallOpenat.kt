@@ -21,7 +21,7 @@ import ru.pixnews.wasm.host.filesystem.resolveAbsolutePath
 import ru.pixnews.wasm.host.include.oMaskToString
 import ru.pixnews.wasm.host.include.sMaskToString
 import ru.pixnews.wasm.host.memory.Memory
-import ru.pixnews.wasm.host.memory.readNullTerminatedString
+import ru.pixnews.wasm.host.memory.readZeroTerminatedString
 
 fun syscallOpenat(
     memory: Memory,
@@ -69,7 +69,7 @@ private class Openat(
         flags: UInt,
         mode: UInt
     ): Int {
-        val path = memory.readNullTerminatedString(pathnamePtr)
+        val path = memory.readZeroTerminatedString(pathnamePtr)
         val absolutePath = filesystem.resolveAbsolutePath(dirfd, path)
 
         return try {

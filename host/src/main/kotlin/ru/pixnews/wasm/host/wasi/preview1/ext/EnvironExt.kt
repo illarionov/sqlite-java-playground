@@ -2,7 +2,7 @@ package ru.pixnews.wasm.host.wasi.preview1.ext
 
 import ru.pixnews.wasm.host.memory.Memory
 import ru.pixnews.wasm.host.memory.encodedNullTerminatedStringLength
-import ru.pixnews.wasm.host.memory.writeNullTerminatedString
+import ru.pixnews.wasm.host.memory.writeZeroTerminatedString
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.WasmPtr
 import ru.pixnews.wasm.host.plus
@@ -38,7 +38,7 @@ object WasiEnvironmentFunc {
             .forEach { envString ->
                 memory.writeI32(pp, bufP.addr)
                 pp += 4
-                bufP += memory.writeNullTerminatedString(bufP, envString)
+                bufP += memory.writeZeroTerminatedString(bufP, envString)
             }
 
         return Errno.SUCCESS

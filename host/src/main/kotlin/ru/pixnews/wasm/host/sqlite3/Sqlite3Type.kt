@@ -21,8 +21,28 @@ typealias Sqlite3ComparatorCallbackRaw = (
     bPtr: WasmPtr<Byte>,
 ) -> Int
 
-typealias Sqlite3TraceCallback = (db: WasmPtr<Sqlite3Db>, statement: String) -> Unit
+typealias Sqlite3TraceCallback = (trace: Sqlite3Trace) -> Unit
 
-typealias Sqlite3Profile = (db: WasmPtr<Sqlite3Db>, statement: String, time: Long) -> Unit
+typealias Sqlite3ProfileCallback = (db: WasmPtr<Sqlite3Db>, statement: String, time: Long) -> Unit
 
 typealias Sqlite3ProgressHandlerCallback = (db: WasmPtr<Sqlite3Db>) -> Unit
+
+public sealed class Sqlite3Trace {
+    class TraceStmt(
+        val db: WasmPtr<Sqlite3Db>,
+        val statement: WasmPtr<Sqlite3Statement>,
+        val unexpandedSql: String?,
+    ) : Sqlite3Trace()
+    class TraceProfile(
+        val db: WasmPtr<Sqlite3Db>,
+        val statement: WasmPtr<Sqlite3Statement>,
+        val timeMs: Long
+    ): Sqlite3Trace()
+    class TraceRow(
+        val db: WasmPtr<Sqlite3Db>,
+        val statement: WasmPtr<Sqlite3Statement>,
+    ): Sqlite3Trace()
+    class TraceClose(
+        val db: WasmPtr<Sqlite3Db>,
+    ): Sqlite3Trace()
+}

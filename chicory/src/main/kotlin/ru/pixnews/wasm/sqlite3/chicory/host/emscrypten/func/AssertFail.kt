@@ -4,7 +4,7 @@ import com.dylibso.chicory.runtime.HostFunction
 import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I32
 import ru.pixnews.wasm.host.emscrypten.AssertionFailed
 import ru.pixnews.wasm.host.memory.Memory
-import ru.pixnews.wasm.host.memory.readNullableNullTerminatedString
+import ru.pixnews.wasm.host.memory.readNullableZeroTerminatedString
 import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U8
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr
@@ -26,9 +26,9 @@ fun assertFail(
     moduleName = moduleName,
 ) { _, params ->
     throw AssertionFailed(
-        condition = memory.readNullableNullTerminatedString(params[0].asWasmAddr()),
-        filename = memory.readNullableNullTerminatedString(params[1].asWasmAddr()),
+        condition = memory.readNullableZeroTerminatedString(params[0].asWasmAddr()),
+        filename = memory.readNullableZeroTerminatedString(params[1].asWasmAddr()),
         line = params[2].asInt(),
-        func = memory.readNullableNullTerminatedString(params[3].asWasmAddr())
+        func = memory.readNullableZeroTerminatedString(params[3].asWasmAddr())
     )
 }

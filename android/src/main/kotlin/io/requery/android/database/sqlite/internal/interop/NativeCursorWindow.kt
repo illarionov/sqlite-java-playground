@@ -146,11 +146,6 @@ class NativeCursorWindow(
     ) {
         val type: CursorFieldType
             get() = this.field.type
-
-        val longValue: Long get() = (this.field as Field.IntegerField).value
-        val doubleValue: Double get() = (this.field as Field.FloatField).value
-        val stringValue: String get() = (this.field as Field.StringField).value
-        val blobValue: ByteArray get() = (this.field as Field.BlobField).value
     }
 
     private class RowSlot(numColumns: Int) {

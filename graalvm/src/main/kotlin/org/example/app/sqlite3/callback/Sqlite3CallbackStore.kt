@@ -1,18 +1,28 @@
 package org.example.app.sqlite3.callback
 
+import java.util.Collections
+import ru.pixnews.wasm.host.WasmPtr
+import ru.pixnews.wasm.host.sqlite3.Sqlite3Db
 import ru.pixnews.wasm.host.sqlite3.Sqlite3ExecCallback
+import ru.pixnews.wasm.host.sqlite3.Sqlite3ProgressHandlerCallback
+import ru.pixnews.wasm.host.sqlite3.Sqlite3TraceCallback
 
 class Sqlite3CallbackStore {
     val sqlite3ExecCallbacks: IdMap<Sqlite3ExecCallbackId, Sqlite3ExecCallback> = IdMap(::Sqlite3ExecCallbackId)
+    val sqlite3TraceCallbacks: MutableMap<WasmPtr<Sqlite3Db>, Sqlite3TraceCallback> = Collections.synchronizedMap(
+        mutableMapOf()
+    )
+    val sqlite3ProgressHandlerCallbacks: IdMap<Sqlite3ProgressHandlerCallbackId, Sqlite3ProgressHandlerCallback> = IdMap(::Sqlite3ProgressHandlerCallbackId)
 
     interface CallbackId {
         val id: Int
     }
 
     @JvmInline
-    value class Sqlite3ExecCallbackId(
-        override val id: Int
-    ) : CallbackId
+    value class Sqlite3ExecCallbackId(override val id: Int) : CallbackId
+
+    @JvmInline
+    value class Sqlite3ProgressHandlerCallbackId(override val id: Int) : CallbackId
 
     class IdMap<K: CallbackId, V: Any>(
         private val ctor: (Int) -> K
@@ -37,16 +47,16 @@ class Sqlite3CallbackStore {
             val start = counter
             var id = start
             while (map.containsKey(ctor(id))) {
-                id = id.nextIdNotZero()
+                id = id.nextNonZeroId()
                 if (id == start) {
                     throw RuntimeException("Can not allocate ID")
                 }
             }
-            counter = id.nextIdNotZero()
+            counter = id.nextNonZeroId()
             return ctor(id)
         }
 
-        private fun Int.nextIdNotZero(): Int {
+        private fun Int.nextNonZeroId(): Int {
             val nextId = this + 1
             return if (nextId != 0) nextId else 1
         }

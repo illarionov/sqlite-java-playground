@@ -5,20 +5,21 @@ import org.example.app.bindings.SqliteBindings
 import org.example.app.sqlite3.Sqlite3CApi
 import org.example.app.sqlite3.Sqlite3OopApi
 import org.example.app.sqlite3.callback.Sqlite3CallbackStore
+import ru.pixnews.wasm.host.functiontable.IndirectFunctionTableIndex
 
 class SqliteBasicDemo1(
     private val sqlite: SqliteBindings,
     callbackStore: Sqlite3CallbackStore,
     private val log: Logger = Logger.getLogger(SqliteBasicDemo1::class.simpleName)
 ) {
-    private val cApi = Sqlite3CApi(sqlite, callbackStore)
+    private val cApi = Sqlite3CApi(sqlite, callbackStore, IndirectFunctionTableIndex(0), IndirectFunctionTableIndex(0), IndirectFunctionTableIndex(0))
     private val oopApi = Sqlite3OopApi(sqlite)
 
     fun run() {
-        val version = cApi.version
+        val version = cApi.sqlite3Version
         log.info { "Sqlite3 version: $version" }
 
-        val enumJson = sqlite.sqlite3WasmEnumJson
+        val enumJson = cApi.sqlite3WasmEnumJson
         log.info { "Internal structures: $enumJson" }
 
         val dbRes = cApi.sqlite3Open("mydb.db"

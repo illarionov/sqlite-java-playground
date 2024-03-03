@@ -16,7 +16,7 @@ import ru.pixnews.wasm.host.filesystem.FileSystem
 import ru.pixnews.wasm.host.include.sys.pack
 import ru.pixnews.wasm.host.filesystem.SysException
 import ru.pixnews.wasm.host.include.sys.StructStat
-import ru.pixnews.wasm.host.memory.readNullTerminatedString
+import ru.pixnews.wasm.host.memory.readZeroTerminatedString
 import ru.pixnews.wasm.sqlite3.chicory.host.memory.ChicoryMemoryImpl
 
 fun syscallLstat64(
@@ -84,7 +84,7 @@ private class Stat64(
     ): Int {
         var path = ""
         try {
-            path = memory.readNullTerminatedString(pathnamePtr)
+            path = memory.readZeroTerminatedString(pathnamePtr)
             val stat = filesystem.stat(
                 path = path,
                 followSymlinks = followSymlinks

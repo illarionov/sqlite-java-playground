@@ -12,7 +12,7 @@ import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.emscriptenEnvHostFunction
 import ru.pixnews.wasm.host.filesystem.FileSystem
 import ru.pixnews.wasm.host.filesystem.SysException
 import ru.pixnews.wasm.host.memory.Memory
-import ru.pixnews.wasm.host.memory.readNullTerminatedString
+import ru.pixnews.wasm.host.memory.readZeroTerminatedString
 
 fun syscallUnlinkat(
     memory: Memory,
@@ -40,7 +40,7 @@ private class Unlinkat(
         val flags = args[2].asInt().toUInt()
 
         val errNo = try {
-            val path = memory.readNullTerminatedString(pathnamePtr)
+            val path = memory.readZeroTerminatedString(pathnamePtr)
             filesystem.unlinkAt(dirfd, path, flags)
             Errno.SUCCESS
         } catch (e: SysException) {

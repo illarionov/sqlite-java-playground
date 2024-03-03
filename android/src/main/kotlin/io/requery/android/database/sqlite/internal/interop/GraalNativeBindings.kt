@@ -38,13 +38,20 @@ import ru.pixnews.sqlite3.wasm.Sqlite3Exception.Companion.sqlite3ErrNoName
 import ru.pixnews.sqlite3.wasm.Sqlite3OpenFlags
 import ru.pixnews.sqlite3.wasm.Sqlite3OpenFlags.Companion.SQLITE_OPEN_READWRITE
 import ru.pixnews.sqlite3.wasm.Sqlite3TextEncoding.SQLITE_UTF8
+import ru.pixnews.sqlite3.wasm.Sqlite3TraceEventCode
+import ru.pixnews.sqlite3.wasm.Sqlite3TraceEventCode.Companion.SQLITE_TRACE_CLOSE
+import ru.pixnews.sqlite3.wasm.Sqlite3TraceEventCode.Companion.SQLITE_TRACE_PROFILE
+import ru.pixnews.sqlite3.wasm.Sqlite3TraceEventCode.Companion.SQLITE_TRACE_ROW
+import ru.pixnews.sqlite3.wasm.Sqlite3TraceEventCode.Companion.SQLITE_TRACE_STMT
 import ru.pixnews.sqlite3.wasm.util.contains
+import ru.pixnews.sqlite3.wasm.util.or
 import ru.pixnews.wasm.host.WasmPtr
 import ru.pixnews.wasm.host.WasmPtr.Companion.sqlite3Null
 import ru.pixnews.wasm.host.isSqlite3Null
 import ru.pixnews.wasm.host.memory.encodedNullTerminatedStringLength
 import ru.pixnews.wasm.host.sqlite3.Sqlite3Db
 import ru.pixnews.wasm.host.sqlite3.Sqlite3Statement
+import ru.pixnews.wasm.host.sqlite3.Sqlite3Trace
 
 @JvmInline
 value class GraalSqlite3ConnectionPtr(
@@ -111,11 +118,15 @@ class GraalNativeBindings(
             connections.add(db, openFlags, path, label)
 
             // Enable tracing and profiling if requested.
-            if (enableTrace) {
-                sqlite3Api.sqlite3Trace(db, ::sqliteTraceCallback)
-            }
-            if (enableProfile) {
-                sqlite3Api.sqlite3Profile(db, ::sqliteProfileCallback)
+            if (enableTrace || enableProfile) {
+                var mask = Sqlite3TraceEventCode(0)
+                if (enableTrace) {
+                    mask = mask or SQLITE_TRACE_STMT or SQLITE_TRACE_ROW or SQLITE_TRACE_CLOSE
+                }
+                if (enableProfile) {
+                    mask = mask or SQLITE_TRACE_PROFILE
+                }
+                sqlite3Api.sqlite3Trace(db, mask, ::sqliteTraceCallback)
             }
             return GraalSqlite3ConnectionPtr(db)
         } catch (e: Sqlite3Exception) {
@@ -494,9 +505,22 @@ class GraalNativeBindings(
         }
     }
 
-    private fun sqliteTraceCallback(db: WasmPtr<Sqlite3Db>, statement: String) {
-        val connection = connections.get(db)
-        logger.v { """${connection?.label ?: db.toString()}: "$statement"""" }
+    private fun sqliteTraceCallback(trace: Sqlite3Trace) {
+        when (trace) {
+            is Sqlite3Trace.TraceStmt -> logger.v { """${trace.db}: "${trace.unexpandedSql}"""" }
+            is Sqlite3Trace.TraceClose -> logger.v { """${trace.db} closed""" }
+            is Sqlite3Trace.TraceProfile -> {
+                logger.v {
+                    String.format(
+                        """%s: "%s" took %0.3f ms """,
+                        trace.db.toString(),
+                        sqlite3Api.sqlite3ExpandedSql(trace.statement) ?: trace.statement.toString(),
+                        trace.timeMs * 0.000001f,
+                    )
+                }
+            }
+            is Sqlite3Trace.TraceRow -> logger.v { """${trace.db} / statement ${trace.statement}: ROW""" }
+        }
     }
 
     private fun sqliteProfileCallback(db: WasmPtr<Sqlite3Db>, statement: String, time: Long): Unit {

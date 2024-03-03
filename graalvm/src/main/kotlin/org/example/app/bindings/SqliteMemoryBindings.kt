@@ -3,9 +3,9 @@ package org.example.app.bindings
 import org.example.app.ext.asWasmAddr
 import org.example.app.host.memory.GraalHostMemoryImpl
 import org.graalvm.polyglot.Value
-import ru.pixnews.wasm.host.memory.readNullTerminatedString
-import ru.pixnews.wasm.host.memory.readNullableNullTerminatedString
-import ru.pixnews.wasm.host.memory.writeNullTerminatedString
+import ru.pixnews.wasm.host.memory.readZeroTerminatedString
+import ru.pixnews.wasm.host.memory.readNullableZeroTerminatedString
+import ru.pixnews.wasm.host.memory.writeZeroTerminatedString
 import ru.pixnews.wasm.host.memory.writePtr
 import ru.pixnews.wasm.host.WasmPtr
 
@@ -57,10 +57,10 @@ class SqliteMemoryBindings(
         free(value)
     }
 
-    public fun allocNullTerminatedString(string: String): WasmPtr<Byte> {
+    public fun allocZeroTerminatedString(string: String): WasmPtr<Byte> {
         val bytes = string.encodeToByteArray()
         val mem = allocOrThrow<Byte>(bytes.size.toUInt() + 1U)
-        memory.writeNullTerminatedString(mem, string)
+        memory.writeZeroTerminatedString(mem, string)
         return mem
     }
 
@@ -72,17 +72,17 @@ class SqliteMemoryBindings(
         memory.writePtr(offset, if (!addr.isNull) addr.asWasmAddr<Unit>() else WasmPtr.SQLITE3_NULL )
     }
 
-    fun readNullTerminatedString(
+    fun readZeroTerminatedString(
         offsetValue: Value
     ): String? = if (!offsetValue.isNull) {
-        memory.readNullTerminatedString(offsetValue.asWasmAddr())
+        memory.readNullableZeroTerminatedString(offsetValue.asWasmAddr())
     } else {
         null
     }
 
-    fun readNullTerminatedString(
+    fun readZeroTerminatedString(
         offsetValue: WasmPtr<Byte>
-    ): String? = memory.readNullableNullTerminatedString(offsetValue)
+    ): String? = memory.readNullableZeroTerminatedString(offsetValue)
 
     private fun initEmscriptenStack() {
         if (emscripten_stack_init != null) {
