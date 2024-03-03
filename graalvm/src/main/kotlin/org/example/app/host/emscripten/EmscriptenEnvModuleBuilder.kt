@@ -1,10 +1,9 @@
 package org.example.app.host.emscripten
 
-import org.example.app.ext.allocateFunctionTypes
-import org.example.app.ext.declareExportedFunctions
+import org.example.app.ext.setupWasmModuleFunctions
+import org.example.app.ext.withWasmContext
 import org.example.app.host.Host
 import org.example.app.host.HostFunction
-import org.example.app.host.HostFunctionType
 import org.example.app.host.emscripten.func.Abort
 import org.example.app.host.emscripten.func.AssertFail
 import org.example.app.host.emscripten.func.EmscriptenDateNow
@@ -20,8 +19,8 @@ import org.example.app.host.emscripten.func.syscallLstat64
 import org.example.app.host.emscripten.func.syscallStat64
 import org.example.app.host.fn
 import org.example.app.host.fnVoid
+import org.graalvm.polyglot.Context
 import org.graalvm.wasm.WasmContext
-import org.graalvm.wasm.WasmFunction
 import org.graalvm.wasm.WasmInstance
 import org.graalvm.wasm.WasmModule
 import org.graalvm.wasm.constants.Sizes
@@ -29,9 +28,11 @@ import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.F64
 import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I32
 import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I64
 
-object EmscriptenEnvBindings {
-    private const val ENV_MODULE_NAME = "env"
-
+class EmscriptenEnvModuleBuilder(
+    private val graalContext: Context,
+    private val host: Host,
+    private val moduleName: String = ENV_MODULE_NAME
+) {
     private val envFunctions: List<HostFunction> = buildList {
         fnVoid(
             name = "abort",
@@ -124,30 +125,10 @@ object EmscriptenEnvBindings {
         fnVoid("_tzset_js", List(3) { I32 })
     }
 
-    fun setupEnvBindings(
-        context: WasmContext,
-        host: Host,
-        name: String = ENV_MODULE_NAME,
-    ): WasmInstance {
-        val envModule = WasmModule.create(name, null)
-
-        setupMemory(context, envModule)
-
-        val functionTypes: Map<HostFunctionType, Int> = allocateFunctionTypes(envModule, envFunctions)
-        val exportedFunctions: Map<String, WasmFunction> = declareExportedFunctions(
-            envModule,
-            functionTypes,
-            envFunctions
-        )
-        val envInstance: WasmInstance = context.readInstance(envModule)
-
-        envFunctions.forEach { f: HostFunction ->
-            val node = f.nodeFactory(context.language(), envInstance, host, f.name)
-            val exportedIndex = exportedFunctions.getValue(f.name).index()
-            envInstance.setTarget(exportedIndex, node.callTarget)
-        }
-
-        return envInstance
+    fun setupModule(): WasmInstance = graalContext.withWasmContext { wasmContext ->
+        val envModule = WasmModule.create(moduleName, null)
+        setupMemory(wasmContext, envModule)
+        return setupWasmModuleFunctions(wasmContext, host, envModule, envFunctions)
     }
 
     private fun setupMemory(
@@ -170,5 +151,9 @@ object EmscriptenEnvBindings {
             allocateMemory(memoryIndex, minSize, maxSize, is64Bit, false, false)
             exportMemory(memoryIndex, "memory")
         }
+    }
+
+    companion object {
+        private const val ENV_MODULE_NAME = "env"
     }
 }

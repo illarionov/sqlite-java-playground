@@ -265,7 +265,7 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
     private fun setLocaleFromConfiguration() {
         // Register the localized collators.
         val newLocale = configuration.locale.toString()
-        bindings.nativeRegisterLocalizedCollators(connectionPtr, newLocale)
+        // Removed: bindings.nativeRegisterLocalizedCollators(connectionPtr, newLocale)
 
         // If the database is read-only, we cannot modify the android metadata table
         // or existing indexes.

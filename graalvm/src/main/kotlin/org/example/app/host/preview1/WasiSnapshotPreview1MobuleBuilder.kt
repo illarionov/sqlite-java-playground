@@ -1,10 +1,9 @@
 package org.example.app.host.preview1
 
-import org.example.app.ext.allocateFunctionTypes
-import org.example.app.ext.declareExportedFunctions
+import org.example.app.ext.setupWasmModuleFunctions
+import org.example.app.ext.withWasmContext
 import org.example.app.host.Host
 import org.example.app.host.HostFunction
-import org.example.app.host.HostFunctionType
 import org.example.app.host.fn
 import org.example.app.host.preview1.func.EnvironGet
 import org.example.app.host.preview1.func.EnvironSizesGet
@@ -16,18 +15,20 @@ import org.example.app.host.preview1.func.fdPread
 import org.example.app.host.preview1.func.fdPwrite
 import org.example.app.host.preview1.func.fdRead
 import org.example.app.host.preview1.func.fdWrite
+import org.graalvm.polyglot.Context
 import org.graalvm.wasm.SymbolTable
 import org.graalvm.wasm.WasmContext
-import org.graalvm.wasm.WasmFunction
 import org.graalvm.wasm.WasmInstance
 import org.graalvm.wasm.WasmModule
 import org.graalvm.wasm.constants.Sizes
 import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I32
 import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I64
 
-object WasiSnapshotPreview1Bindngs {
-    internal const val WASI_SNAPSHOT_PREVIEW1 = "wasi_snapshot_preview1"
-
+class WasiSnapshotPreview1MobuleBuilder(
+    private val graalContext: Context,
+    private val host: Host,
+    private val moduleName: String = WASI_SNAPSHOT_PREVIEW1,
+) {
     private val preview1Functions: List<HostFunction> = buildList {
         fn(
             name = "args_get",
@@ -186,32 +187,10 @@ object WasiSnapshotPreview1Bindngs {
         )
     }
 
-    fun setupWasiSnapshotPreview1Bindngs(
-        context: WasmContext,
-        host: Host,
-        name: String = WASI_SNAPSHOT_PREVIEW1
-    ): WasmInstance {
-        val wasiModule = WasmModule.create(name, null)
-        importMemory(wasiModule, context)
-
-        val functionTypes: Map<HostFunctionType, Int> = allocateFunctionTypes(
-            wasiModule,
-            preview1Functions
-        )
-        val exportedFunctions: Map<String, WasmFunction> = declareExportedFunctions(
-            wasiModule,
-            functionTypes,
-            preview1Functions
-        )
-        val envInstance: WasmInstance = context.readInstance(wasiModule)
-
-        preview1Functions.forEach { f: HostFunction ->
-            val node = f.nodeFactory(context.language(), envInstance, host, f.name)
-            val exportedIndex = exportedFunctions.getValue(f.name).index()
-            envInstance.setTarget(exportedIndex, node.callTarget)
-        }
-
-        return envInstance
+    fun setupModule(): WasmInstance = graalContext.withWasmContext { wasmContext ->
+        val wasiModule = WasmModule.create(moduleName, null)
+        importMemory(wasiModule, wasmContext)
+        return setupWasmModuleFunctions(wasmContext, host, wasiModule, preview1Functions)
     }
 
     private fun importMemory(
@@ -242,4 +221,7 @@ object WasiSnapshotPreview1Bindngs {
         )
     }
 
+    companion object {
+        internal const val WASI_SNAPSHOT_PREVIEW1 = "wasi_snapshot_preview1"
+    }
 }

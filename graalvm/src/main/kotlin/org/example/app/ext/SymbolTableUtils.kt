@@ -1,10 +1,33 @@
 package org.example.app.ext
 
+import org.example.app.host.Host
 import org.example.app.host.HostFunction
 import org.example.app.host.HostFunctionType
 import org.graalvm.wasm.SymbolTable
+import org.graalvm.wasm.WasmContext
 import org.graalvm.wasm.WasmFunction
+import org.graalvm.wasm.WasmInstance
+import org.graalvm.wasm.WasmModule
 import ru.pixnews.wasm.host.WasmValueType
+
+internal fun setupWasmModuleFunctions(
+    context: WasmContext,
+    host: Host,
+    module: WasmModule,
+    functions: List<HostFunction>
+): WasmInstance {
+    val functionTypes: Map<HostFunctionType, Int> = allocateFunctionTypes(module, functions)
+    val exportedFunctions: Map<String, WasmFunction> = declareExportedFunctions(module, functionTypes, functions)
+
+    val moduleInstance: WasmInstance = context.readInstance(module)
+
+    functions.forEach { f: HostFunction ->
+        val node = f.nodeFactory(context.language(), moduleInstance, host, f.name)
+        val exportedIndex = exportedFunctions.getValue(f.name).index()
+        moduleInstance.setTarget(exportedIndex, node.callTarget)
+    }
+    return moduleInstance
+}
 
 internal fun allocateFunctionTypes(
     symbolTable: SymbolTable,

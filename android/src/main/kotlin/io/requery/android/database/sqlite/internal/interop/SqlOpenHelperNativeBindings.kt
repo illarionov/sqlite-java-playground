@@ -22,11 +22,6 @@ interface SqlOpenHelperNativeBindings<
         connectionPtr: CP,
     )
 
-    fun nativeRegisterLocalizedCollators(
-        connectionPtr: CP,
-        locale: String
-    )
-
     fun nativePrepareStatement(
         connectionPtr: CP,
         sql: String

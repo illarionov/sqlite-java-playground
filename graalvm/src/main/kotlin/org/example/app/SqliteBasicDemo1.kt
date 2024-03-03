@@ -4,15 +4,17 @@ import java.util.logging.Logger
 import org.example.app.bindings.SqliteBindings
 import org.example.app.sqlite3.Sqlite3CApi
 import org.example.app.sqlite3.Sqlite3OopApi
+import org.example.app.sqlite3.callback.Sqlite3CallbackFunctionIndexes
 import org.example.app.sqlite3.callback.Sqlite3CallbackStore
 import ru.pixnews.wasm.host.functiontable.IndirectFunctionTableIndex
 
 class SqliteBasicDemo1(
     private val sqlite: SqliteBindings,
     callbackStore: Sqlite3CallbackStore,
+    functionIndexes: Sqlite3CallbackFunctionIndexes,
     private val log: Logger = Logger.getLogger(SqliteBasicDemo1::class.simpleName)
 ) {
-    private val cApi = Sqlite3CApi(sqlite, callbackStore, IndirectFunctionTableIndex(0), IndirectFunctionTableIndex(0), IndirectFunctionTableIndex(0))
+    private val cApi = Sqlite3CApi(sqlite, callbackStore, functionIndexes)
     private val oopApi = Sqlite3OopApi(sqlite)
 
     fun run() {

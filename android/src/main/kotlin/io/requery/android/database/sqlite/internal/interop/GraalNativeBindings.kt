@@ -78,7 +78,7 @@ class GraalNativeBindings(
     private val sqlite3Api: Sqlite3CApi,
     logger: Logger = Logger
 ) : SqlOpenHelperNativeBindings<GraalSqlite3ConnectionPtr, GraalSqlite3StatementPtr, GraalSqlite3WindowPtr> {
-    private val logger = Logger.withTag("GraalNativeBindings")
+    private val logger = logger.withTag("GraalNativeBindings")
 
     private val localizedComparator = LocalizedComparator()
     private val connections = Sqlite3ConnectionRegistry()
@@ -115,7 +115,7 @@ class GraalNativeBindings(
             sqlite3Api.sqlite3BusyTimeout(db, BUSY_TIMEOUT_MS)
 
             // Register wrapper object
-            connections.add(db, openFlags, path, label)
+            connections.add(db, path)
 
             // Enable tracing and profiling if requested.
             if (enableTrace || enableProfile) {
@@ -141,10 +141,6 @@ class GraalNativeBindings(
             }
             throw otherException
         }
-    }
-
-    override fun nativeRegisterLocalizedCollators(connectionPtr: GraalSqlite3ConnectionPtr, locale: String) {
-        // empty
     }
 
     override fun nativeClose(connectionPtr: GraalSqlite3ConnectionPtr) {
@@ -241,23 +237,23 @@ class GraalNativeBindings(
 
                     SQLITE_ROW -> {
                         logger.v { "Stepped statement $statement to row $totalRows" }
-                        retryCount = 0;
-                        totalRows += 1;
+                        retryCount = 0
+                        totalRows += 1
 
                         // Skip the row if the window is full or we haven't reached the start position yet.
                         if (startPos >= totalRows || windowFull) {
-                            continue;
+                            continue
                         }
                         var cpr = copyRow(window, statement, numColumns, startPos, addedRows)
 
                         if (cpr == CPR_FULL && addedRows != 0 && startPos + addedRows <= requiredPos) {
                             // We filled the window before we got to the one row that we really wanted.
                             // Clear the window and start filling it again from here.
-                            window.clear();
-                            window.setNumColumns(numColumns);
-                            startPos += addedRows;
-                            addedRows = 0;
-                            cpr = copyRow(window, statement, numColumns, startPos, addedRows);
+                            window.clear()
+                            window.setNumColumns(numColumns)
+                            startPos += addedRows
+                            addedRows = 0
+                            cpr = copyRow(window, statement, numColumns, startPos, addedRows)
                         }
 
                         when (cpr) {
@@ -275,7 +271,7 @@ class GraalNativeBindings(
                         } else {
                             // Sleep to give the thread holding the lock a chance to finish
                             Thread.sleep(1)
-                            retryCount++;
+                            retryCount++
                         }
                     }
 
@@ -298,7 +294,7 @@ class GraalNativeBindings(
             logger.e { "startPos $startPos > actual rows $totalRows" }
         }
 
-        return (startPos.toLong().shr(32)).or(totalRows.toLong());
+        return (startPos.toLong().shr(32)).or(totalRows.toLong())
     }
 
     override fun nativeExecuteForLastInsertedRowId(
@@ -486,7 +482,7 @@ class GraalNativeBindings(
     private fun executeNonQuery(
         db: GraalSqlite3ConnectionPtr,
         statement: GraalSqlite3StatementPtr,
-    ): Unit {
+    ) {
         val err = sqlite3Api.sqlite3Step(statement.ptr)
         when (err) {
             SQLITE_ROW -> throwAndroidSqliteException("Queries can be performed using SQLiteDatabase query or rawQuery methods only.")
@@ -520,18 +516,6 @@ class GraalNativeBindings(
                 }
             }
             is Sqlite3Trace.TraceRow -> logger.v { """${trace.db} / statement ${trace.statement}: ROW""" }
-        }
-    }
-
-    private fun sqliteProfileCallback(db: WasmPtr<Sqlite3Db>, statement: String, time: Long): Unit {
-        val connection = connections.get(db)
-        logger.v {
-            String.format(
-                """%s: "%s" took %0.3f ms """,
-                connection?.label ?: db.toString(),
-                statement,
-                time * 0.000001f,
-            )
         }
     }
 
@@ -579,8 +563,8 @@ class GraalNativeBindings(
                                 "Failed allocating ${text.encodedNullTerminatedStringLength()} bytes for text " +
                                         "at ${startPos + addedRows},${columnNo}, error=$putStatus"
                             }
-                            result = CPR_FULL;
-                            break;
+                            result = CPR_FULL
+                            break
                         }
                         logger.v {
                             "${startPos + addedRows},${columnNo} is TEXT with " +
@@ -593,8 +577,8 @@ class GraalNativeBindings(
                         val putStatus = window.putLong(addedRows, columnNo, value)
                         if (putStatus != 0) {
                             logger.v { "Failed allocating space for a long in column $columnNo, error=$putStatus" }
-                            result = CPR_FULL;
-                            break;
+                            result = CPR_FULL
+                            break
                         }
                         logger.v { "${startPos + addedRows},${columnNo} is INTEGER $value" }
                     }
@@ -604,8 +588,8 @@ class GraalNativeBindings(
                         val putStatus = window.putDouble(addedRows, columnNo, value)
                         if (putStatus != 0) {
                             logger.v { "Failed allocating space for a double in column $columnNo, error=$putStatus" }
-                            result = CPR_FULL;
-                            break;
+                            result = CPR_FULL
+                            break
                         }
                         logger.v { "${startPos + addedRows},${columnNo} is FLOAT $value" }
                     }
@@ -618,8 +602,8 @@ class GraalNativeBindings(
                                 "Failed allocating ${value.size} bytes for blob at " +
                                         "${startPos + addedRows},$columnNo, error=${putStatus}"
                             }
-                            result = CPR_FULL;
-                            break;
+                            result = CPR_FULL
+                            break
                         }
                         logger.v { "${startPos + addedRows},$columnNo is Blob with ${value.size} bytes" }
                     }
@@ -631,8 +615,8 @@ class GraalNativeBindings(
                                 "Failed allocating space for a null in column ${columnNo}, error=${putStatus}" +
                                         "${startPos + addedRows},$columnNo, error=${putStatus}"
                             }
-                            result = CPR_FULL;
-                            break;
+                            result = CPR_FULL
+                            break
                         }
                     }
 
@@ -656,9 +640,7 @@ class GraalNativeBindings(
 
     class Sqlite3Connection(
         val dbPtr: WasmPtr<Sqlite3Db>,
-        val openFlags: Sqlite3OpenFlags,
         val path: String,
-        val label: String,
         var isCancelled: Boolean = false
     )
 
@@ -667,11 +649,9 @@ class GraalNativeBindings(
 
         fun add(
             dbPtr: WasmPtr<Sqlite3Db>,
-            openFlags: Sqlite3OpenFlags,
             path: String,
-            label: String,
         ): Sqlite3Connection {
-            val connection = Sqlite3Connection(dbPtr, openFlags, path, label, false)
+            val connection = Sqlite3Connection(dbPtr, path, false)
             val old = map.put(dbPtr, connection)
             check(old == null) { "Connection $dbPtr already registered" }
             return connection
@@ -699,7 +679,7 @@ class GraalNativeBindings(
         operation.  The busy timeout needs to be long enough to tolerate slow I/O write
         operations but not so long as to cause the application to hang indefinitely if
         there is a problem acquiring a database lock. */
-        const val BUSY_TIMEOUT_MS = 2500;
+        const val BUSY_TIMEOUT_MS = 2500
 
         private fun Sqlite3Exception.rethrowAndroidSqliteException(msg: String? = null): Nothing {
             throwAndroidSqliteException(errorInfo, msg)

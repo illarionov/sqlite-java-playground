@@ -5,22 +5,19 @@ import java.time.Clock
 import org.example.app.bindings.SqliteBindings
 import org.example.app.bindings.SqliteMemoryBindings
 import org.example.app.ext.asWasmAddr
-import org.example.app.ext.functionTable
 import org.example.app.ext.readNullTerminatedString
 import org.example.app.ext.withWasmContext
 import org.example.app.host.Host
-import org.example.app.host.emscripten.EmscriptenEnvBindings
-import org.example.app.host.preview1.WasiSnapshotPreview1Bindngs
-import org.example.app.sqlite3.callback.SQLITE3_CALLBACK_MANAGER_MODULE_NAME
-import org.example.app.sqlite3.callback.SQLITE3_EXEC_CB_FUNCTION_NAME
+import org.example.app.host.emscripten.EmscriptenEnvModuleBuilder
+import org.example.app.host.preview1.WasiSnapshotPreview1MobuleBuilder
+import org.example.app.sqlite3.callback.Sqlite3CallbackFunctionIndexes
 import org.example.app.sqlite3.callback.Sqlite3CallbackStore
 import org.example.app.sqlite3.callback.Sqlite3CallbackStore.Sqlite3ExecCallbackId
-import org.example.app.sqlite3.callback.setupSqliteCallbacksWasmModule
+import org.example.app.sqlite3.callback.SqliteCallbacksModuleBuilder
 import org.graalvm.polyglot.Context
 import org.graalvm.polyglot.Engine
 import org.graalvm.polyglot.Source
 import org.graalvm.polyglot.Value
-import org.graalvm.wasm.WasmFunctionInstance
 import ru.pixnews.sqlite3.wasm.Sqlite3ColumnType
 import ru.pixnews.sqlite3.wasm.Sqlite3DbStatusParameter
 import ru.pixnews.sqlite3.wasm.Sqlite3DestructorType.SQLITE_TRANSIENT
@@ -38,7 +35,6 @@ import ru.pixnews.wasm.host.WasmPtr
 import ru.pixnews.wasm.host.WasmPtr.Companion.WASM_SIZEOF_PTR
 import ru.pixnews.wasm.host.WasmPtr.Companion.sqlite3Null
 import ru.pixnews.wasm.host.filesystem.FileSystem
-import ru.pixnews.wasm.host.functiontable.IndirectFunctionTableIndex
 import ru.pixnews.wasm.host.isSqlite3Null
 import ru.pixnews.wasm.host.memory.write
 import ru.pixnews.wasm.host.plus
@@ -65,44 +61,26 @@ fun Sqlite3CApi(
         .build()
     graalContext.initialize("wasm")
 
-    graalContext.withWasmContext { instanceContext ->
-        EmscriptenEnvBindings.setupEnvBindings(instanceContext, host)
-        WasiSnapshotPreview1Bindngs.setupWasiSnapshotPreview1Bindngs(instanceContext, host)
-        setupSqliteCallbacksWasmModule(instanceContext, callbackStore)
+    val sqliteCallbacksModuleBuilder = SqliteCallbacksModuleBuilder(graalContext, host, callbackStore)
+    graalContext.withWasmContext {
+        EmscriptenEnvModuleBuilder(graalContext, host).setupModule()
+        WasiSnapshotPreview1MobuleBuilder(graalContext, host).setupModule()
+        sqliteCallbacksModuleBuilder.setupModule()
     }
 
     val sqliteSource: Source = Source.newBuilder("wasm", sqlite3Url).build()
-
     graalContext.eval(sqliteSource)
 
-    // XXX: replace with globals?
-    val sqliteExecFuncInstance = graalContext
-        .getBindings("wasm")
-        .getMember(SQLITE3_CALLBACK_MANAGER_MODULE_NAME)
-        .getMember(SQLITE3_EXEC_CB_FUNCTION_NAME)
-        .`as`(WasmFunctionInstance::class.java)
+    val indirectFunctionIndexes = sqliteCallbacksModuleBuilder.setupIndirectFunctionTable()
 
-    val sqlite3ExecCbFuncId: IndirectFunctionTableIndex = graalContext.withWasmContext { wasmContext ->
-        val sqlite3ExecCbFuncId = wasmContext.functionTable.grow(1, sqliteExecFuncInstance)
-        IndirectFunctionTableIndex(sqlite3ExecCbFuncId)
-    }
-
-    val bindings = SqliteBindings(graalContext, )
-    return Sqlite3CApi(
-        bindings,
-        callbackStore,
-        sqlite3ExecCbFuncId,
-        IndirectFunctionTableIndex(0),
-        IndirectFunctionTableIndex(0),
-    )
+    val bindings = SqliteBindings(graalContext)
+    return Sqlite3CApi(bindings, callbackStore, indirectFunctionIndexes)
 }
 
 class Sqlite3CApi internal constructor(
     val sqliteBindings: SqliteBindings,
     val callbackStore: Sqlite3CallbackStore,
-    private val sqlite3ExecCbFuncId: IndirectFunctionTableIndex,
-    private val sqlite3TraceFuncId: IndirectFunctionTableIndex,
-    private val sqlite3ProgressFuncId: IndirectFunctionTableIndex,
+    private val callbackFunctionIndexes: Sqlite3CallbackFunctionIndexes,
 ) {
     private val memory: SqliteMemoryBindings = sqliteBindings.memoryBindings
 
@@ -240,7 +218,7 @@ class Sqlite3CApi internal constructor(
     }
 
     fun sqlite3Exec(
-        sqliteDb: WasmPtr<Sqlite3Db>,
+        database: WasmPtr<Sqlite3Db>,
         sql: String,
         callback: Sqlite3ExecCallback? = null,
     ): Sqlite3Result<Unit> {
@@ -257,9 +235,9 @@ class Sqlite3CApi internal constructor(
             pzErrMsg = memory.allocOrThrow(WASM_SIZEOF_PTR)
 
             val errNo = sqliteBindings.sqlite3_exec.execute(
-                sqliteDb.addr,
+                database.addr,
                 pSql.addr,
-                if (pCallbackId != null) sqlite3ExecCbFuncId.funcId else 0,
+                if (pCallbackId != null) callbackFunctionIndexes.execCallbackFunction.funcId else 0,
                 pCallbackId?.id ?: 0,
                 pzErrMsg.addr
             ).asInt()
@@ -318,7 +296,7 @@ class Sqlite3CApi internal constructor(
         val errNo = sqliteBindings.sqlite3_trace_v2.execute(
             sqliteDb.addr,
             mask.mask,
-            if (traceCallback != null) sqlite3TraceFuncId.funcId else 0,
+            if (traceCallback != null) callbackFunctionIndexes.traceFunction.funcId else 0,
             sqliteDb.addr,
         )
 
