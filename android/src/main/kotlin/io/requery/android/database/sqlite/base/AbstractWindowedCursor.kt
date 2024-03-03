@@ -3,6 +3,7 @@ package io.requery.android.database.sqlite.base
 import android.database.CharArrayBuffer
 import android.database.Cursor
 import android.database.StaleDataException
+import io.requery.android.database.sqlite.internal.interop.NativeCursorWindow
 import io.requery.android.database.sqlite.internal.interop.Sqlite3WindowPtr
 
 /**
@@ -35,7 +36,7 @@ internal abstract class AbstractWindowedCursor<WP : Sqlite3WindowPtr>(
 
     override fun getBlob(column: Int): ByteArray {
         checkPosition()
-        return _window!!.getBlob(pos, column)
+        return _window!!.getBlob(pos, column) ?: byteArrayOf()
     }
 
     override fun getString(column: Int): String? {
@@ -73,11 +74,11 @@ internal abstract class AbstractWindowedCursor<WP : Sqlite3WindowPtr>(
     }
 
     override fun isNull(column: Int): Boolean {
-        return _window!!.getType(pos, column) == Cursor.FIELD_TYPE_NULL
+        return _window!!.getType(pos, column) == NativeCursorWindow.CursorFieldType.NULL
     }
 
     override fun getType(column: Int): Int {
-        return _window!!.getType(pos, column)
+        return _window!!.getType(pos, column).id
     }
 
     override fun checkPosition() {

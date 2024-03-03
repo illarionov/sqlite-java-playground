@@ -9,7 +9,6 @@ interface SqlOpenHelperNativeBindings<
 
     fun connectionNullPtr(): CP
     fun connectionStatementPtr(): SP
-    fun connectionWindowPtr(): WP
 
     fun nativeOpen(
         path: String,

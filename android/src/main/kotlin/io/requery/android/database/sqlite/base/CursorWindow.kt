@@ -2,9 +2,12 @@ package io.requery.android.database.sqlite.base
 
 import android.database.CharArrayBuffer
 import io.requery.android.database.sqlite.internal.SQLiteClosable
+import io.requery.android.database.sqlite.internal.interop.NativeCursorWindow
 import io.requery.android.database.sqlite.internal.interop.SqlOpenHelperWindowBindings
 import io.requery.android.database.sqlite.internal.interop.Sqlite3WindowPtr
 import io.requery.android.database.sqlite.internal.interop.isNotNull
+import kotlin.properties.Delegates
+import org.jetbrains.annotations.NotNull
 
 /**
  * A buffer containing multiple cursor rows.
@@ -17,7 +20,7 @@ internal class CursorWindow<WP : Sqlite3WindowPtr>(
     /**
      * The native CursorWindow object pointer.  (FOR INTERNAL USE ONLY)
      */
-    var windowPtr: WP
+    var windowPtr: WP?
 
     /**
      * Gets the start position of this cursor window.
@@ -74,24 +77,22 @@ internal class CursorWindow<WP : Sqlite3WindowPtr>(
      * Creates a new empty cursor with default cursor size (currently 2MB)
      */
     init {
-        windowPtr = bindings.nativeCreate(this.name, windowSizeBytes)
-        if (windowPtr.isNull()) {
-            throw CursorWindowAllocationException(
-                "Cursor window allocation of ${windowSizeBytes / 1024} kb failed. "
-            )
-        }
+        windowPtr = bindings.nativeCreate(
+            this.name,
+            windowSizeBytes
+        ) ?: throw CursorWindowAllocationException(
+            "Cursor window allocation of ${windowSizeBytes / 1024} kb failed. "
+        )
     }
 
-
-    @Throws(Throwable::class)
     protected fun finalize() {
         dispose()
     }
 
     private fun dispose() {
-        if (windowPtr.isNotNull()) {
-            bindings.nativeDispose(windowPtr)
-            windowPtr = bindings.nullPtr()
+        windowPtr?.let {
+            bindings.nativeDispose(it)
+            windowPtr = null
         }
     }
 
@@ -106,7 +107,7 @@ internal class CursorWindow<WP : Sqlite3WindowPtr>(
      */
     fun clear() {
         startPosition = 0
-        bindings.nativeClear(windowPtr)
+        bindings.nativeClear(windowPtr!!)
     }
 
     val numRows: Int
@@ -115,7 +116,7 @@ internal class CursorWindow<WP : Sqlite3WindowPtr>(
          *
          * @return The number of rows in this cursor window.
          */
-        get() = bindings.nativeGetNumRows(windowPtr)
+        get() = bindings.nativeGetNumRows(windowPtr!!)
 
     /**
      * Sets the number of columns in this window.
@@ -130,7 +131,7 @@ internal class CursorWindow<WP : Sqlite3WindowPtr>(
      * @return True if successful.
      */
     fun setNumColumns(columnNum: Int): Boolean {
-        return bindings.nativeSetNumColumns(windowPtr, columnNum)
+        return bindings.nativeSetNumColumns(windowPtr!!, columnNum)
     }
 
     /**
@@ -139,14 +140,14 @@ internal class CursorWindow<WP : Sqlite3WindowPtr>(
      * @return True if successful, false if the cursor window is out of memory.
      */
     fun allocRow(): Boolean {
-        return bindings.nativeAllocRow(windowPtr)
+        return bindings.nativeAllocRow(windowPtr!!)
     }
 
     /**
      * Frees the last row in this cursor window.
      */
     fun freeLastRow() {
-        bindings.nativeFreeLastRow(windowPtr)
+        bindings.nativeFreeLastRow(windowPtr!!)
     }
 
     /**
@@ -167,8 +168,8 @@ internal class CursorWindow<WP : Sqlite3WindowPtr>(
      * @param column The zero-based column index.
      * @return The field type.
      */
-    fun getType(row: Int, column: Int): Int {
-        return bindings.nativeGetType(windowPtr, row - startPosition, column)
+    fun getType(row: Int, column: Int): NativeCursorWindow.CursorFieldType {
+        return bindings.nativeGetType(windowPtr!!, row - startPosition, column)
     }
 
     /**
@@ -193,8 +194,8 @@ internal class CursorWindow<WP : Sqlite3WindowPtr>(
      * @param column The zero-based column index.
      * @return The value of the field as a byte array.
      */
-    fun getBlob(row: Int, column: Int): ByteArray {
-        return bindings.nativeGetBlob(windowPtr, row - startPosition, column)
+    fun getBlob(row: Int, column: Int): ByteArray? {
+        return bindings.nativeGetBlob(windowPtr!!, row - startPosition, column)
     }
 
     /**
@@ -224,8 +225,8 @@ internal class CursorWindow<WP : Sqlite3WindowPtr>(
      * @param column The zero-based column index.
      * @return The value of the field as a string.
      */
-    fun getString(row: Int, column: Int): String {
-        return bindings.nativeGetString(windowPtr, row - startPosition, column)
+    fun getString(row: Int, column: Int): String? {
+        return bindings.nativeGetString(windowPtr!!, row - startPosition, column)
     }
 
     /**
@@ -262,7 +263,7 @@ internal class CursorWindow<WP : Sqlite3WindowPtr>(
     fun copyStringToBuffer(row: Int, column: Int, buffer: CharArrayBuffer?) {
         requireNotNull(buffer) { "CharArrayBuffer should not be null" }
         // TODO not as optimal as the original code
-        val chars = getString(row, column).toCharArray()
+        val chars = getString(row, column)?.toCharArray() ?: charArrayOf()
         buffer.data = chars
         buffer.sizeCopied = chars.size
     }
@@ -289,7 +290,7 @@ internal class CursorWindow<WP : Sqlite3WindowPtr>(
      * @return The value of the field as a `long`.
      */
     fun getLong(row: Int, column: Int): Long {
-        return bindings.nativeGetLong(windowPtr, row - startPosition, column)
+        return bindings.nativeGetLong(windowPtr!!, row - startPosition, column)
     }
 
     /**
@@ -317,7 +318,7 @@ internal class CursorWindow<WP : Sqlite3WindowPtr>(
      * @return The value of the field as a `double`.
      */
     fun getDouble(row: Int, column: Int): Double {
-        return bindings.nativeGetDouble(windowPtr, row - startPosition, column)
+        return bindings.nativeGetDouble(windowPtr!!, row - startPosition, column)
     }
 
     /**
@@ -380,7 +381,7 @@ internal class CursorWindow<WP : Sqlite3WindowPtr>(
      * @return True if successful.
      */
     fun putBlob(value: ByteArray, row: Int, column: Int): Boolean {
-        return bindings.nativePutBlob(windowPtr, value, row - startPosition, column)
+        return bindings.nativePutBlob(windowPtr!!, value, row - startPosition, column)
     }
 
     /**
@@ -392,7 +393,7 @@ internal class CursorWindow<WP : Sqlite3WindowPtr>(
      * @return True if successful.
      */
     fun putString(value: String, row: Int, column: Int): Boolean {
-        return bindings.nativePutString(windowPtr, value, row - startPosition, column)
+        return bindings.nativePutString(windowPtr!!, value, row - startPosition, column)
     }
 
     /**
@@ -404,7 +405,7 @@ internal class CursorWindow<WP : Sqlite3WindowPtr>(
      * @return True if successful.
      */
     fun putLong(value: Long, row: Int, column: Int): Boolean {
-        return bindings.nativePutLong(windowPtr, value, row - startPosition, column)
+        return bindings.nativePutLong(windowPtr!!, value, row - startPosition, column)
     }
 
     /**
@@ -417,7 +418,7 @@ internal class CursorWindow<WP : Sqlite3WindowPtr>(
      * @return True if successful.
      */
     fun putDouble(value: Double, row: Int, column: Int): Boolean {
-        return bindings.nativePutDouble(windowPtr, value, row - startPosition, column)
+        return bindings.nativePutDouble(windowPtr!!, value, row - startPosition, column)
     }
 
     /**
@@ -428,7 +429,7 @@ internal class CursorWindow<WP : Sqlite3WindowPtr>(
      * @return True if successful.
      */
     fun putNull(row: Int, column: Int): Boolean {
-        return bindings.nativePutNull(windowPtr, row - startPosition, column)
+        return bindings.nativePutNull(windowPtr!!, row - startPosition, column)
     }
 
     override fun onAllReferencesReleased() {

@@ -1,10 +1,7 @@
 package io.requery.android.database.sqlite.internal.interop
 
 interface SqlOpenHelperWindowBindings<WP : Sqlite3WindowPtr> {
-
-    fun nullPtr(): WP
-
-    fun nativeCreate(name: String, cursorWindowSize: Int): WP
+    fun nativeCreate(name: String, cursorWindowSize: Int): WP?
     fun nativeDispose(windowPtr: WP)
 
     fun nativeClear(windowPtr: WP)
@@ -14,9 +11,9 @@ interface SqlOpenHelperWindowBindings<WP : Sqlite3WindowPtr> {
     fun nativeAllocRow(windowPtr: WP): Boolean
     fun nativeFreeLastRow(windowPtr: WP)
 
-    fun nativeGetType(windowPtr: WP, row: Int, column: Int): Int
-    fun nativeGetBlob(windowPtr: WP, row: Int, column: Int): ByteArray
-    fun nativeGetString(windowPtr: WP, row: Int, column: Int): String
+    fun nativeGetType(windowPtr: WP, row: Int, column: Int): NativeCursorWindow.CursorFieldType
+    fun nativeGetBlob(windowPtr: WP, row: Int, column: Int): ByteArray?
+    fun nativeGetString(windowPtr: WP, row: Int, column: Int): String?
     fun nativeGetLong(windowPtr: WP, row: Int, column: Int): Long
     fun nativeGetDouble(windowPtr: WP, row: Int, column: Int): Double
 
@@ -26,5 +23,5 @@ interface SqlOpenHelperWindowBindings<WP : Sqlite3WindowPtr> {
     fun nativePutDouble(windowPtr: WP, value: Double, row: Int, column: Int): Boolean
     fun nativePutNull(windowPtr: WP, row: Int, column: Int): Boolean
 
-    fun nativeGetName(windowPtr: WP): String?
+    fun nativeGetName(windowPtr: WP): String
 }

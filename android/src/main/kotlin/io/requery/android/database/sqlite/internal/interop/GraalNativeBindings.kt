@@ -62,9 +62,9 @@ value class GraalSqlite3StatementPtr(
 
 @JvmInline
 value class GraalSqlite3WindowPtr(
-    val ptr: NativeCursorWindow?
+    val ptr: NativeCursorWindow
 ) : Sqlite3WindowPtr {
-    override fun isNull(): Boolean = ptr == null
+    override fun isNull(): Boolean = false
 }
 
 class GraalNativeBindings(
@@ -79,8 +79,6 @@ class GraalNativeBindings(
     override fun connectionNullPtr(): GraalSqlite3ConnectionPtr = GraalSqlite3ConnectionPtr(sqlite3Null())
 
     override fun connectionStatementPtr(): GraalSqlite3StatementPtr = GraalSqlite3StatementPtr(sqlite3Null())
-
-    override fun connectionWindowPtr(): GraalSqlite3WindowPtr = GraalSqlite3WindowPtr(null)
 
     override fun nativeOpen(
         path: String,
@@ -201,7 +199,7 @@ class GraalNativeBindings(
         requiredPos: Int,
         countAllRows: Boolean
     ): Long {
-        val window: NativeCursorWindow = winPtr.ptr ?: throw NullPointerException("NativeCursorWindow is null")
+        val window: NativeCursorWindow = winPtr.ptr
         val statement = statementPtr.ptr
 
         val status = window.clear()

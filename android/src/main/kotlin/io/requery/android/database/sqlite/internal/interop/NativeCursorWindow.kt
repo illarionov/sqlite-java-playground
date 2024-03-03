@@ -131,25 +131,21 @@ class NativeCursorWindow(
         var numColumns: Int
     )
 
-    sealed class Field {
-        data object Null : Field()
-        class IntegerField(val value: Long) : Field()
-        class FloatField(val value: Double) : Field()
-        class StringField(val value: String) : Field()
-        class BlobField(val value: ByteArray) : Field()
+    sealed class Field(
+        val type: CursorFieldType
+    ) {
+        data object Null : Field(CursorFieldType.NULL)
+        class IntegerField(val value: Long) : Field(CursorFieldType.INTEGER)
+        class FloatField(val value: Double) : Field(CursorFieldType.FLOAT)
+        class StringField(val value: String) : Field(CursorFieldType.STRING)
+        class BlobField(val value: ByteArray) : Field(CursorFieldType.BLOB)
     }
 
     class FieldSlot(
         var field: Field = Field.Null
     ) {
-        val type: Int
-            get() = when (this.field) {
-                is Field.Null -> 0
-                is Field.IntegerField -> 1
-                is Field.FloatField -> 2
-                is Field.StringField -> 3
-                is Field.BlobField -> 4
-            }
+        val type: CursorFieldType
+            get() = this.field.type
 
         val longValue: Long get() = (this.field as Field.IntegerField).value
         val doubleValue: Double get() = (this.field as Field.FloatField).value
@@ -164,6 +160,14 @@ class NativeCursorWindow(
     private class RowSlotChunk {
         val slots: MutableList<RowSlot> = MutableList(ROW_SLOT_CHUNK_NUM_ROWS) { RowSlot(0) }
         var nextChunk: RowSlotChunk? = null
+    }
+
+    enum class CursorFieldType(val id: Int) {
+        NULL(0),
+        INTEGER(1),
+        FLOAT(2),
+        STRING(3),
+        BLOB(4)
     }
 
     companion object {

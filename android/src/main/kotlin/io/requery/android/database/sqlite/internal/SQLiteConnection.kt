@@ -663,7 +663,7 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
                         val result = bindings.nativeExecuteForCursorWindow(
                             connectionPtr = connectionPtr,
                             statementPtr = statement.statementPtr,
-                            winPtr = window.windowPtr,
+                            winPtr = window.windowPtr!!,
                             startPos = startPos,
                             requiredPos = requiredPos,
                             countAllRows = countAllRows
@@ -948,8 +948,8 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
                 window = window
             )
             for (i in 1 until window.numRows) {
-                val name = window.getString(i, 1)
-                val path = window.getString(i, 2)
+                val name = window.getString(i, 1) ?: ""
+                val path = window.getString(i, 2) ?: ""
                 pageCount = 0
                 pageSize = 0
                 try {
@@ -959,7 +959,7 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
                     // Ignore.
                 }
                 var label = "  (attached) $name"
-                if (!path.isEmpty()) {
+                if (path.isNotEmpty()) {
                     label += ": $path"
                 }
                 dbStatsList.add(SQLiteDebug.DbStats(label, pageCount, pageSize, 0, 0, 0, 0))
