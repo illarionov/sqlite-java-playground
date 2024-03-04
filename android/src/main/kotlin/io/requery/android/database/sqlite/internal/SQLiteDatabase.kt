@@ -8,31 +8,30 @@ import android.database.sqlite.SQLiteException
 import android.database.sqlite.SQLiteQueryBuilder
 import android.database.sqlite.SQLiteTransactionListener
 import android.os.Looper
-import android.util.EventLog
-import android.util.Log
 import android.util.Pair
 import androidx.core.os.CancellationSignal
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteQuery
 import androidx.sqlite.db.SupportSQLiteStatement
+import co.touchlab.kermit.Logger
 import io.requery.android.database.sqlite.RequeryOpenFlags
 import io.requery.android.database.sqlite.RequeryOpenFlags.Companion.CREATE_IF_NECESSARY
 import io.requery.android.database.sqlite.RequeryOpenFlags.Companion.ENABLE_WRITE_AHEAD_LOGGING
 import io.requery.android.database.sqlite.RequeryOpenFlags.Companion.OPEN_CREATE
 import io.requery.android.database.sqlite.RequeryOpenFlags.Companion.OPEN_READONLY
-import io.requery.android.database.sqlite.base.DatabaseErrorHandler
-import io.requery.android.database.sqlite.base.DefaultDatabaseErrorHandler
-import io.requery.android.database.sqlite.internal.SQLiteCursor
 import io.requery.android.database.sqlite.SQLiteDatabaseConfiguration
 import io.requery.android.database.sqlite.base.CursorWindow
+import io.requery.android.database.sqlite.base.DatabaseErrorHandler
+import io.requery.android.database.sqlite.base.DefaultDatabaseErrorHandler
 import io.requery.android.database.sqlite.clear
+import io.requery.android.database.sqlite.contains
+import io.requery.android.database.sqlite.internal.SQLiteCursor
 import io.requery.android.database.sqlite.internal.SQLiteProgram.Companion.bindAllArgsAsStrings
 import io.requery.android.database.sqlite.internal.interop.SqlOpenHelperNativeBindings
 import io.requery.android.database.sqlite.internal.interop.SqlOpenHelperWindowBindings
 import io.requery.android.database.sqlite.internal.interop.Sqlite3ConnectionPtr
 import io.requery.android.database.sqlite.internal.interop.Sqlite3StatementPtr
 import io.requery.android.database.sqlite.internal.interop.Sqlite3WindowPtr
-import io.requery.android.database.sqlite.contains
 import io.requery.android.database.sqlite.or
 import java.io.File
 import java.io.FileFilter
@@ -57,12 +56,16 @@ import java.util.Locale
  */
 internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr, WP : Sqlite3WindowPtr> private constructor(
     configuration: SQLiteDatabaseConfiguration,
+    private val debugConfig: SQLiteDebug,
+    logger: Logger = Logger,
     private val bindings: SqlOpenHelperNativeBindings<CP, SP, WP>,
     private val windowBindings: SqlOpenHelperWindowBindings<WP>,
     // The optional factory to use when creating new Cursors.  May be null.
     private val cursorFactory: CursorFactory<CP, SP, WP>? = null,
     errorHandler: DatabaseErrorHandler? = null
 ) : SQLiteClosable(), SupportSQLiteDatabase {
+    private val logger = logger.withTag(TAG)
+
     // Thread-local for database sessions that belong to this database.
     // Each thread has its own database session.
     // INVARIANT: Immutable.
@@ -162,7 +165,6 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
      * Sends a corruption message to the database error handler.
      */
     fun onCorruption() {
-        EventLog.writeEvent(EVENT_DB_CORRUPT, label)
         errorHandler.onCorruption(this)
     }
 
@@ -419,7 +421,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
 
     private fun open() = try {
         if (!configurationLocked.isInMemoryDb && configurationLocked.openFlags.contains(OPEN_CREATE)) {
-            ensureFile(configurationLocked.path)
+            ensureFile(configurationLocked.path, logger)
         }
         try {
             openInner()
@@ -428,14 +430,15 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
             openInner()
         }
     } catch (ex: SQLiteException) {
-        Log.e(TAG, "Failed to open database '$label'.", ex)
+        logger.e(ex) { "Failed to open database '$label'." }
         close()
         throw ex
     }
 
     private fun openInner() = synchronized(lock) {
         check(connectionPoolLocked == null)
-        connectionPoolLocked = SQLiteConnectionPool.open(configurationLocked, bindings, windowBindings)
+        connectionPoolLocked = SQLiteConnectionPool.
+        open(configurationLocked, debugConfig, bindings, windowBindings)
         closeGuardLocked.open("close")
     }
 
@@ -1298,7 +1301,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
         }
 
         if (configurationLocked.isInMemoryDb) {
-            Log.i(TAG, "can't enable WAL for memory databases.")
+            logger.i { "can't enable WAL for memory databases." }
             return false
         }
 
@@ -1350,7 +1353,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
             }
         }
 
-    private fun collectDbStats(dbStatsList: ArrayList<SQLiteDebug.DbStats>) {
+    private fun collectDbStats(dbStatsList: ArrayList<DbStats>) {
         synchronized(lock) {
             connectionPoolLocked?.collectDbStats(dbStatsList)
         }
@@ -1420,7 +1423,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
                     val rslt = prog.simpleQueryForString()
                     if (!rslt.equals("ok", ignoreCase = true)) {
                         // integrity_checker failed on main or attached databases
-                        Log.e(TAG, "PRAGMA integrity_check on " + p.second + " returned: " + rslt)
+                        logger.e { "PRAGMA integrity_check on ${p.second} returned: $rslt" }
                         return false
                     }
                 }
@@ -1566,9 +1569,11 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
             errorHandler: DatabaseErrorHandler? = null,
             bindings: SqlOpenHelperNativeBindings<CP, SP, WP>,
             windowBindings: SqlOpenHelperWindowBindings<WP>,
+            debugConfig: SQLiteDebug,
+            logger: Logger = Logger,
         ): SQLiteDatabase<CP, SP, WP> {
             val configuration = SQLiteDatabaseConfiguration(path, flags)
-            val db = SQLiteDatabase(configuration, bindings, windowBindings, factory, errorHandler)
+            val db = SQLiteDatabase(configuration, debugConfig, logger, bindings, windowBindings, factory, errorHandler)
             db.open()
             return db
         }
@@ -1598,8 +1603,10 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
             errorHandler: DatabaseErrorHandler?,
             bindings: SqlOpenHelperNativeBindings<CP, SP, WP>,
             windowBindings: SqlOpenHelperWindowBindings<WP>,
+            debugConfig: SQLiteDebug,
+            logger: Logger = Logger,
         ): SQLiteDatabase<CP, SP, WP> {
-            val db = SQLiteDatabase(configuration, bindings, windowBindings, factory, errorHandler)
+            val db = SQLiteDatabase(configuration, debugConfig, logger, bindings, windowBindings, factory, errorHandler)
             db.open()
             return db
         }
@@ -1612,7 +1619,8 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
             factory: CursorFactory<CP, SP, WP>?,
             bindings: SqlOpenHelperNativeBindings<CP, SP, WP>,
             windowBindings: SqlOpenHelperWindowBindings<WP>,
-        ): SQLiteDatabase<CP, SP, WP> = openOrCreateDatabase(file.path, factory, bindings, windowBindings)
+            debugConfig: SQLiteDebug,
+        ): SQLiteDatabase<CP, SP, WP> = openOrCreateDatabase(file.path, factory, bindings, windowBindings, debugConfig)
 
         /**
          * Equivalent to openDatabase(path, factory, CREATE_IF_NECESSARY).
@@ -1622,6 +1630,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
             factory: CursorFactory<CP, SP, WP>?,
             bindings: SqlOpenHelperNativeBindings<CP, SP, WP>,
             windowBindings: SqlOpenHelperWindowBindings<WP>,
+            debugConfig: SQLiteDebug,
         ): SQLiteDatabase<CP, SP, WP> = openDatabase(
             path = path,
             factory = factory,
@@ -1629,6 +1638,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
             errorHandler = null,
             bindings = bindings,
             windowBindings = windowBindings,
+            debugConfig = debugConfig,
         )
 
         /**
@@ -1641,8 +1651,9 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
             errorHandler: DatabaseErrorHandler?,
             bindings: SqlOpenHelperNativeBindings<CP, SP, WP>,
             windowBindings: SqlOpenHelperWindowBindings<WP>,
+            debugConfig: SQLiteDebug,
         ): SQLiteDatabase<CP, SP, WP> =
-            openDatabase(path, factory, CREATE_IF_NECESSARY, errorHandler, bindings, windowBindings)
+            openDatabase(path, factory, CREATE_IF_NECESSARY, errorHandler, bindings, windowBindings, debugConfig)
 
         /**
          * Deletes a database including its journal file and other auxiliary files
@@ -1672,7 +1683,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
             return deleted
         }
 
-        private fun ensureFile(path: String) {
+        private fun ensureFile(path: String, logger: Logger = Logger) {
             val file = File(path)
             if (!file.exists()) {
                 try {
@@ -1686,13 +1697,13 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
                     if (!created) {
                         // Fixes #103: Check parent directory's existence before
                         // attempting to create.
-                        Log.e(TAG, "Couldn't mkdirs $file")
+                        logger.e { "Couldn't mkdirs $file" }
                     }
                     if (!file.createNewFile()) {
-                        Log.e(TAG, "Couldn't create $file")
+                        logger.e { "Couldn't create $file" }
                     }
                 } catch (e: IOException) {
-                    Log.e(TAG, "Couldn't ensure file $file", e)
+                    logger.e(e) {  "Couldn't ensure file $file" }
                 }
             }
         }
@@ -1712,12 +1723,14 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
             factory: CursorFactory<CP, SP, WP>?,
             bindings: SqlOpenHelperNativeBindings<CP, SP, WP>,
             windowBindings: SqlOpenHelperWindowBindings<WP>,
+            debugConfig: SQLiteDebug,
         ): SQLiteDatabase<CP, SP, WP> = openDatabase(
             path = SQLiteDatabaseConfiguration.MEMORY_DB_PATH,
             factory = factory,
             flags = CREATE_IF_NECESSARY,
             bindings = bindings,
-            windowBindings = windowBindings
+            windowBindings = windowBindings,
+            debugConfig = debugConfig,
         )
 
         /**
@@ -1891,7 +1904,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
         fun SQLiteDatabase<*, *, *>.insert(table: String?, nullColumnHack: String?, values: ContentValues): Long = try {
             insertWithOnConflict(table, nullColumnHack, values, ConflictAlgorithm.CONFLICT_NONE)
         } catch (e: SQLException) {
-            Log.e(TAG, "Error inserting $values", e)
+            logger.e(e) { "Error inserting $values" }
             -1
         }
 
@@ -1944,7 +1957,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
             try {
                 return insertWithOnConflict(table, nullColumnHack, initialValues, ConflictAlgorithm.CONFLICT_REPLACE)
             } catch (e: SQLException) {
-                Log.e(TAG, "Error inserting $initialValues", e)
+                logger.e(e) { "Error inserting $initialValues" }
                 return -1
             }
         }

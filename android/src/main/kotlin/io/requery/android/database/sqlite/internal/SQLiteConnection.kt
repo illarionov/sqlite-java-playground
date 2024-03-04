@@ -14,10 +14,7 @@ import io.requery.android.database.sqlite.RequeryOpenFlags.Companion.ENABLE_WRIT
 import io.requery.android.database.sqlite.RequeryOpenFlags.Companion.OPEN_READONLY
 import io.requery.android.database.sqlite.base.CursorWindow
 import io.requery.android.database.sqlite.SQLiteDatabaseConfiguration
-import io.requery.android.database.sqlite.clear
 import io.requery.android.database.sqlite.contains
-import io.requery.android.database.sqlite.internal.SQLiteDebug.DEBUG_SQL_STATEMENTS
-import io.requery.android.database.sqlite.internal.SQLiteDebug.DEBUG_SQL_TIME
 import io.requery.android.database.sqlite.internal.SQLiteStatementType.STATEMENT_SELECT
 import io.requery.android.database.sqlite.internal.SQLiteStatementType.STATEMENT_UPDATE
 import io.requery.android.database.sqlite.internal.interop.SqlOpenHelperNativeBindings
@@ -82,6 +79,7 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
     private val windowBindings: SqlOpenHelperWindowBindings<WP>,
     private val connectionId: Int,
     internal val isPrimaryConnection: Boolean,
+    private val debugConfig: SQLiteDebug,
 ) : CancellationSignal.OnCancelListener {
     private val closeGuard: CloseGuard = CloseGuard.get()
 
@@ -91,7 +89,7 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
     private val preparedStatementCache = PreparedStatementCache(this.configuration.maxSqlCacheSize)
 
     // The recent operations log.
-    private val recentOperations = OperationLog()
+    private val recentOperations = OperationLog(debugConfig)
 
     // The native SQLiteConnection pointer.  (FOR INTERNAL USE ONLY)
     private var connectionPtr: CP = bindings.connectionNullPtr()
@@ -129,8 +127,8 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
             path = configuration.path,
             openFlags = configuration.openFlags.toSqliteOpenFlags(),
             label = configuration.label,
-            enableTrace = DEBUG_SQL_STATEMENTS,
-            enableProfile = DEBUG_SQL_TIME
+            enableTrace = debugConfig.sqlStatements,
+            enableProfile = debugConfig.sqlTime
         )
 
         setPageSize()
@@ -297,7 +295,7 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
                 execute(if (success) "COMMIT" else "ROLLBACK")
             }
         } catch (ex: RuntimeException) {
-            throw SQLiteException("Failed to change locale for db '${configuration.label}' to '$newLocale'.")
+            throw SQLiteException("Failed to change locale for db '${configuration.label}' to '$newLocale'.", ex)
         }
     }
 
@@ -421,7 +419,6 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
             try {
                 throwIfStatementForbidden(statement)
                 bindArguments(statement, bindArgs)
-                applyBlockGuardPolicy(statement)
                 attachCancellationSignal(cancellationSignal)
                 try {
                     bindings.nativeExecute(connectionPtr, statement.statementPtr)
@@ -463,7 +460,6 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
             try {
                 throwIfStatementForbidden(statement)
                 bindArguments(statement, bindArgs)
-                applyBlockGuardPolicy(statement)
                 attachCancellationSignal(cancellationSignal)
                 try {
                     return bindings.nativeExecuteForLong(connectionPtr, statement.statementPtr)
@@ -505,7 +501,6 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
             try {
                 throwIfStatementForbidden(statement)
                 bindArguments(statement, bindArgs)
-                applyBlockGuardPolicy(statement)
                 attachCancellationSignal(cancellationSignal)
                 try {
                     return bindings.nativeExecuteForString(connectionPtr, statement.statementPtr)
@@ -548,7 +543,6 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
             try {
                 throwIfStatementForbidden(statement)
                 bindArguments(statement, bindArgs)
-                applyBlockGuardPolicy(statement)
                 attachCancellationSignal(cancellationSignal)
                 try {
                     changedRows = bindings.nativeExecuteForChangedRowCount(connectionPtr, statement.statementPtr)
@@ -597,7 +591,6 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
             try {
                 throwIfStatementForbidden(statement)
                 bindArguments(statement, bindArgs)
-                applyBlockGuardPolicy(statement)
                 attachCancellationSignal(cancellationSignal)
                 try {
                     return bindings.nativeExecuteForLastInsertedRowId(connectionPtr, statement.statementPtr)
@@ -657,7 +650,6 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
                 try {
                     throwIfStatementForbidden(statement)
                     bindArguments(statement, bindArgs)
-                    applyBlockGuardPolicy(statement)
                     attachCancellationSignal(cancellationSignal)
                     try {
                         val result = bindings.nativeExecuteForCursorWindow(
@@ -890,20 +882,6 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
         }
     }
 
-    private fun applyBlockGuardPolicy(statement: PreparedStatement<*>) {
-        if (!configuration.isInMemoryDb && SQLiteDebug.DEBUG_SQL_LOG) {
-            // don't have access to the policy, so just log
-            if (Looper.myLooper() == Looper.getMainLooper()) {
-                if (statement.readOnly) {
-                    Log.w(TAG, "Reading from disk on main thread")
-                } else {
-                    Log.w(TAG, "Writing to disk on main thread")
-                }
-            }
-        }
-    }
-
-
     /**
      * Describes the currently executing operation, in the case where the
      * caller might not actually own the connection.
@@ -925,7 +903,7 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
      *
      * @param dbStatsList The list to populate.
      */
-    fun collectDbStats(dbStatsList: ArrayList<SQLiteDebug.DbStats>) {
+    fun collectDbStats(dbStatsList: ArrayList<DbStats>) {
         // Get information about the main database.
         val lookaside = bindings.nativeGetDbLookaside(connectionPtr)
         var pageCount: Long = 0
@@ -962,7 +940,7 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
                 if (path.isNotEmpty()) {
                     label += ": $path"
                 }
-                dbStatsList.add(SQLiteDebug.DbStats(label, pageCount, pageSize, 0, 0, 0, 0))
+                dbStatsList.add(DbStats(label, pageCount, pageSize, 0, 0, 0, 0))
             }
         } catch (ex: SQLiteException) {
             // Ignore.
@@ -975,18 +953,18 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
      * Collects statistics about database connection memory usage, in the case where the
      * caller might not actually own the connection.
      */
-    fun collectDbStatsUnsafe(dbStatsList: MutableList<SQLiteDebug.DbStats>) {
+    fun collectDbStatsUnsafe(dbStatsList: MutableList<DbStats>) {
         dbStatsList.add(getMainDbStatsUnsafe(0, 0, 0))
     }
 
-    private fun getMainDbStatsUnsafe(lookaside: Int, pageCount: Long, pageSize: Long): SQLiteDebug.DbStats {
+    private fun getMainDbStatsUnsafe(lookaside: Int, pageCount: Long, pageSize: Long): DbStats {
         // The prepared statement cache is thread-safe so we can access its statistics
         // even if we do not own the database connection.
         var label = configuration.path
         if (!isPrimaryConnection) {
             label += " ($connectionId)"
         }
-        return SQLiteDebug.DbStats(
+        return DbStats(
             label, pageCount, pageSize, lookaside,
             preparedStatementCache.hitCount(),
             preparedStatementCache.missCount(),
@@ -1071,7 +1049,9 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
         }
     }
 
-    private class OperationLog {
+    private class OperationLog(
+        private val debugConfig: SQLiteDebug
+    ) {
         private val operations = arrayOfNulls<Operation>(MAX_RECENT_OPERATIONS)
         private var index = 0
         private var generation = 0
@@ -1129,9 +1109,7 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
             if (operation != null) {
                 operation.endTime = System.currentTimeMillis()
                 operation.finished = true
-                return SQLiteDebug.DEBUG_LOG_SLOW_QUERIES && SQLiteDebug.shouldLogSlowQuery(
-                    operation.endTime - operation.startTime
-                )
+                return debugConfig.sqlLog && debugConfig.shouldLogSlowQuery(operation.endTime - operation.startTime)
             }
             return false
         }
@@ -1276,7 +1254,8 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
             configuration: SQLiteDatabaseConfiguration,
             bindings: SqlOpenHelperNativeBindings<CP, SP, WP>,
             windowBindings: SqlOpenHelperWindowBindings<WP>,
-            connectionId: Int, primaryConnection: Boolean
+            connectionId: Int, primaryConnection: Boolean,
+            debugConfig: SQLiteDebug,
         ): SQLiteConnection<CP, SP, WP> {
             val connection = SQLiteConnection(
                 pool = pool,
@@ -1284,7 +1263,8 @@ internal class SQLiteConnection<CP : Sqlite3ConnectionPtr, SP : Sqlite3Statement
                 bindings = bindings,
                 windowBindings = windowBindings,
                 connectionId = connectionId,
-                isPrimaryConnection = primaryConnection
+                isPrimaryConnection = primaryConnection,
+                debugConfig = debugConfig
             )
             try {
                 connection.open()

@@ -4,11 +4,18 @@ import android.content.ContextWrapper
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import co.touchlab.kermit.Logger
+import io.requery.android.database.sqlite.internal.DatabasePathResolver
+import io.requery.android.database.sqlite.internal.SQLiteDebug
+import java.io.File
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 
 class RequerySQLiteOpenHelperFactoryTest {
     val logger = Logger.withTag("RequerySQLiteOpenHelperFactoryTest")
     val mockContext = ContextWrapper(null)
+
+    @TempDir
+    lateinit var tempDir: File
 
     @Test
     fun `Factory initialization should work`() {
@@ -34,7 +41,10 @@ class RequerySQLiteOpenHelperFactoryTest {
         dbName: String = "test.db",
         openHelperCallback: SupportSQLiteOpenHelper.Callback = LoggingOpenHelperCallback(logger)
     ): SupportSQLiteOpenHelper {
-        val factory = RequerySQLiteOpenHelperFactory()
+        val pathResolver = DatabasePathResolver { name -> File(tempDir, name) }
+        val debugConfig = SQLiteDebug(true, true, true, true)
+
+        val factory = RequerySQLiteOpenHelperFactory(pathResolver, debugConfig)
         val config = SupportSQLiteOpenHelper.Configuration(mockContext, dbName, openHelperCallback)
         return factory.create(config)
     }

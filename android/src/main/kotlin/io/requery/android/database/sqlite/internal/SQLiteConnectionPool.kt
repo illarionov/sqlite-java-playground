@@ -54,6 +54,7 @@ import java.util.concurrent.locks.LockSupport
  */
 internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr, WP : Sqlite3WindowPtr> private constructor(
     configuration: SQLiteDatabaseConfiguration,
+    private val debugConfig: SQLiteDebug,
     private val bindings: SqlOpenHelperNativeBindings<CP, SP, WP>,
     private val windowBindings: SqlOpenHelperWindowBindings<WP>,
 ) : Closeable {
@@ -364,7 +365,7 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
      *
      * @param dbStatsList The list to populate.
      */
-    fun collectDbStats(dbStatsList: ArrayList<SQLiteDebug.DbStats>): Unit = synchronized(lock) {
+    fun collectDbStats(dbStatsList: ArrayList<DbStats>): Unit = synchronized(lock) {
         availablePrimaryConnection?.collectDbStats(dbStatsList)
         for (connection: SQLiteConnection<*, *, *> in availableNonPrimaryConnections) {
             connection.collectDbStats(dbStatsList)
@@ -386,7 +387,8 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
             bindings,
             windowBindings,
             connectionId,
-            primaryConnection
+            primaryConnection,
+            debugConfig,
         ) // might throw
     }
 
@@ -990,9 +992,10 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
          */
         fun <CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr, WP : Sqlite3WindowPtr> open(
             configuration: SQLiteDatabaseConfiguration,
+            debugConfig: SQLiteDebug,
             bindings: SqlOpenHelperNativeBindings<CP, SP, WP>,
             windowBindings: SqlOpenHelperWindowBindings<WP>,
-        ): SQLiteConnectionPool<CP, SP, WP> = SQLiteConnectionPool(configuration, bindings, windowBindings)
+        ): SQLiteConnectionPool<CP, SP, WP> = SQLiteConnectionPool(configuration, debugConfig, bindings, windowBindings)
             .apply(SQLiteConnectionPool<*, *, *>::open)
 
         private fun getPriority(connectionFlags: Int): Int {

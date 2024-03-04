@@ -35,7 +35,7 @@ internal class Sqlite3TraceAdapter(
             Sqlite3TraceEventCode(args[0] as Int),
             args.asWasmPtr(1),
             args.asWasmPtr(2),
-            args[3] as Long,
+            (args[3] as Int).toLong(),
         )
     }
 
@@ -53,7 +53,7 @@ internal class Sqlite3TraceAdapter(
             val traceInfo = Sqlite3Trace.TraceStmt(
                 db = contextPointer,
                 statement = arg1 as WasmPtr<Sqlite3Statement>,
-                unexpandedSql = memory.readNullTerminatedString(arg2 as WasmPtr<Byte>)
+                unexpandedSql = memory.readNullTerminatedString(WasmPtr(arg2.toInt()))
             )
             delegate.invoke(traceInfo)
         }

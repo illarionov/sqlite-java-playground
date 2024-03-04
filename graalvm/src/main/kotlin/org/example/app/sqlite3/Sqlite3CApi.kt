@@ -163,7 +163,7 @@ class Sqlite3CApi internal constructor(
                 pFileName.addr,
                 ppDb.addr,
                 flags.mask,
-                pVfsName
+                pVfsName.addr
             )
 
             pDb = memory.readAddr(ppDb)
@@ -222,9 +222,9 @@ class Sqlite3CApi internal constructor(
 
         val errNo = sqliteBindings.sqlite3_create_collation_v2.execute(
             database.addr,
-            pName,
-            Sqlite3TextEncoding.SQLITE_UTF8,
-            pCallbackId,
+            pName.addr,
+            Sqlite3TextEncoding.SQLITE_UTF8.id,
+            pCallbackId?.id,
             if (pCallbackId != null) callbackFunctionIndexes.execCallbackFunction.funcId else 0,
             if (pCallbackId != null) callbackFunctionIndexes.destroyComparatorFunction.funcId else 0,
         )
@@ -286,7 +286,7 @@ class Sqlite3CApi internal constructor(
         }
 
         try {
-            val readonlyResultId = sqliteBindings.sqlite3_db_readonly.execute(sqliteDb, pDbName).asInt()
+            val readonlyResultId = sqliteBindings.sqlite3_db_readonly.execute(sqliteDb.addr, pDbName.addr).asInt()
             return Sqlite3DbReadonlyResult.fromId(readonlyResultId)
         } finally {
             memory.freeSilent(pDbName)
@@ -617,10 +617,10 @@ class Sqlite3CApi internal constructor(
                 sqliteDb.addr,
                 sqlBytesPtr.addr,
                 nullTerminatedSqlSize,
-                ppStatement,
+                ppStatement.addr,
                 sqlite3Null<Unit>().addr
             )
-            result.throwOnSqliteError("sqlite3_open_v2() failed", sqliteDb)
+            result.throwOnSqliteError("sqlite3_prepare_v2() failed", sqliteDb)
             return memory.readAddr(ppStatement)
         } finally {
             memory.freeSilent(sqlBytesPtr)

@@ -15,11 +15,12 @@
  */
 package io.requery.android.database.sqlite
 
-import android.content.Context
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import io.requery.android.database.sqlite.base.DatabaseErrorHandler
+import io.requery.android.database.sqlite.internal.DatabasePathResolver
 import io.requery.android.database.sqlite.internal.RequerySqliteOpenHelper
 import io.requery.android.database.sqlite.internal.SQLiteDatabase
+import io.requery.android.database.sqlite.internal.SQLiteDebug
 import io.requery.android.database.sqlite.internal.interop.GraalNativeBindings
 import io.requery.android.database.sqlite.internal.interop.GraalWindowBindings
 import io.requery.android.database.sqlite.internal.interop.SqlOpenHelperNativeBindings
@@ -34,32 +35,37 @@ import org.example.app.sqlite3.Sqlite3CApi
  * this library.
  */
 public class RequerySQLiteOpenHelperFactory(
+    private val pathResolver: DatabasePathResolver,
+    private val debugConfig: SQLiteDebug = SQLiteDebug(),
     private val configurationOptions: List<ConfigurationOptions> = emptyList()
 ) : SupportSQLiteOpenHelper.Factory {
     override fun create(configuration: SupportSQLiteOpenHelper.Configuration): SupportSQLiteOpenHelper {
         val api = Sqlite3CApi()
         val bindings = GraalNativeBindings(api)
-        val windowBindins = GraalWindowBindings()
+        val windowBindings = GraalWindowBindings()
 
         return CallbackSQLiteOpenHelper(
-            configuration.context,
+            pathResolver,
+            debugConfig,
             configuration.name,
             configuration.callback,
             configurationOptions,
             bindings,
-            windowBindins,
+            windowBindings,
         )
     }
 
     private class CallbackSQLiteOpenHelper<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr, WP : Sqlite3WindowPtr>(
-        context: Context,
+        pathResolver: DatabasePathResolver,
+        debugConfig: SQLiteDebug,
         name: String?,
         cb: SupportSQLiteOpenHelper.Callback,
         ops: Iterable<ConfigurationOptions>,
         bindings: SqlOpenHelperNativeBindings<CP, SP, WP>,
         windowBindings: SqlOpenHelperWindowBindings<WP>,
     ) : RequerySqliteOpenHelper<CP, SP, WP>(
-        context = context,
+        pathResolver = pathResolver,
+        debugConfig = debugConfig,
         databaseName = name,
         factory = null,
         version = cb.version,

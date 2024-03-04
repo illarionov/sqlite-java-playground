@@ -1,6 +1,5 @@
 package io.requery.android.database.sqlite.internal
 
-import android.content.Context
 import android.database.sqlite.SQLiteException
 import android.util.Log
 import androidx.sqlite.db.SupportSQLiteOpenHelper
@@ -41,9 +40,9 @@ import io.requery.android.database.sqlite.or
  *
  *
  */
-@Suppress("unused")
 internal abstract class RequerySqliteOpenHelper<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr, WP : Sqlite3WindowPtr>(
-    private val context: Context,
+    private val pathResolver: DatabasePathResolver,
+    private val debugConfig: SQLiteDebug,
     override val databaseName: String?,
     private val factory: SQLiteDatabase.CursorFactory<CP, SP, WP>?,
     private val version: Int,
@@ -64,7 +63,7 @@ internal abstract class RequerySqliteOpenHelper<CP : Sqlite3ConnectionPtr, SP : 
      * Accepts input param: a concrete instance of [DatabaseErrorHandler] to be
      * used to handle corruption when sqlite reports database corruption.
      *
-     * @param context to use to open or create the database
+     * @param pathResolver to use to open or create the database
      * @param databaseName of the database file, or null for an in-memory database
      * @param factory to use for creating cursor objects, or null for the default
      * @param version number of the database (starting at 1); if the database is older,
@@ -189,27 +188,48 @@ internal abstract class RequerySqliteOpenHelper<CP : Sqlite3ConnectionPtr, SP : 
                     db.reopenReadWrite()
                 }
             } else if (databaseName == null) {
-                db = SQLiteDatabase.create(factory = null, bindings, windowBindings)
+                db = SQLiteDatabase.create(factory = null, bindings, windowBindings, debugConfig)
             } else {
                 try {
-                    val path = context.getDatabasePath(databaseName).path
+                    val path = pathResolver.getDatabasePath(databaseName.toString()).path
                     if (DEBUG_STRICT_READONLY && !writable) {
                         val configuration = createConfiguration(path, OPEN_READONLY)
-                        db = SQLiteDatabase.openDatabase(configuration, factory, errorHandler, bindings, windowBindings)
+                        db = SQLiteDatabase.openDatabase(
+                            configuration = configuration,
+                            factory = factory,
+                            errorHandler = errorHandler,
+                            bindings = bindings,
+                            windowBindings = windowBindings,
+                            debugConfig = debugConfig
+                        )
                     } else {
                         var flags = if (enableWriteAheadLogging) ENABLE_WRITE_AHEAD_LOGGING else RequeryOpenFlags(0)
                         flags = flags or CREATE_IF_NECESSARY
                         val configuration = createConfiguration(path, flags)
-                        db = SQLiteDatabase.openDatabase(configuration, factory, errorHandler, bindings, windowBindings)
+                        db = SQLiteDatabase.openDatabase(
+                            configuration = configuration,
+                            factory = factory,
+                            errorHandler = errorHandler,
+                            bindings = bindings,
+                            windowBindings = windowBindings,
+                            debugConfig = debugConfig
+                        )
                     }
                 } catch (ex: SQLiteException) {
                     if (writable) {
                         throw ex
                     }
                     Log.e(TAG, "Couldn't open $databaseName for writing (will try read-only):", ex)
-                    val path = context.getDatabasePath(databaseName).path
+                    val path = pathResolver.getDatabasePath(databaseName.toString()).path
                     val configuration = createConfiguration(path, OPEN_READONLY)
-                    db = SQLiteDatabase.openDatabase(configuration, factory, errorHandler, bindings, windowBindings)
+                    db = SQLiteDatabase.openDatabase(
+                        configuration = configuration,
+                        factory = factory,
+                        errorHandler = errorHandler,
+                        bindings = bindings,
+                        windowBindings = windowBindings,
+                        debugConfig = debugConfig
+                    )
                 }
             }
 

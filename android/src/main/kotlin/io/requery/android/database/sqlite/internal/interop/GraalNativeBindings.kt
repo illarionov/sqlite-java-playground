@@ -106,7 +106,7 @@ class GraalNativeBindings(
 
             // Check that the database is really read/write when that is what we asked for.
             if (openFlags.contains(SQLITE_OPEN_READWRITE)
-                && sqlite3Api.sqlite3DbReadonly(db, null) == Sqlite3CApi.Sqlite3DbReadonlyResult.READ_WRITE
+                && sqlite3Api.sqlite3DbReadonly(db, null) != Sqlite3CApi.Sqlite3DbReadonlyResult.READ_WRITE
             ) {
                 throw SQLiteCantOpenDatabaseException("Could not open the database in read/write mode.")
             }
@@ -508,7 +508,7 @@ class GraalNativeBindings(
             is Sqlite3Trace.TraceProfile -> {
                 logger.v {
                     String.format(
-                        """%s: "%s" took %0.3f ms """,
+                        """%s: "%s" took %.3f ms """,
                         trace.db.toString(),
                         sqlite3Api.sqlite3ExpandedSql(trace.statement) ?: trace.statement.toString(),
                         trace.timeMs * 0.000001f,

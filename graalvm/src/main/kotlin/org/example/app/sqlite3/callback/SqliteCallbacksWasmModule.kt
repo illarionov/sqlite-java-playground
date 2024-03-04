@@ -6,6 +6,7 @@ import org.example.app.ext.withWasmContext
 import org.example.app.host.Host
 import org.example.app.host.HostFunction
 import org.example.app.host.fn
+import org.example.app.host.fnVoid
 import org.example.app.sqlite3.callback.func.SQLITE3_COMPARATOR_CALL_FUNCTION_NAME
 import org.example.app.sqlite3.callback.func.SQLITE3_DESTROY_COMPARATOR_FUNCTION_NAME
 import org.example.app.sqlite3.callback.func.SQLITE3_EXEC_CB_FUNCTION_NAME
@@ -51,7 +52,7 @@ internal class SqliteCallbacksModuleBuilder(
         )
         fn(
             name = SQLITE3_TRACE_CB_FUNCTION_NAME,
-            paramTypes = listOf(U32, POINTER, POINTER, I64),
+            paramTypes = listOf(U32, POINTER, POINTER, I32),
             retType = I32,
             nodeFactory = { language: WasmLanguage, instance: WasmInstance, _: Host, functionName: String ->
                 Sqlite3TraceAdapter(
@@ -88,10 +89,9 @@ internal class SqliteCallbacksModuleBuilder(
                 )
             }
         )
-        fn(
+        fnVoid(
             name = SQLITE3_DESTROY_COMPARATOR_FUNCTION_NAME,
             paramTypes = listOf(I32),
-            retType = I32,
             nodeFactory = { language: WasmLanguage, instance: WasmInstance, _: Host, functionName: String ->
                 Sqlite3DestroyComparatorAdapter(
                     language = language,
