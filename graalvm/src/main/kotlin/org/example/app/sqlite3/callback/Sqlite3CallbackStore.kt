@@ -2,12 +2,14 @@ package org.example.app.sqlite3.callback
 
 import java.util.Collections
 import ru.pixnews.wasm.host.WasmPtr
+import ru.pixnews.wasm.host.sqlite3.Sqlite3ComparatorCallback
 import ru.pixnews.wasm.host.sqlite3.Sqlite3Db
 import ru.pixnews.wasm.host.sqlite3.Sqlite3ExecCallback
 import ru.pixnews.wasm.host.sqlite3.Sqlite3ProgressCallback
 import ru.pixnews.wasm.host.sqlite3.Sqlite3TraceCallback
 
 class Sqlite3CallbackStore {
+    val sqlite3Comparators: IdMap<Sqlite3ComparatorId, Sqlite3ComparatorCallback> = IdMap(::Sqlite3ComparatorId)
     val sqlite3ExecCallbacks: IdMap<Sqlite3ExecCallbackId, Sqlite3ExecCallback> = IdMap(::Sqlite3ExecCallbackId)
     val sqlite3TraceCallbacks: MutableMap<WasmPtr<Sqlite3Db>, Sqlite3TraceCallback> = Collections.synchronizedMap(
         mutableMapOf()
@@ -22,6 +24,9 @@ class Sqlite3CallbackStore {
 
     @JvmInline
     value class Sqlite3ExecCallbackId(override val id: Int) : CallbackId
+
+    @JvmInline
+    value class Sqlite3ComparatorId(override val id: Int) : CallbackId
 
     class IdMap<K: CallbackId, V: Any>(
         private val ctor: (Int) -> K

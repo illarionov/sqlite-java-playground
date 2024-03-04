@@ -102,7 +102,7 @@ class GraalNativeBindings(
                 vfsName = null
             )
 
-            sqlite3Api.sqlite3CreateCollation(db, "localized", SQLITE_UTF8, localizedComparator)
+            sqlite3Api.sqlite3CreateCollation(db, "localized", localizedComparator)
 
             // Check that the database is really read/write when that is what we asked for.
             if (openFlags.contains(SQLITE_OPEN_READWRITE)
@@ -369,7 +369,7 @@ class GraalNativeBindings(
         index: Int,
         value: ByteArray
     ) {
-        val err = sqlite3Api.sqlite3BindBlobTTransient(statementPtr.ptr, index, value)
+        val err = sqlite3Api.sqlite3BindBlobTransient(statementPtr.ptr, index, value)
         if (err != SQLITE_OK) {
             throwAndroidSqliteException(connectionPtr.ptr)
         }

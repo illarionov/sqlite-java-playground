@@ -7,7 +7,6 @@ enum class Sqlite3TextEncoding(
    SQLITE_UTF16LE(2),
    SQLITE_UTF16BE(3),
    SQLITE_UTF16(4),
-   SQLITE_ANY(5), // Deprecated
    SQLITE_UTF16_ALIGNED(8)    /* sqlite3_create_collation only */
 
    ;

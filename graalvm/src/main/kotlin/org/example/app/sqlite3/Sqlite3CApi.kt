@@ -38,6 +38,7 @@ import ru.pixnews.wasm.host.filesystem.FileSystem
 import ru.pixnews.wasm.host.isSqlite3Null
 import ru.pixnews.wasm.host.memory.write
 import ru.pixnews.wasm.host.plus
+import ru.pixnews.wasm.host.sqlite3.Sqlite3ComparatorCallback
 import ru.pixnews.wasm.host.sqlite3.Sqlite3ComparatorCallbackRaw
 import ru.pixnews.wasm.host.sqlite3.Sqlite3ExecCallback
 import ru.pixnews.wasm.host.sqlite3.Sqlite3ProgressCallback
@@ -104,7 +105,6 @@ class Sqlite3CApi internal constructor(
             val resultPtr = sqliteBindings.sqlite3_wasm_enum_json.execute()
             return memory.memory.readNullTerminatedString(resultPtr)
         }
-
 
     val sqlite3VersionFull: Sqlite3Version
         get() = Sqlite3Version(
@@ -209,12 +209,31 @@ class Sqlite3CApi internal constructor(
     }
 
     fun sqlite3CreateCollation(
-        db: WasmPtr<Sqlite3Db>,
+        database: WasmPtr<Sqlite3Db>,
         name: String,
-        encoding: Sqlite3TextEncoding,
-        comparator: Sqlite3ComparatorCallbackRaw,
+        comparator: Sqlite3ComparatorCallback?,
     ) {
-        // TODO
+        val pCallbackId: Sqlite3CallbackStore.Sqlite3ComparatorId? = if (comparator != null) {
+            callbackStore.sqlite3Comparators.put(comparator)
+        } else {
+            null
+        }
+
+        val pName: WasmPtr<Byte> = memory.allocZeroTerminatedString(name)
+
+        val errNo = sqliteBindings.sqlite3_create_collation_v2.execute(
+            database.addr,
+            pName,
+            Sqlite3TextEncoding.SQLITE_UTF8,
+            pCallbackId,
+            if (pCallbackId != null) callbackFunctionIndexes.execCallbackFunction.funcId else 0,
+            if (pCallbackId != null) callbackFunctionIndexes.destroyComparatorFunction.funcId else 0,
+        )
+        memory.freeSilent(pName)
+        if (errNo.asInt() != Errno.SUCCESS.code && pCallbackId != null) {
+            callbackStore.sqlite3Comparators.remove(pCallbackId)
+        }
+        errNo.throwOnSqliteError("sqlite3CreateCollation() failed", database)
     }
 
     fun sqlite3Exec(
@@ -300,7 +319,7 @@ class Sqlite3CApi internal constructor(
             sqliteDb.addr,
         )
 
-        if (traceCallback == null) {
+        if (traceCallback == null || errNo.asInt() != Errno.SUCCESS.code) {
             callbackStore.sqlite3TraceCallbacks.remove(sqliteDb)
         }
 
@@ -481,7 +500,7 @@ class Sqlite3CApi internal constructor(
         return Sqlite3Errno.fromErrNoCode(errCode) ?: error("Unknown error code $errCode")
     }
 
-    fun sqlite3BindBlobTTransient(
+    fun sqlite3BindBlobTransient(
         sqliteDb: WasmPtr<Sqlite3Statement>,
         index: Int,
         value: ByteArray,
