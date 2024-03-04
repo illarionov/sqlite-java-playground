@@ -5,6 +5,7 @@ import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I32
 import ru.pixnews.wasm.host.emscrypten.AssertionFailed
 import ru.pixnews.wasm.host.memory.Memory
 import ru.pixnews.wasm.host.memory.readNullableZeroTerminatedString
+import ru.pixnews.wasm.host.pointer
 import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U8
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
 import ru.pixnews.wasm.sqlite3.chicory.ext.asWasmAddr

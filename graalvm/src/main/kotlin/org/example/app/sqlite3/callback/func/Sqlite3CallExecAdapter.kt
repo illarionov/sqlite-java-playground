@@ -1,10 +1,11 @@
-package org.example.app.sqlite3.callback
+package org.example.app.sqlite3.callback.func
 
 import com.oracle.truffle.api.CompilerDirectives
 import com.oracle.truffle.api.frame.VirtualFrame
 import java.util.logging.Logger
 import org.example.app.ext.asWasmPtr
 import org.example.app.host.BaseWasmNode
+import org.example.app.sqlite3.callback.Sqlite3CallbackStore
 import org.example.app.sqlite3.callback.Sqlite3CallbackStore.Sqlite3ExecCallbackId
 import org.graalvm.wasm.WasmContext
 import org.graalvm.wasm.WasmInstance

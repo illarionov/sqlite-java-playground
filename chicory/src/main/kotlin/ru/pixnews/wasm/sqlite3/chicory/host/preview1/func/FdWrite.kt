@@ -15,6 +15,7 @@ import ru.pixnews.wasm.host.memory.Memory
 import ru.pixnews.wasm.host.memory.DefaultWasiMemoryWriter
 import ru.pixnews.wasm.host.wasi.preview1.ext.FdWriteExt.readCiovecs
 import ru.pixnews.wasm.host.memory.WasiMemoryWriter
+import ru.pixnews.wasm.host.pointer
 import ru.pixnews.wasm.host.wasi.preview1.type.CioVec
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.wasi.preview1.type.Fd

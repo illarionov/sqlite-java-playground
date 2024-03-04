@@ -4,7 +4,7 @@ import java.util.Collections
 import ru.pixnews.wasm.host.WasmPtr
 import ru.pixnews.wasm.host.sqlite3.Sqlite3Db
 import ru.pixnews.wasm.host.sqlite3.Sqlite3ExecCallback
-import ru.pixnews.wasm.host.sqlite3.Sqlite3ProgressHandlerCallback
+import ru.pixnews.wasm.host.sqlite3.Sqlite3ProgressCallback
 import ru.pixnews.wasm.host.sqlite3.Sqlite3TraceCallback
 
 class Sqlite3CallbackStore {
@@ -12,7 +12,9 @@ class Sqlite3CallbackStore {
     val sqlite3TraceCallbacks: MutableMap<WasmPtr<Sqlite3Db>, Sqlite3TraceCallback> = Collections.synchronizedMap(
         mutableMapOf()
     )
-    val sqlite3ProgressHandlerCallbacks: IdMap<Sqlite3ProgressHandlerCallbackId, Sqlite3ProgressHandlerCallback> = IdMap(::Sqlite3ProgressHandlerCallbackId)
+    val sqlite3ProgressCallbacks: MutableMap<WasmPtr<Sqlite3Db>, Sqlite3ProgressCallback> = Collections.synchronizedMap(
+        mutableMapOf()
+    )
 
     interface CallbackId {
         val id: Int
@@ -20,9 +22,6 @@ class Sqlite3CallbackStore {
 
     @JvmInline
     value class Sqlite3ExecCallbackId(override val id: Int) : CallbackId
-
-    @JvmInline
-    value class Sqlite3ProgressHandlerCallbackId(override val id: Int) : CallbackId
 
     class IdMap<K: CallbackId, V: Any>(
         private val ctor: (Int) -> K

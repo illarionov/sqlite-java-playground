@@ -2,6 +2,7 @@ package ru.pixnews.wasm.sqlite3.chicory.host.preview1.func
 
 import com.dylibso.chicory.runtime.HostFunction
 import ru.pixnews.wasm.host.memory.Memory
+import ru.pixnews.wasm.host.pointer
 import ru.pixnews.wasm.host.wasi.preview1.ext.WasiEnvironmentFunc
 import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U8
 import ru.pixnews.wasm.host.wasi.preview1.type.pointer
@@ -31,7 +32,7 @@ fun environGet(
         U8.pointer, // *environ_buf
     ),
     moduleName = moduleName,
-) { instance, params ->
+) { _, params ->
     WasiEnvironmentFunc.environGet(
         envProvider = envProvider,
         memory = memory,

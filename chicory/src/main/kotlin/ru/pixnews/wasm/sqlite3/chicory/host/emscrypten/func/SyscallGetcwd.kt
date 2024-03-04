@@ -15,6 +15,7 @@ import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.EmscryptenHostFunction
 import ru.pixnews.wasm.sqlite3.chicory.host.emscrypten.emscriptenEnvHostFunction
 import ru.pixnews.wasm.host.filesystem.FileSystem
 import ru.pixnews.wasm.host.memory.encodeToNullTerminatedByteArray
+import ru.pixnews.wasm.host.pointer
 
 fun syscallGetcwd(
     filesystem: FileSystem,

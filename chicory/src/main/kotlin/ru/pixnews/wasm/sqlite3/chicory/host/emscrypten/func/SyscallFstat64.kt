@@ -17,6 +17,7 @@ import ru.pixnews.wasm.host.filesystem.FileSystem
 import ru.pixnews.wasm.host.include.sys.pack
 import ru.pixnews.wasm.host.filesystem.SysException
 import ru.pixnews.wasm.host.include.sys.StructStat
+import ru.pixnews.wasm.host.pointer
 
 fun syscallFstat64(
     filesystem: FileSystem,

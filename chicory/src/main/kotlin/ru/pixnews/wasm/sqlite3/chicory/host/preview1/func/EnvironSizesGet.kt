@@ -32,7 +32,7 @@ fun environSizesGet(
         Size.pointer, // *environ_buf_size
     ),
     moduleName = moduleName,
-) { instance, params ->
+) { _, params ->
     WasiEnvironmentFunc.environSizesGet(
         envProvider,
         memory = memory,

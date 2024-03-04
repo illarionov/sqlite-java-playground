@@ -6,18 +6,27 @@ import org.example.app.ext.withWasmContext
 import org.example.app.host.Host
 import org.example.app.host.HostFunction
 import org.example.app.host.fn
+import org.example.app.sqlite3.callback.func.SQLITE3_EXEC_CB_FUNCTION_NAME
+import org.example.app.sqlite3.callback.func.SQLITE3_PROGRESS_CB_FUNCTION_NAME
+import org.example.app.sqlite3.callback.func.SQLITE3_TRACE_CB_FUNCTION_NAME
+import org.example.app.sqlite3.callback.func.Sqlite3CallExecAdapter
+import org.example.app.sqlite3.callback.func.Sqlite3ProgressAdapter
+import org.example.app.sqlite3.callback.func.Sqlite3TraceAdapter
 import org.graalvm.polyglot.Context
 import org.graalvm.polyglot.Value
 import org.graalvm.wasm.WasmFunctionInstance
 import org.graalvm.wasm.WasmInstance
 import org.graalvm.wasm.WasmLanguage
 import org.graalvm.wasm.WasmModule
+import ru.pixnews.wasm.host.POINTER
 import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I32
+import ru.pixnews.wasm.host.WasmValueType.WebAssemblyTypes.I64
 import ru.pixnews.wasm.host.functiontable.IndirectFunctionTableIndex
+import ru.pixnews.wasm.host.wasi.preview1.type.WasiValueTypes.U32
 
 const val SQLITE3_CALLBACK_MANAGER_MODULE_NAME = "sqlite3-callback-manager"
 
-class SqliteCallbacksModuleBuilder(
+internal class SqliteCallbacksModuleBuilder(
     private val graalContext: Context,
     private val host: Host,
     private val callbackStore: Sqlite3CallbackStore
@@ -29,6 +38,32 @@ class SqliteCallbacksModuleBuilder(
             retType = I32,
             nodeFactory = { language: WasmLanguage, instance: WasmInstance, _: Host, functionName: String ->
                 Sqlite3CallExecAdapter(
+                    language = language,
+                    instance = instance,
+                    callbackStore = callbackStore,
+                    functionName = functionName
+                )
+            }
+        )
+        fn(
+            name = SQLITE3_TRACE_CB_FUNCTION_NAME,
+            paramTypes = listOf(U32, POINTER, POINTER, I64),
+            retType = I32,
+            nodeFactory = { language: WasmLanguage, instance: WasmInstance, _: Host, functionName: String ->
+                Sqlite3TraceAdapter(
+                    language = language,
+                    instance = instance,
+                    callbackStore = callbackStore,
+                    functionName = functionName
+                )
+            }
+        )
+        fn(
+            name = SQLITE3_PROGRESS_CB_FUNCTION_NAME,
+            paramTypes = listOf(POINTER),
+            retType = I32,
+            nodeFactory = { language: WasmLanguage, instance: WasmInstance, _: Host, functionName: String ->
+                Sqlite3ProgressAdapter(
                     language = language,
                     instance = instance,
                     callbackStore = callbackStore,

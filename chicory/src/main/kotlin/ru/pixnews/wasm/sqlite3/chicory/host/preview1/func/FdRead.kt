@@ -12,6 +12,7 @@ import ru.pixnews.wasm.host.filesystem.ReadWriteStrategy.CHANGE_POSITION
 import ru.pixnews.wasm.host.filesystem.ReadWriteStrategy.DO_NOT_CHANGE_POSITION
 import ru.pixnews.wasm.host.filesystem.SysException
 import ru.pixnews.wasm.host.memory.Memory
+import ru.pixnews.wasm.host.pointer
 import ru.pixnews.wasm.host.wasi.preview1.ext.FdReadExt.readIovecs
 import ru.pixnews.wasm.host.wasi.preview1.type.Errno
 import ru.pixnews.wasm.host.wasi.preview1.type.Fd

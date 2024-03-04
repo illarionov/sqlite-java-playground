@@ -40,7 +40,7 @@ import ru.pixnews.wasm.host.memory.write
 import ru.pixnews.wasm.host.plus
 import ru.pixnews.wasm.host.sqlite3.Sqlite3ComparatorCallbackRaw
 import ru.pixnews.wasm.host.sqlite3.Sqlite3ExecCallback
-import ru.pixnews.wasm.host.sqlite3.Sqlite3ProgressHandlerCallback
+import ru.pixnews.wasm.host.sqlite3.Sqlite3ProgressCallback
 import ru.pixnews.wasm.host.sqlite3.Sqlite3Statement
 import ru.pixnews.wasm.host.sqlite3.Sqlite3TraceCallback
 
@@ -310,9 +310,31 @@ class Sqlite3CApi internal constructor(
     fun sqlite3ProgressHandler(
         sqliteDb: WasmPtr<Sqlite3Db>,
         instructions: Int,
-        callback: Sqlite3ProgressHandlerCallback?,
+        progressCallback: Sqlite3ProgressCallback?,
     ) {
-        TODO()
+        val activeCallback: Sqlite3ProgressCallback? = if (instructions >= 1) {
+            progressCallback
+        } else {
+            null
+        }
+
+        // TODO: remove callback on close
+        if (activeCallback != null) {
+            callbackStore.sqlite3ProgressCallbacks[sqliteDb] = activeCallback
+        }
+
+        val errNo = sqliteBindings.sqlite3_progress_handler.execute(
+            sqliteDb.addr,
+            instructions,
+            if (activeCallback != null) callbackFunctionIndexes.progressFunction.funcId else 0,
+            sqliteDb.addr
+        )
+
+        if (activeCallback == null) {
+            callbackStore.sqlite3ProgressCallbacks.remove(sqliteDb)
+        }
+
+        errNo.throwOnSqliteError("sqlite3ProgressHandler() failed", sqliteDb)
     }
 
     fun sqlite3DbStatus(

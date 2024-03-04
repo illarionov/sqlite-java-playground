@@ -11,7 +11,7 @@ import ru.pixnews.wasm.host.sqlite3.Sqlite3ExecCallback
 
 class SqliteBasicDemo0(
     private val api: Sqlite3CApi,
-    private val log: Logger = Logger.getLogger(SqliteBasicDemo1::class.simpleName)
+    private val log: Logger = Logger.getLogger(SqliteBasicDemo0::class.simpleName)
 ) {
 
     fun run() {

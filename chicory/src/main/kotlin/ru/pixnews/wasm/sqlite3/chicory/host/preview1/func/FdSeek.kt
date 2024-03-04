@@ -21,6 +21,7 @@ import ru.pixnews.wasm.sqlite3.chicory.host.preview1.WasiHostFunction
 import ru.pixnews.wasm.sqlite3.chicory.host.preview1.wasiHostFunction
 import ru.pixnews.wasm.host.filesystem.SysException
 import ru.pixnews.wasm.host.memory.Memory
+import ru.pixnews.wasm.host.pointer
 
 fun fdSeek(
     memory: Memory,

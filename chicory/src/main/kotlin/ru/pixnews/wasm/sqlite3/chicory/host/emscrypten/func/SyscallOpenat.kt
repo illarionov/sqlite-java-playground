@@ -22,6 +22,7 @@ import ru.pixnews.wasm.host.include.oMaskToString
 import ru.pixnews.wasm.host.include.sMaskToString
 import ru.pixnews.wasm.host.memory.Memory
 import ru.pixnews.wasm.host.memory.readZeroTerminatedString
+import ru.pixnews.wasm.host.pointer
 
 fun syscallOpenat(
     memory: Memory,
@@ -53,7 +54,6 @@ private class Openat(
         }
 
         val fdOrErrno = openAt(
-            instance = instance,
             dirfd = args[0].asInt(),
             pathnamePtr = args[1].asWasmAddr(),
             flags = args[2].asInt().toUInt(),
@@ -63,7 +63,6 @@ private class Openat(
     }
 
     private fun openAt(
-        instance: Instance,
         dirfd: Int,
         pathnamePtr: WasmPtr<Byte>,
         flags: UInt,

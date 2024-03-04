@@ -8,6 +8,8 @@ value class Sqlite3TraceEventCode(
 ) : Sqlite3BitMaskExt<Sqlite3TraceEventCode> {
     override val newInstance: (Int) -> Sqlite3TraceEventCode get() = ::Sqlite3TraceEventCode
 
+    override fun toString(): String = "0x" + mask.toString(16)
+
     companion object {
 
         /**
