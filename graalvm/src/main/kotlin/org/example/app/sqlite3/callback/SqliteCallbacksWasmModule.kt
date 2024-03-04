@@ -18,7 +18,7 @@ import org.example.app.sqlite3.callback.func.Sqlite3ProgressAdapter
 import org.example.app.sqlite3.callback.func.Sqlite3TraceAdapter
 import org.graalvm.polyglot.Context
 import org.graalvm.polyglot.Value
-import org.graalvm.wasm.WasmFunctionInstance
+import org.graalvm.wasm.WasmFunction
 import org.graalvm.wasm.WasmInstance
 import org.graalvm.wasm.WasmLanguage
 import org.graalvm.wasm.WasmModule
@@ -103,34 +103,31 @@ internal class SqliteCallbacksModuleBuilder(
         )
     }
 
-    fun setupModule() {
+    fun setupModule(): WasmInstance {
         val module = WasmModule.create(
             SQLITE3_CALLBACK_MANAGER_MODULE_NAME,
             null
         )
         graalContext.withWasmContext { wasmContext ->
-            setupWasmModuleFunctions(wasmContext, host, module, sqliteCallbackHostFunctions)
+            return setupWasmModuleFunctions(wasmContext, host, module, sqliteCallbackHostFunctions)
         }
     }
 
-    fun setupIndirectFunctionTable(): Sqlite3CallbackFunctionIndexes {
-        val callbackManagerModule: Value = graalContext
-            .getBindings("wasm")
-            .getMember(SQLITE3_CALLBACK_MANAGER_MODULE_NAME)
+    fun setupIndirectFunctionTable(): Sqlite3CallbackFunctionIndexes = graalContext.withWasmContext { wasmContext ->
+        // Ensure module linked
+        val moduleInstance: WasmInstance = wasmContext.moduleInstances().getValue(SQLITE3_CALLBACK_MANAGER_MODULE_NAME)
+        wasmContext.linker().tryLink(moduleInstance)
 
-        graalContext.withWasmContext { wasmContext ->
-            val functionTable = wasmContext.functionTable
-            val firstFuncId = functionTable.grow(sqliteCallbackHostFunctions.size, null)
-            val funcIdx: Map<String, IndirectFunctionTableIndex> = sqliteCallbackHostFunctions
-                .mapIndexed { index, hostFunction ->
-                    val funcId = firstFuncId + index
-                    val funcName = hostFunction.name
-                    functionTable[funcId] = callbackManagerModule
-                        .getMember(funcName)
-                        .`as`(WasmFunctionInstance::class.java)
-                    funcName to IndirectFunctionTableIndex(funcId)
-                }.toMap()
-            return Sqlite3CallbackFunctionIndexes(funcIdx)
-        }
+        val functionTable = wasmContext.functionTable
+        val firstFuncId = functionTable.grow(sqliteCallbackHostFunctions.size, null)
+        val funcIdx: Map<String, IndirectFunctionTableIndex> = sqliteCallbackHostFunctions
+            .mapIndexed { index, hostFunction ->
+                val indirectFuncId = firstFuncId + index
+                val funcName = hostFunction.name
+                val funcInstance = moduleInstance.readMember(funcName)
+                functionTable[indirectFuncId] = funcInstance
+                funcName to IndirectFunctionTableIndex(indirectFuncId)
+            }.toMap()
+        return Sqlite3CallbackFunctionIndexes(funcIdx)
     }
 }

@@ -39,7 +39,6 @@ import ru.pixnews.wasm.host.isSqlite3Null
 import ru.pixnews.wasm.host.memory.write
 import ru.pixnews.wasm.host.plus
 import ru.pixnews.wasm.host.sqlite3.Sqlite3ComparatorCallback
-import ru.pixnews.wasm.host.sqlite3.Sqlite3ComparatorCallbackRaw
 import ru.pixnews.wasm.host.sqlite3.Sqlite3ExecCallback
 import ru.pixnews.wasm.host.sqlite3.Sqlite3ProgressCallback
 import ru.pixnews.wasm.host.sqlite3.Sqlite3Statement
