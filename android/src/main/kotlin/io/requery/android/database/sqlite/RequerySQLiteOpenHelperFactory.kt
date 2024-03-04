@@ -98,7 +98,7 @@ public class RequerySQLiteOpenHelperFactory(
         override fun onCorruption(dbObj: SQLiteDatabase<*, *, *>) = callback.onCorruption(dbObj)
     }
 
-    interface ConfigurationOptions {
-        fun apply(configuration: SQLiteDatabaseConfiguration?): SQLiteDatabaseConfiguration
+    fun interface ConfigurationOptions {
+        fun apply(configuration: SQLiteDatabaseConfiguration): SQLiteDatabaseConfiguration
     }
 }
