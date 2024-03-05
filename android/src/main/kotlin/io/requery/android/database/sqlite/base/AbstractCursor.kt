@@ -35,8 +35,6 @@ abstract class AbstractCursor : Cursor {
     private val dataSetObservable = DataSetObservable()
     private val contentObservable = ContentObservable()
 
-    private var extras: Bundle = Bundle.EMPTY
-
     abstract override fun getCount(): Int
 
     abstract override fun getColumnNames(): Array<String>
@@ -294,12 +292,16 @@ abstract class AbstractCursor : Cursor {
     override fun getWantsAllOnMoveCalls(): Boolean = false
 
     override fun setExtras(extras: Bundle?) {
-        this.extras = if ((extras == null)) Bundle.EMPTY else extras
+        throw UnsupportedOperationException("Extras on cursor not supported")
     }
 
-    override fun getExtras(): Bundle = extras
+    override fun getExtras(): Bundle {
+        throw UnsupportedOperationException("Extras on cursor not supported")
+    }
 
-    override fun respond(extras: Bundle): Bundle = Bundle.EMPTY
+    override fun respond(extras: Bundle): Bundle {
+        throw UnsupportedOperationException("Extras on cursor not supported")
+    }
 
     /**
      * This function throws CursorIndexOutOfBoundsException if the cursor position is out of bounds.

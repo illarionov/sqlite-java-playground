@@ -495,7 +495,7 @@ class Sqlite3CApi internal constructor(
     }
 
     fun sqlite3ClearBindings(statement: WasmPtr<Sqlite3Statement>): Sqlite3Errno {
-        val errCode = sqliteBindings.sqlite3_clear_bindings.execute(statement).asInt()
+        val errCode = sqliteBindings.sqlite3_clear_bindings.execute(statement.addr).asInt()
         return Sqlite3Errno.fromErrNoCode(errCode) ?: error("Unknown error code $errCode")
     }
 

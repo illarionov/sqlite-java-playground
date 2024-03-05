@@ -335,13 +335,12 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
      * contention over available database connections.
      *
      * @param connection The connection owned by the session.
-     * @param connectionFlags The connection request flags.
      * @return True if the session should yield its connection.
      *
      * @throws IllegalStateException if the connection was not acquired
      * from this pool or if it has already been released.
      */
-    fun shouldYieldConnection(connection: SQLiteConnection<*, *, *>, connectionFlags: Int): Boolean =
+    fun shouldYieldConnection(connection: SQLiteConnection<*, *, *>): Boolean =
         synchronized(lock) {
             if (!acquiredConnections.containsKey(connection)) {
                 throw IllegalStateException(
@@ -353,7 +352,6 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
             return if (isOpen) {
                 isSessionBlockingImportantConnectionWaitersLocked(
                     holdingPrimaryConnection = connection.isPrimaryConnection,
-                    connectionFlags = connectionFlags
                 )
             } else {
                 false
@@ -542,12 +540,10 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
             }
 
             // No connections available.  Enqueue a waiter in priority order.
-            val priority = getPriority(connectionFlags)
             val startTime = SystemClock.uptimeMillis()
             waiter = obtainConnectionWaiterLocked(
                 thread = Thread.currentThread(),
                 startTime = startTime,
-                priority = priority,
                 wantPrimaryConnection = wantPrimaryConnection,
                 sql = sql,
                 connectionFlags = connectionFlags
@@ -555,10 +551,6 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
             var predecessor: ConnectionWaiter<CP, SP, WP>? = null
             var successor = connectionWaiterQueue
             while (successor != null) {
-                if (priority > successor.priority) {
-                    waiter.next = successor
-                    break
-                }
                 predecessor = successor
                 successor = successor.next
             }
@@ -851,27 +843,24 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
 
     private fun isSessionBlockingImportantConnectionWaitersLocked(
         holdingPrimaryConnection: Boolean,
-        connectionFlags: Int
     ): Boolean {
-        var waiter = connectionWaiterQueue
-        if (waiter != null) {
-            val priority = getPriority(connectionFlags)
-            do {
-                // Only worry about blocked connections that have same or lower priority.
-                if (priority > waiter!!.priority) {
-                    break
-                }
+        var waiter = connectionWaiterQueue ?: return false
+        val priority = 0
+        do {
+            // Only worry about blocked connections that have same or lower priority.
+            if (priority > waiter.priority) {
+                break
+            }
 
-                // If we are holding the primary connection then we are blocking the waiter.
-                // Likewise, if we are holding a non-primary connection and the waiter
-                // would accept a non-primary connection, then we are blocking the waier.
-                if (holdingPrimaryConnection || !waiter.wantPrimaryConnection) {
-                    return true
-                }
+            // If we are holding the primary connection then we are blocking the waiter.
+            // Likewise, if we are holding a non-primary connection and the waiter
+            // would accept a non-primary connection, then we are blocking the waier.
+            if (holdingPrimaryConnection || !waiter.wantPrimaryConnection) {
+                return true
+            }
 
-                waiter = waiter.next
-            } while (waiter != null)
-        }
+            waiter = waiter.next ?: break
+        } while (true)
         return false
     }
 
@@ -894,7 +883,6 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
     private fun obtainConnectionWaiterLocked(
         thread: Thread,
         startTime: Long,
-        priority: Int,
         wantPrimaryConnection: Boolean,
         sql: String?,
         connectionFlags: Int
@@ -908,7 +896,6 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
         }
         waiter.thread = thread
         waiter.startTime = startTime
-        waiter.priority = priority
         waiter.wantPrimaryConnection = wantPrimaryConnection
         waiter.sql = sql
         waiter.connectionFlags = connectionFlags
@@ -931,7 +918,7 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
         var next: ConnectionWaiter<CP, SP, WP>? = null
         var thread: Thread? = null
         var startTime: Long = 0
-        var priority: Int = 0
+        val priority: Int = 0
         var wantPrimaryConnection: Boolean = false
         var sql: String? = null
         var connectionFlags: Int = 0
@@ -972,17 +959,6 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
         const val CONNECTION_FLAG_PRIMARY_CONNECTION_AFFINITY: Int = 1 shl 1
 
         /**
-         * Connection flag: Connection is being used interactively.
-         *
-         *
-         * This flag indicates that the connection is needed by the UI thread.
-         * The connection pool can use this flag to elevate the priority
-         * of the database connection request.
-         *
-         */
-        const val CONNECTION_FLAG_INTERACTIVE: Int = 1 shl 2
-
-        /**
          * Opens a connection pool for the specified database.
          *
          * @param configuration The database configuration.
@@ -998,8 +974,5 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
         ): SQLiteConnectionPool<CP, SP, WP> = SQLiteConnectionPool(configuration, debugConfig, bindings, windowBindings)
             .apply(SQLiteConnectionPool<*, *, *>::open)
 
-        private fun getPriority(connectionFlags: Int): Int {
-            return if ((connectionFlags and CONNECTION_FLAG_INTERACTIVE) != 0) 1 else 0
-        }
     }
 }

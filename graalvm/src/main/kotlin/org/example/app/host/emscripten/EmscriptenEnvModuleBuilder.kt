@@ -12,6 +12,7 @@ import org.example.app.host.emscripten.func.EmscriptenGetNowIsMonotonic
 import org.example.app.host.emscripten.func.EmscriptenResizeHeap
 import org.example.app.host.emscripten.func.SyscallFchown32
 import org.example.app.host.emscripten.func.SyscallFstat64
+import org.example.app.host.emscripten.func.SyscallFtruncate64
 import org.example.app.host.emscripten.func.SyscallGetcwd
 import org.example.app.host.emscripten.func.SyscallOpenat
 import org.example.app.host.emscripten.func.SyscallUnlinkat
@@ -85,7 +86,7 @@ class EmscriptenEnvModuleBuilder(
         )
         fn("__syscall_fcntl64", List(3) { I32 })
         fn("__syscall_fstat64", listOf(I32, I32), I32, ::SyscallFstat64)
-        fn("__syscall_ftruncate64", listOf(I32, I64))
+        fn("__syscall_ftruncate64", listOf(I32, I64), I32, ::SyscallFtruncate64)
         fn(
             name = "__syscall_getcwd",
             paramTypes = listOf(I32, I32),

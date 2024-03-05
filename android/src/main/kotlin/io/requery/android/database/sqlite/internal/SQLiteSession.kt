@@ -439,7 +439,7 @@ internal class SQLiteSession<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr
     ): Boolean {
         cancellationSignal?.throwIfCanceled()
 
-        if (!connectionPool.shouldYieldConnection(connection!!, connectionFlags)) {
+        if (!connectionPool.shouldYieldConnection(connection!!)) {
             return false
         }
 

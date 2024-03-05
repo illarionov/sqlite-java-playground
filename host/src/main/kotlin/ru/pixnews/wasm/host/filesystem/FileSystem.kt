@@ -374,6 +374,23 @@ class FileSystem(
         }
     }
 
+    fun ftruncate(fd: Fd, length: ULong) {
+        logger.finest { "ftruncate($fd, $length)" }
+        val channel = getStreamByFd(fd)
+        try {
+            channel.channel.truncate(length.toLong())
+            // TODO: extend file size to length?
+        } catch (nve: NonReadableChannelException) {
+            throw SysException(Errno.INVAL, "Read-only channel", nve)
+        } catch (cce: ClosedChannelException) {
+            throw SysException(Errno.BADF, "Channel closed", cce)
+        } catch (iae: IllegalArgumentException) {
+            throw SysException(Errno.INVAL, "Negative length", iae)
+        } catch (ioe: IOException) {
+            throw SysException(Errno.IO, ioe.message, ioe)
+        }
+    }
+
     private companion object {
         private const val ATTR_UNI_CTIME = "ctime"
         private const val ATTR_UNI_DEV = "dev"

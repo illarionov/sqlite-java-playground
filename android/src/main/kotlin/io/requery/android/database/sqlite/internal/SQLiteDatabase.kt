@@ -25,6 +25,8 @@ import io.requery.android.database.sqlite.base.DatabaseErrorHandler
 import io.requery.android.database.sqlite.base.DefaultDatabaseErrorHandler
 import io.requery.android.database.sqlite.clear
 import io.requery.android.database.sqlite.contains
+import io.requery.android.database.sqlite.internal.SQLiteConnectionPool.Companion.CONNECTION_FLAG_PRIMARY_CONNECTION_AFFINITY
+import io.requery.android.database.sqlite.internal.SQLiteConnectionPool.Companion.CONNECTION_FLAG_READ_ONLY
 import io.requery.android.database.sqlite.internal.SQLiteCursor
 import io.requery.android.database.sqlite.internal.SQLiteProgram.Companion.bindAllArgsAsStrings
 import io.requery.android.database.sqlite.internal.interop.SqlOpenHelperNativeBindings
@@ -176,11 +178,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
      * @return The connection flags.
      */
     fun getThreadDefaultConnectionFlags(readOnly: Boolean): Int {
-        var flags =
-            if (readOnly) SQLiteConnectionPool.CONNECTION_FLAG_READ_ONLY else SQLiteConnectionPool.CONNECTION_FLAG_PRIMARY_CONNECTION_AFFINITY
-        if (isMainThread) {
-            flags = flags or SQLiteConnectionPool.CONNECTION_FLAG_INTERACTIVE
-        }
+        val flags = if (readOnly) CONNECTION_FLAG_READ_ONLY else CONNECTION_FLAG_PRIMARY_CONNECTION_AFFINITY
         return flags
     }
 
@@ -1523,9 +1521,6 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
         fun releaseMemory(): Int {
             return SQLiteGlobal.releaseMemory()
         }
-
-        private val isMainThread: Boolean
-            get() = Looper.getMainLooper().isCurrentThread
 
         /**
          * Open the database according to the flags [RequeryOpenFlags]
