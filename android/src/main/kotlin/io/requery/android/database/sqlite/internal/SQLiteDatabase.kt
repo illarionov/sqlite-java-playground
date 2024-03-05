@@ -7,7 +7,6 @@ import android.database.sqlite.SQLiteDatabaseCorruptException
 import android.database.sqlite.SQLiteException
 import android.database.sqlite.SQLiteQueryBuilder
 import android.database.sqlite.SQLiteTransactionListener
-import android.os.Looper
 import android.util.Pair
 import androidx.core.os.CancellationSignal
 import androidx.sqlite.db.SupportSQLiteDatabase
@@ -436,7 +435,7 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
     private fun openInner() = synchronized(lock) {
         check(connectionPoolLocked == null)
         connectionPoolLocked = SQLiteConnectionPool.
-        open(configurationLocked, debugConfig, bindings, windowBindings)
+        open(configurationLocked, debugConfig, bindings, windowBindings, logger)
         closeGuardLocked.open("close")
     }
 

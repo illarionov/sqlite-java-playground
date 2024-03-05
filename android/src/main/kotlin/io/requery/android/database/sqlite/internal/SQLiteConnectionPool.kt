@@ -1,9 +1,8 @@
 package io.requery.android.database.sqlite.internal
 
-import android.os.SystemClock
-import android.util.Log
 import androidx.core.os.CancellationSignal
 import androidx.core.os.OperationCanceledException
+import co.touchlab.kermit.Logger
 import io.requery.android.database.sqlite.RequeryOpenFlags.Companion.ENABLE_WRITE_AHEAD_LOGGING
 import io.requery.android.database.sqlite.SQLiteDatabaseConfiguration
 import io.requery.android.database.sqlite.contains
@@ -57,7 +56,9 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
     private val debugConfig: SQLiteDebug,
     private val bindings: SqlOpenHelperNativeBindings<CP, SP, WP>,
     private val windowBindings: SqlOpenHelperWindowBindings<WP>,
+    logger: Logger = Logger,
 ) : Closeable {
+    private val logger: Logger = logger.withTag(TAG)
     private val closeGuard: CloseGuard = CloseGuard.get()
 
     private val lock = Any()
@@ -149,12 +150,11 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
 
                 val pendingCount = acquiredConnections.size
                 if (pendingCount != 0) {
-                    Log.i(
-                        TAG,
+                    logger.i {
                         "The connection pool for ${configuration.label} has been closed but there are still " +
                                 "$pendingCount connections in use.  They will be closed as they are released back to " +
                                 "the pool."
-                    )
+                    }
                 }
                 wakeConnectionWaitersLocked()
             }
@@ -315,11 +315,7 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
             try {
                 connection.reconfigure(configuration) // might throw
             } catch (ex: RuntimeException) {
-                Log.e(
-                    TAG,
-                    "Failed to reconfigure released connection, closing it: $connection",
-                    ex
-                )
+                logger.e(ex) { "Failed to reconfigure released connection, closing it: $connection" }
                 discard = true
             }
         }
@@ -411,12 +407,12 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
         // several seconds while waiting for a leaked connection to be detected and recreated,
         // then perhaps its authors will have added incentive to fix the problem!
 
-        Log.w(
-            TAG, "A SQLiteConnection object for database '"
-                    + configuration.label + "' was leaked!  Please fix your application "
-                    + "to end transactions in progress properly and to close the database "
-                    + "when it is no longer needed."
-        )
+        logger.w {
+            "A SQLiteConnection object for database '" +
+                    configuration.label + "' was leaked!  Please fix your application " +
+                    "to end transactions in progress properly and to close the database " +
+                    "when it is no longer needed."
+        }
 
         connectionLeaked.set(true)
     }
@@ -452,10 +448,9 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
         try {
             connection.close() // might throw
         } catch (ex: RuntimeException) {
-            Log.e(
-                TAG, "Failed to close connection, its fate is now in the hands "
-                        + "of the merciful GC: " + connection, ex
-            )
+            logger.e(ex) {
+                "Failed to close connection, its fate is now in the hands of the merciful GC: $connection"
+            }
         }
     }
 
@@ -470,11 +465,7 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
             try {
                 connection.reconfigure(configuration) // might throw
             } catch (ex: RuntimeException) {
-                Log.e(
-                    TAG,
-                    "Failed to reconfigure available primary connection, closing it: $connection",
-                    ex
-                )
+                logger.e(ex) { "Failed to reconfigure available primary connection, closing it: $connection" }
                 closeConnectionAndLogExceptionsLocked(connection)
                 availablePrimaryConnection = null
             }
@@ -487,11 +478,7 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
             try {
                 connection.reconfigure(configuration) // might throw
             } catch (ex: RuntimeException) {
-                Log.e(
-                    TAG,
-                    "Failed to reconfigure available non-primary connection, closing it: $connection",
-                    ex
-                )
+                logger.e(ex) { "Failed to reconfigure available non-primary connection, closing it: $connection" }
                 closeConnectionAndLogExceptionsLocked(connection)
                 availableNonPrimaryConnections.removeAt(i--)
                 count -= 1
@@ -540,7 +527,7 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
             }
 
             // No connections available.  Enqueue a waiter in priority order.
-            val startTime = SystemClock.uptimeMillis()
+            val startTime = System.nanoTime() / 1_000_000
             waiter = obtainConnectionWaiterLocked(
                 thread = Thread.currentThread(),
                 startTime = startTime,
@@ -602,7 +589,7 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
                         throw (ex)!! // rethrow!
                     }
 
-                    val now = SystemClock.uptimeMillis()
+                    val now = System.nanoTime() / 1_000_000
                     if (now < nextBusyTimeoutTime) {
                         busyTimeoutMillis = now - nextBusyTimeoutTime
                     } else {
@@ -687,7 +674,7 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
             }
         }
 
-        Log.w(TAG, msg.toString())
+        logger.w(message = msg::toString)
     }
 
     // Can't throw.
@@ -829,13 +816,12 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
         try {
             val readOnly = (connectionFlags and CONNECTION_FLAG_READ_ONLY) != 0
             connection.setOnlyAllowReadOnlyOperations(readOnly)
-
             acquiredConnections[connection] = AcquiredConnectionStatus.NORMAL
         } catch (ex: RuntimeException) {
-            Log.e(
-                TAG,
-                "Failed to prepare acquired connection for session, closing it: $connection, connectionFlags=$connectionFlags"
-            )
+            logger.e(ex) {
+                "Failed to prepare acquired connection for session, closing it: $connection, " +
+                        "connectionFlags=$connectionFlags"
+            }
             closeConnectionAndLogExceptionsLocked(connection)
             throw ex // rethrow!
         }
@@ -971,7 +957,8 @@ internal class SQLiteConnectionPool<CP : Sqlite3ConnectionPtr, SP : Sqlite3State
             debugConfig: SQLiteDebug,
             bindings: SqlOpenHelperNativeBindings<CP, SP, WP>,
             windowBindings: SqlOpenHelperWindowBindings<WP>,
-        ): SQLiteConnectionPool<CP, SP, WP> = SQLiteConnectionPool(configuration, debugConfig, bindings, windowBindings)
+            logger: Logger = Logger,
+        ): SQLiteConnectionPool<CP, SP, WP> = SQLiteConnectionPool(configuration, debugConfig, bindings, windowBindings, logger)
             .apply(SQLiteConnectionPool<*, *, *>::open)
 
     }

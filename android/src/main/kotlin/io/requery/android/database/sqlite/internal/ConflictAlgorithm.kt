@@ -1,7 +1,5 @@
 package io.requery.android.database.sqlite.internal
 
-import androidx.annotation.IntDef
-
 internal enum class ConflictAlgorithm(
     val id: Int,
     val sql: String

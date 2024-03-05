@@ -1,11 +1,14 @@
 package io.requery.android.database.sqlite
 
 import android.content.ContextWrapper
+import androidx.room.Room
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import co.touchlab.kermit.Logger
 import io.requery.android.database.sqlite.internal.DatabasePathResolver
 import io.requery.android.database.sqlite.internal.SQLiteDebug
+import io.requery.android.database.sqlite.room.AppDatabase1
+import io.requery.android.database.sqlite.room.User
 import java.io.File
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -35,19 +38,46 @@ class RequerySQLiteOpenHelperFactoryTest {
                 }
             }
         }
-        println()
+    }
+
+    @Test
+    fun `Test Room`() {
+        val helperFactory = createHelperFactory()
+        val db = Room.databaseBuilder(mockContext, AppDatabase1::class.java, "database-name")
+            .openHelperFactory(helperFactory)
+            .allowMainThreadQueries()
+            .build()
+        val userDao = db.userDao()
+
+        val user101 = User(101, "User 101 First Name", "User 101 Last Name")
+        userDao.insertAll(
+            User(100, "User 100 First Name", "User 100 Last Name"),
+            user101,
+            User(102, "User 102 First Name", "User 102 Last Name"),
+        )
+        userDao.delete(user101)
+
+        val usersByIds = userDao.loadAllByIds(intArrayOf(101, 102))
+        val userByName = userDao.findByName("User 102 First Name", "User 102 Last Name")
+        val users: List<User> = userDao.getAll()
+
+        logger.i { "users by ids: $usersByIds; user by name: $userByName; users: $users;" }
     }
 
     private fun createHelper(
         dbName: String = "test.db",
         openHelperCallback: SupportSQLiteOpenHelper.Callback = LoggingOpenHelperCallback(logger)
     ): SupportSQLiteOpenHelper {
+        val factory = createHelperFactory()
+        val config = SupportSQLiteOpenHelper.Configuration(mockContext, dbName, openHelperCallback)
+        return factory.create(config)
+    }
+
+    private fun createHelperFactory(): SupportSQLiteOpenHelper.Factory {
         val pathResolver = DatabasePathResolver { name -> File(tempDir, name) }
         val debugConfig = SQLiteDebug(true, true, true, true)
 
-        val factory = RequerySQLiteOpenHelperFactory(pathResolver, debugConfig)
-        val config = SupportSQLiteOpenHelper.Configuration(mockContext, dbName, openHelperCallback)
-        return factory.create(config)
+        return RequerySQLiteOpenHelperFactory(pathResolver, debugConfig)
     }
 
     private class LoggingOpenHelperCallback(

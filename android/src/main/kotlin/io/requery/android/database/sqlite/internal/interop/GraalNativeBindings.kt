@@ -515,7 +515,7 @@ class GraalNativeBindings(
                     )
                 }
             }
-            is Sqlite3Trace.TraceRow -> logger.v { """${trace.db} / statement ${trace.statement}: ROW""" }
+            is Sqlite3Trace.TraceRow -> logger.v { """${trace.db} / ${trace.statement}: Received row""" }
         }
     }
 
