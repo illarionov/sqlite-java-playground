@@ -2,6 +2,7 @@ package io.requery.android.database.sqlite.internal
 
 import android.database.Cursor
 import androidx.core.os.CancellationSignal
+import co.touchlab.kermit.Logger
 import io.requery.android.database.sqlite.base.CursorWindow
 import io.requery.android.database.sqlite.internal.SQLiteProgram.Companion.bindAllArgsAsStrings
 import io.requery.android.database.sqlite.internal.interop.Sqlite3ConnectionPtr
@@ -16,7 +17,9 @@ internal class SQLiteDirectCursorDriver<CP : Sqlite3ConnectionPtr, SP : Sqlite3S
     private val sql: String,
     private val cancellationSignal: CancellationSignal?,
     private val cursorWindowCtor: (name: String?) -> CursorWindow<WP>,
+    logger: Logger,
 ) : SQLiteCursorDriver<CP, SP, WP> {
+    private val logger: Logger = Logger.withTag("SQLiteDirectCursorDriver")
     private var query: SQLiteQuery<WP>? = null
 
     override fun query(
@@ -30,6 +33,7 @@ internal class SQLiteDirectCursorDriver<CP : Sqlite3ConnectionPtr, SP : Sqlite3S
                 this,
                 query,
                 cursorWindowCtor,
+                logger,
             )
         } catch (ex: RuntimeException) {
             query.close()

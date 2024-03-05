@@ -2,9 +2,11 @@
 agp = "8.2.2"
 androidx-test = "1.6.0-alpha05"
 kotlin-gradle-plugin = "1.9.22"
+ksp = "1.9.22-1.0.17"
 graalvm = "23.1.2"
 chicory = "999-SNAPSHOT"
 junit5 = "5.10.2"
+androidx-room = "2.6.1"
 
 [libraries]
 chicory = { group = "com.dylibso.chicory", name = "runtime", version.ref = "chicory" }
@@ -17,6 +19,11 @@ graalvm-compiler = { group = "org.graalvm.compiler", name = "compiler", version.
 
 androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidx-test"}
 
+androidx-room = { group = "androidx.room", name = "room-ktx", version.ref = "androidx-room" }
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "androidx-room" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "androidx-room" }
+androidx-room-testing = { group = "androidx.room", name = "room-testing", version.ref = "androidx-room" }
+androidx-room-plugin = { group = "androidx.room", name = "androidx.room.gradle.plugin", version.ref = "androidx-room" }
 
 junit-bom = { group = "org.junit", name = "junit-bom", version.ref = "junit5" }
 junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter" }
@@ -29,3 +36,5 @@ junit-jupiter-params = { group = "org.junit.jupiter", name = "junit-jupiter-para
 [plugins]
 jetbrainsKotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin-gradle-plugin" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
+room = { id = "androidx.room", version.ref = "androidx-room" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp"}

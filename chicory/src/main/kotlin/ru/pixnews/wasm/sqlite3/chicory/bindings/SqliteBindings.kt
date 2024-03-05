@@ -311,24 +311,6 @@ class SqliteBindings(
     }
 
     private fun postRun() {
-        val config = mapOf(
-            "exports" to null,
-            "memory" to null,
-            "bigIntEnabled" to true,
-            "debug" to  null, // console.debug.bind(console)
-            "warn" to  null, // console.warn.bind(console)
-            "error" to  null, // console.error.bind(console)
-            "log" to  null, // console.log.bind(console)
-
-            "wasmfsOpfsDir" to  "/opfs",
-            "useStdAlloc" to false,
-
-            "allocExportName" to "sqlite3_malloc",
-            "deallocExportName" to "sqlite3_free",
-            "reallocExportName" to "sqlite3_realloc",
-
-        )
-
         val sqliteInitResult = sqlite3_initialize.apply()[0].asInt()
         if (sqliteInitResult != Sqlite3Errno.SQLITE_OK.code) {
             throw Sqlite3Exception(sqliteInitResult, sqliteInitResult)

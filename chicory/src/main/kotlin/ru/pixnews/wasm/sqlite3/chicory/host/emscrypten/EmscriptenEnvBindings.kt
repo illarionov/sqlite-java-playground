@@ -39,7 +39,6 @@ class EmscriptenEnvBindings(
     memory: ChicoryMemoryImpl,
     filesystem: FileSystem,
     clock: Clock = Clock.systemDefaultZone(),
-    moduleName: String = ENV_MODULE_NAME,
 ) {
     val functions: List<HostFunction> = listOf(
         abortFunc(),

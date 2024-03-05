@@ -1,4 +1,3 @@
-import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED
 import org.gradle.api.tasks.testing.logging.TestLogEvent.PASSED
 import org.gradle.api.tasks.testing.logging.TestLogEvent.SKIPPED
@@ -7,6 +6,8 @@ import org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_OUT
 
 plugins {
     id("com.android.library")
+    alias(libs.plugins.room)
+    alias(libs.plugins.ksp)
     kotlin("android")
 }
 
@@ -49,6 +50,10 @@ android {
     }
 }
 
+room {
+    schemaDirectory("$projectDir/schemas/")
+}
+
 repositories {
     mavenLocal {
         mavenContent {
@@ -63,8 +68,12 @@ repositories {
 dependencies {
     implementation(project(":graalvm"))
     implementation("co.touchlab:kermit:2.0.3")
+    implementation(libs.androidx.room.runtime)
+    annotationProcessor(libs.androidx.room.compiler)
+    ksp(libs.androidx.room.compiler)
     api("androidx.core:core:1.12.0")
     api("androidx.sqlite:sqlite:2.4.0")
+    testImplementation(libs.androidx.room.testing)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter.api)
     testImplementation(libs.junit.jupiter.params)

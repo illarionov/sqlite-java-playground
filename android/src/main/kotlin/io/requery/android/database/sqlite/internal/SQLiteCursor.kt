@@ -1,12 +1,12 @@
 package io.requery.android.database.sqlite.internal
 
-import android.util.Log
-import android.util.SparseIntArray
+import co.touchlab.kermit.Logger
 import io.requery.android.database.sqlite.base.AbstractWindowedCursor
 import io.requery.android.database.sqlite.base.CursorWindow
 import io.requery.android.database.sqlite.internal.interop.Sqlite3ConnectionPtr
 import io.requery.android.database.sqlite.internal.interop.Sqlite3StatementPtr
 import io.requery.android.database.sqlite.internal.interop.Sqlite3WindowPtr
+import kotlin.LazyThreadSafetyMode.NONE
 import kotlin.math.max
 
 /**
@@ -21,7 +21,10 @@ internal class SQLiteCursor<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr,
     /** The query object for the cursor  */
     private val query: SQLiteQuery<WP>,
     private val windowCtor: (name: String?) -> CursorWindow<WP>,
+    logger: Logger = Logger
 ) : AbstractWindowedCursor<WP>(windowCtor) {
+    private val logger = logger.withTag(TAG)
+
     /** The names of the columns in the rows  */
     private val columns: List<String> = query.columnNames
 
@@ -32,8 +35,9 @@ internal class SQLiteCursor<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr,
     private var cursorWindowCapacity = 0
 
     /** A mapping of column names to column indices, to speed up lookups  */
-    private var columnNameArray: SparseIntArray? = null
-    private var columnNameMap: HashMap<String, Int>? = null
+    private val columnNameMap: Map<String, Int> by lazy(NONE) {
+        columns.mapIndexed { columnNo, name -> name to columnNo }.toMap()
+    }
 
     /** Used to find out where a cursor was allocated in case it never got released.  */
     private val closeGuard: CloseGuard = CloseGuard.get()
@@ -71,9 +75,8 @@ internal class SQLiteCursor<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr,
                 val startPos = cursorPickFillWindowStartPosition(requiredPos, 0)
                 count = query.fillWindow(window, startPos, requiredPos, true)
                 cursorWindowCapacity = window.numRows
-                if (Log.isLoggable(TAG, Log.DEBUG)) {
-                    Log.d(TAG, "received count(*) from native_fill_window: $count")
-                }
+
+                logger.d { "received count(*) from native_fill_window: $count" }
             } else {
                 val startPos = cursorPickFillWindowStartPosition(requiredPos, cursorWindowCapacity)
                 query.fillWindow(window, startPos, requiredPos, false)
@@ -89,53 +92,12 @@ internal class SQLiteCursor<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr,
     }
 
     override fun getColumnIndex(columnName: String): Int {
-        // Create mColumnNameMap on demand
-        if (columnNameArray == null && columnNameMap == null) {
-            val columns = columns
-            val columnCount = columns.size
-            val map = SparseIntArray(columnCount)
-            var collision = false
-            for (i in 0 until columnCount) {
-                val key = columns[i].hashCode()
-                // check for hashCode collision
-                if (map[key, -1] != -1) {
-                    collision = true
-                    break
-                }
-                map.put(key, i)
-            }
-
-            if (collision) {
-                columnNameMap = HashMap()
-                for (i in 0 until columnCount) {
-                    columnNameMap!![columns[i]] = i
-                }
-            } else {
-                columnNameArray = map
-            }
-        }
-
         // Hack according to bug 903852
-        val periodIndex = columnName.lastIndexOf('.')
-        val cleanColumnName = if (periodIndex != -1) {
-            val e = Exception()
-            Log.e(TAG, "requesting column name with table name -- $columnName", e)
-            columnName.substring(periodIndex + 1)
-        } else {
-            columnName
-        }
-
-        if (columnNameMap != null) {
-            val i = columnNameMap!![cleanColumnName]
-            return i ?: -1
-        } else {
-            return columnNameArray!![cleanColumnName.hashCode(), -1]
-        }
+        val cleanColumnName = columnName.substringAfterLast(".")
+        return columnNameMap.getOrDefault(cleanColumnName, -1)
     }
 
-    override fun getColumnNames(): Array<String> {
-        return columns.toTypedArray<String>()
-    }
+    override fun getColumnNames(): Array<String> = columns.toTypedArray<String>()
 
     @Deprecated("Deprecated in Java")
     override fun deactivate() {
@@ -171,7 +133,7 @@ internal class SQLiteCursor<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPtr,
             return super.requery()
         } catch (e: IllegalStateException) {
             // for backwards compatibility, just return false
-            Log.w(TAG, "requery() failed " + e.message, e)
+            logger.w(e) { "requery() failed ${e.message}" }
             return false
         }
     }

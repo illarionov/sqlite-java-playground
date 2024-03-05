@@ -12,23 +12,23 @@ class GraalWindowBindings : SqlOpenHelperWindowBindings<GraalSqlite3WindowPtr> {
     }
 
     override fun nativePutNull(windowPtr: GraalSqlite3WindowPtr, row: Int, column: Int): Boolean {
-        return windowPtr.ptr.putNull(row, column) != 0
+        return windowPtr.ptr.putNull(row, column) == 0
     }
 
     override fun nativePutDouble(windowPtr: GraalSqlite3WindowPtr, value: Double, row: Int, column: Int): Boolean {
-        return windowPtr.ptr.putDouble(row, column, value) != 0
+        return windowPtr.ptr.putDouble(row, column, value) == 0
     }
 
     override fun nativePutLong(windowPtr: GraalSqlite3WindowPtr, value: Long, row: Int, column: Int): Boolean {
-        return windowPtr.ptr.putLong(row, column, value) != 0
+        return windowPtr.ptr.putLong(row, column, value) == 0
     }
 
     override fun nativePutString(windowPtr: GraalSqlite3WindowPtr, value: String, row: Int, column: Int): Boolean {
-        return windowPtr.ptr.putString(row, column, value) != 0
+        return windowPtr.ptr.putString(row, column, value) == 0
     }
 
     override fun nativePutBlob(windowPtr: GraalSqlite3WindowPtr, value: ByteArray, row: Int, column: Int): Boolean {
-        return windowPtr.ptr.putBlob(row, column, value) != 0
+        return windowPtr.ptr.putBlob(row, column, value) == 0
     }
 
     override fun nativeGetDouble(windowPtr: GraalSqlite3WindowPtr, row: Int, column: Int): Double {
@@ -89,26 +89,26 @@ class GraalWindowBindings : SqlOpenHelperWindowBindings<GraalSqlite3WindowPtr> {
     }
 
     override fun nativeFreeLastRow(windowPtr: GraalSqlite3WindowPtr) {
-        TODO("Not yet implemented")
+        windowPtr.ptr.freeLastRow()
     }
 
     override fun nativeAllocRow(windowPtr: GraalSqlite3WindowPtr): Boolean {
-        TODO("Not yet implemented")
+        return windowPtr.ptr.allocRow() == 0
     }
 
     override fun nativeSetNumColumns(windowPtr: GraalSqlite3WindowPtr, columnNum: Int): Boolean {
-        TODO("Not yet implemented")
+        return windowPtr.ptr.setNumColumns(columnNum) == 0
     }
 
     override fun nativeGetNumRows(windowPtr: GraalSqlite3WindowPtr): Int {
-        TODO("Not yet implemented")
+        return windowPtr.ptr.numRows
     }
 
     override fun nativeClear(windowPtr: GraalSqlite3WindowPtr) {
-        TODO("Not yet implemented")
+        windowPtr.ptr.clear()
     }
 
     override fun nativeDispose(windowPtr: GraalSqlite3WindowPtr) {
-        TODO("Not yet implemented")
+        windowPtr.ptr.clear()
     }
 }

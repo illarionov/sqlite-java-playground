@@ -30,7 +30,7 @@ private class SyscallIoctl(
     private val filesystem: FileSystem,
     private val logger: Logger = Logger.getLogger(SyscallIoctl::class.qualifiedName)
 ) : EmscryptenHostFunction {
-    override fun apply(instance: Instance, vararg params: Value): Value {
+    override fun apply(instance: Instance, vararg args: Value): Value {
         TODO("Not yet implemented")
     }
 }

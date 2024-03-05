@@ -16,6 +16,9 @@ class NativeCursorWindow(
     val freeSpace: Int
         get() = _freeSpace
 
+    val numRows: Int
+        get() = data.numRows
+
     fun clear(): Int {
         if (isReadOnly) return -1
         data.freeOffset = 0

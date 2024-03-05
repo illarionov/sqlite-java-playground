@@ -687,7 +687,8 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
             cursorFactory?.newCursor(db, masterQuery, query) ?: SQLiteCursor(
                 checkNotNull(masterQuery),
                 query,
-                cursorWindowCtor
+                cursorWindowCtor,
+                logger,
             )
         },
         supportQuery.sql, listOf(), signal
@@ -725,8 +726,13 @@ internal class SQLiteDatabase<CP : Sqlite3ConnectionPtr, SP : Sqlite3StatementPt
         selectionArgs: List<Any?> = listOf(),
         cancellationSignal: CancellationSignal? = null
     ): Cursor = useReference {
-        val driver: SQLiteCursorDriver<CP, SP, WP> =
-            SQLiteDirectCursorDriver(this, sql, cancellationSignal, cursorWindowCtor)
+        val driver: SQLiteCursorDriver<CP, SP, WP> = SQLiteDirectCursorDriver(
+            database = this,
+            sql = sql,
+            cancellationSignal = cancellationSignal,
+            cursorWindowCtor = cursorWindowCtor,
+            logger = logger
+        )
         return driver.query(cursorFactory ?: this.cursorFactory, selectionArgs)
     }
 

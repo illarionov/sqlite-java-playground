@@ -28,7 +28,7 @@ private class SyscallReadlinkat(
     private val filesystem: FileSystem,
     private val logger: Logger = Logger.getLogger(SyscallReadlinkat::class.qualifiedName)
 ) : EmscryptenHostFunction {
-    override fun apply(instance: Instance, vararg params: Value): Value {
+    override fun apply(instance: Instance, vararg args: Value): Value {
         TODO("Not yet implemented")
     }
 }

@@ -2,16 +2,12 @@ package io.requery.android.database.sqlite.base
 
 import android.content.ContentResolver
 import android.database.CharArrayBuffer
-import android.database.ContentObservable
 import android.database.ContentObserver
 import android.database.Cursor
 import android.database.CursorIndexOutOfBoundsException
-import android.database.DataSetObservable
 import android.database.DataSetObserver
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import java.lang.ref.WeakReference
 
 /**
@@ -19,7 +15,7 @@ import java.lang.ref.WeakReference
  * that all cursors need to deal with and is provided for convenience reasons.
  */
 abstract class AbstractCursor : Cursor {
-    @JvmField
+
     protected var pos: Int
 
     protected var closed: Boolean = false
@@ -72,12 +68,7 @@ abstract class AbstractCursor : Cursor {
 
     @Deprecated("Deprecated in Java")
     override fun requery(): Boolean {
-        if (selfObserver != null && !selfObserverRegistered) {
-            contentResolver!!.registerContentObserver(notifyUri!!, true, selfObserver!!)
-            selfObserverRegistered = true
-        }
-        dataSetObservable.notifyChanged()
-        return true
+        throw UnsupportedOperationException("Not supported")
     }
 
     override fun isClosed(): Boolean = closed
@@ -197,23 +188,8 @@ abstract class AbstractCursor : Cursor {
 
     override fun getColumnIndex(columnName: String): Int {
         // Hack according to bug 903852
-        val periodIndex = columnName.lastIndexOf('.')
-        val tableColumnName = if (periodIndex != -1) {
-            val e = Exception()
-            Log.e(TAG, "requesting column name with table name -- $columnName", e)
-            columnName.substring(periodIndex + 1)
-        } else {
-            columnName
-        }
-
-        val columnNames = columnNames
-        val length = columnNames.size
-        for (i in 0 until length) {
-            if (columnNames[i].equals(tableColumnName, ignoreCase = true)) {
-                return i
-            }
-        }
-        return -1
+        val tableColumnName = columnName.substringAfterLast(".")
+        return columnNames.indexOfFirst { it.equals(tableColumnName, ignoreCase = true) }
     }
 
     override fun getColumnIndexOrThrow(columnName: String): Int {
@@ -251,14 +227,9 @@ abstract class AbstractCursor : Cursor {
      *
      * @param selfChange value
      */
-    @Suppress("deprecation")
     protected fun onChange(selfChange: Boolean) {
         synchronized(selfObserverLock) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                contentObservable.dispatchChange(selfChange, null)
-            } else {
-                contentObservable.dispatchChange(selfChange)
-            }
+            contentObservable.dispatchChange(selfChange, null)
             if (notifyUri != null && selfChange) {
                 contentResolver!!.notifyChange(notifyUri!!, selfObserver)
             }

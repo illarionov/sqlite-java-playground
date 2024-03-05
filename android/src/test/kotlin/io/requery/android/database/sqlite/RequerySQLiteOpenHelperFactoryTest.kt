@@ -35,6 +35,7 @@ class RequerySQLiteOpenHelperFactoryTest {
                 }
             }
         }
+        println()
     }
 
     private fun createHelper(
