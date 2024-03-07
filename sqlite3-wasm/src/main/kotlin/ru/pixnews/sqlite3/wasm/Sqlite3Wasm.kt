@@ -16,6 +16,9 @@ public object Sqlite3Wasm {
         public val sqlite3_346_o2: URL
             get() = getUrl("sqlite3_3460000_o2.wasm")
 
+        public val sqlite3_34501: URL
+           get() = getUrl("sqlite3-3450100-stripped.wasm")
+
         public val sqlite3_346_oz: URL
             get() = getUrl("sqlite3_3460000_oz.wasm")
 

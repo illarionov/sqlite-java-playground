@@ -6,3 +6,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "sqlite-java-playground-build-logic"
+include("project", "sqlite-build")

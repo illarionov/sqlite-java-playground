@@ -123,7 +123,7 @@ class EmscriptenEnvModuleBuilder(
             nodeFactory = ::SyscallUnlinkat
         )
         fn("__syscall_utimensat", List(4) { I32 })
-        fnVoid("_tzset_js", List(3) { I32 })
+        fnVoid("_tzset_js", List(4) { I32 })
     }
 
     fun setupModule(): WasmInstance = graalContext.withWasmContext { wasmContext ->

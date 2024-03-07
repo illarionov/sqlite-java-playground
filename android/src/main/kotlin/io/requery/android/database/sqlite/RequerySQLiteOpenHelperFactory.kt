@@ -29,6 +29,7 @@ import io.requery.android.database.sqlite.internal.interop.Sqlite3ConnectionPtr
 import io.requery.android.database.sqlite.internal.interop.Sqlite3StatementPtr
 import io.requery.android.database.sqlite.internal.interop.Sqlite3WindowPtr
 import org.example.app.sqlite3.Sqlite3CApi
+import ru.pixnews.sqlite3.wasm.Sqlite3Wasm
 
 /**
  * Implements [SupportSQLiteOpenHelper.Factory] using the SQLite implementation shipped in
@@ -40,7 +41,7 @@ public class RequerySQLiteOpenHelperFactory(
     private val configurationOptions: List<ConfigurationOptions> = emptyList()
 ) : SupportSQLiteOpenHelper.Factory {
     override fun create(configuration: SupportSQLiteOpenHelper.Configuration): SupportSQLiteOpenHelper {
-        val api = Sqlite3CApi()
+        val api = Sqlite3CApi(sqlite3Url = Sqlite3Wasm.Emscripten.sqlite3_34501)
         val bindings = GraalNativeBindings(api)
         val windowBindings = GraalWindowBindings()
 
