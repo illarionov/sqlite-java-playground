@@ -1,12 +1,15 @@
-package ru.pixnews.gradle.wasm.sqlite
+package ru.pixnews.gradle.wasm.sqlite3
 
 import java.io.File
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.process.CommandLineArgumentProvider
 
 class SqliteAdditionalArgumentProvider(
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     val sqliteCFile: Provider<File>
 ) : CommandLineArgumentProvider {
     override fun asArguments(): MutableIterable<String> {

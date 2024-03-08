@@ -15,6 +15,7 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.ProviderFactory
+import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.IgnoreEmptyDirectories
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
@@ -29,10 +30,10 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.listProperty
 import org.gradle.process.CommandLineArgumentProvider
 import org.gradle.process.ExecOperations
-import org.jetbrains.kotlin.gradle.utils.`is`
-import ru.pixnews.gradle.wasm.sqlite.BuildDirPath.COMPILE_UNSTRIPPED_RESULT_DIR
-import ru.pixnews.gradle.wasm.sqlite.BuildDirPath.COMPILE_WORK_DIR
+import ru.pixnews.gradle.wasm.sqlite3.BuildDirPath.COMPILE_WORK_DIR
+import ru.pixnews.gradle.wasm.sqlite3.BuildDirPath.compileUnstrippedResultDir
 
+@CacheableTask
 abstract class EmscriptenBuildTask @Inject constructor(
     private val execOperations: ExecOperations,
     objects: ObjectFactory,
@@ -74,7 +75,7 @@ abstract class EmscriptenBuildTask @Inject constructor(
     @get:OutputDirectory
     @Optional
     val outputDirectory: DirectoryProperty = objects.directoryProperty().convention(
-        layout.buildDirectory.dir(COMPILE_UNSTRIPPED_RESULT_DIR)
+        layout.buildDirectory.dir(compileUnstrippedResultDir("Main"))
     )
 
     @get:Input
@@ -95,6 +96,7 @@ abstract class EmscriptenBuildTask @Inject constructor(
 
     @get:InputFiles
     @Optional
+    @PathSensitive(PathSensitivity.NONE)
     val emscriptenConfigFile: ConfigurableFileCollection = objects.fileCollection()
 
     @get:Nested

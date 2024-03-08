@@ -1,4 +1,4 @@
-package ru.pixnews.gradle.wasm.sqlite
+package ru.pixnews.gradle.wasm.sqlite3
 
 import java.net.URI
 import org.gradle.api.artifacts.dsl.RepositoryHandler

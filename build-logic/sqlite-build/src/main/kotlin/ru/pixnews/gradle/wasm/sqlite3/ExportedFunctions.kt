@@ -1,4 +1,4 @@
-package ru.pixnews.gradle.wasm.sqlite
+package ru.pixnews.gradle.wasm.sqlite3
 
 internal object ExportedFunctions {
     val openHelper = listOf(

@@ -1,6 +1,6 @@
 @file:Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
 
-package ru.pixnews.gradle.wasm.sqlite
+package ru.pixnews.gradle.wasm.sqlite3
 
 import java.lang.Boolean
 import org.gradle.api.Project
@@ -13,15 +13,7 @@ val EXTRACTED_SQLITE_ATTRIBUTE: Attribute<Boolean> = Attribute.of("extracted-sql
 private val EXTRACTED_SQLITE_TRUE = Boolean.TRUE as Boolean
 private val EXTRACTED_SQLITE_FALSE = Boolean.FALSE as Boolean
 
-internal fun Project.setupSqliteSource(
-    sqliteVersion: String
-): FileCollection {
-    val sqliteConfiguration = configurations.detachedConfiguration(
-        dependencyFactory.create("sqlite", "amalgamation", sqliteVersion, null, "zip")
-    ).attributes {
-        attribute(EXTRACTED_SQLITE_ATTRIBUTE, EXTRACTED_SQLITE_FALSE)
-    }
-
+internal fun Project.setupUnpackSqliteAttributes() {
     project.dependencies {
         attributesSchema.attribute(EXTRACTED_SQLITE_ATTRIBUTE)
         artifactTypes.maybeCreate("zip").attributes.attribute(EXTRACTED_SQLITE_ATTRIBUTE, EXTRACTED_SQLITE_FALSE)
@@ -29,6 +21,16 @@ internal fun Project.setupSqliteSource(
             from.attribute(EXTRACTED_SQLITE_ATTRIBUTE, EXTRACTED_SQLITE_FALSE)
             to.attribute(EXTRACTED_SQLITE_ATTRIBUTE, EXTRACTED_SQLITE_TRUE)
         }
+    }
+}
+
+internal fun Project.createSqliteSourceConfiguration(
+    sqliteVersion: String
+): FileCollection {
+    val sqliteConfiguration = configurations.detachedConfiguration(
+        dependencyFactory.create("sqlite", "amalgamation", sqliteVersion, null, "zip")
+    ).attributes {
+        attribute(EXTRACTED_SQLITE_ATTRIBUTE, EXTRACTED_SQLITE_FALSE)
     }
 
     val unpackedSqliteSrc = sqliteConfiguration
