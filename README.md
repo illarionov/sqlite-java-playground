@@ -1,6 +1,6 @@
 # Sqlite java Playground
 
-Moved to https://github.com/illarionov/sqlite-java-playground
+Moved to https://github.com/illarionov/wasm-sqlite-open-helper
 
 Here I'm trying to build and run web-assembly version of the [Sqlite][] on JVM using [GraalVM][] or [Chicory][].
 
